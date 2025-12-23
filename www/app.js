@@ -25,18 +25,27 @@ class GameDemo {
     }
 
     initPixi() {
-        // Create Pixi.js application
+        // Get canvas container dimensions
+        const canvasContainer = document.querySelector('.game-container');
+        const rect = canvasContainer.getBoundingClientRect();
+
+        // Create Pixi.js application with responsive size
         this.app = new PIXI.Application({
-            width: 800,
-            height: 600,
+            width: rect.width,
+            height: rect.height,
             backgroundColor: 0x2a2a2a,
             antialias: true,
             resolution: window.devicePixelRatio || 1,
+            autoDensity: true,
         });
 
         // Add canvas to DOM
         const canvas = document.getElementById('game-canvas');
         canvas.parentNode.replaceChild(this.app.view, canvas);
+
+        // Store original game world size
+        this.gameWidth = 800;
+        this.gameHeight = 600;
 
         // Add a grid for reference
         this.drawGrid();
@@ -44,27 +53,59 @@ class GameDemo {
         // Add click handler for canvas
         this.app.view.addEventListener('click', (event) => this.handleCanvasClick(event));
 
+        // Add resize handler
+        window.addEventListener('resize', () => this.handleResize());
+
         // Start render loop
         this.app.ticker.add(() => this.gameLoop());
     }
 
-    drawGrid() {
+    handleResize() {
+        const canvasContainer = document.querySelector('.game-container');
+        const rect = canvasContainer.getBoundingClientRect();
+
+        // Resize Pixi application
+        this.app.renderer.resize(rect.width, rect.height);
+
+        // Update grid
+        this.updateGrid();
+    }
+
+    updateGrid() {
+        // Clear existing grid
+        if (this.gridContainer) {
+            this.app.stage.removeChild(this.gridContainer);
+        }
+
+        // Create new grid
+        this.gridContainer = new PIXI.Container();
         const gridGraphics = new PIXI.Graphics();
         gridGraphics.lineStyle(1, 0x444444, 0.5);
 
+        const gridSize = 50;
+        const scaleX = this.app.screen.width / this.gameWidth;
+        const scaleY = this.app.screen.height / this.gameHeight;
+
         // Vertical lines
-        for (let x = 0; x <= 800; x += 50) {
-            gridGraphics.moveTo(x, 0);
-            gridGraphics.lineTo(x, 600);
+        for (let x = 0; x <= this.gameWidth; x += gridSize) {
+            const scaledX = x * scaleX;
+            gridGraphics.moveTo(scaledX, 0);
+            gridGraphics.lineTo(scaledX, this.app.screen.height);
         }
 
         // Horizontal lines
-        for (let y = 0; y <= 600; y += 50) {
-            gridGraphics.moveTo(0, y);
-            gridGraphics.lineTo(800, y);
+        for (let y = 0; y <= this.gameHeight; y += gridSize) {
+            const scaledY = y * scaleY;
+            gridGraphics.moveTo(0, scaledY);
+            gridGraphics.lineTo(this.app.screen.width, scaledY);
         }
 
-        this.app.stage.addChild(gridGraphics);
+        this.gridContainer.addChild(gridGraphics);
+        this.app.stage.addChildAt(this.gridContainer, 0); // Add behind other elements
+    }
+
+    drawGrid() {
+        this.updateGrid();
     }
 
     setupEventListeners() {
@@ -77,15 +118,19 @@ class GameDemo {
         if (!this.isInitialized) return;
 
         const rect = this.app.view.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+        const screenX = event.clientX - rect.left;
+        const screenY = event.clientY - rect.top;
+
+        // Convert screen coordinates to game world coordinates
+        const gameX = (screenX / this.app.screen.width) * this.gameWidth;
+        const gameY = (screenY / this.app.screen.height) * this.gameHeight;
 
         if (this.selectedEntityId !== null) {
             // Set target for selected entity
-            this.setEntityTarget(this.selectedEntityId, x, y);
+            this.setEntityTarget(this.selectedEntityId, gameX, gameY);
         } else {
             // Try to select entity at clicked position
-            this.selectEntityAtPosition(x, y);
+            this.selectEntityAtPosition(screenX, screenY);
         }
     }
 
@@ -158,11 +203,17 @@ class GameDemo {
         }
     }
 
-    showTargetIndicator(x, y) {
+    showTargetIndicator(gameX, gameY) {
         // Remove existing target indicator
         if (this.targetIndicator) {
             this.app.stage.removeChild(this.targetIndicator);
         }
+
+        // Convert game coordinates to screen coordinates
+        const scaleX = this.app.screen.width / this.gameWidth;
+        const scaleY = this.app.screen.height / this.gameHeight;
+        const screenX = gameX * scaleX;
+        const screenY = gameY * scaleY;
 
         // Create new target indicator
         const graphics = new PIXI.Graphics();
@@ -173,8 +224,8 @@ class GameDemo {
         graphics.moveTo(0, -15);
         graphics.lineTo(0, 15);
 
-        graphics.x = x;
-        graphics.y = y;
+        graphics.x = screenX;
+        graphics.y = screenY;
 
         this.app.stage.addChild(graphics);
         this.targetIndicator = graphics;
@@ -235,6 +286,12 @@ class GameDemo {
     }
 
     createEntitySprite(id, x, y, vehicleType) {
+        // Convert game coordinates to screen coordinates
+        const scaleX = this.app.screen.width / this.gameWidth;
+        const scaleY = this.app.screen.height / this.gameHeight;
+        const screenX = x * scaleX;
+        const screenY = y * scaleY;
+
         // Create a sprite for the entity
         const graphics = new PIXI.Graphics();
 
@@ -272,14 +329,16 @@ class GameDemo {
         const container = new PIXI.Container();
         container.addChild(graphics);
         container.addChild(text);
-        container.x = x;
-        container.y = y;
+        container.x = screenX;
+        container.y = screenY;
 
         this.app.stage.addChild(container);
         this.entities.set(id, {
             container,
-            x,
-            y,
+            x: screenX,
+            y: screenY,
+            gameX: x, // Store both screen and game coordinates
+            gameY: y,
             vehicleType,
             entityType: 'vehicle'
         });
@@ -345,8 +404,14 @@ class GameDemo {
             if (this.entities.has(gameEntity.id)) {
                 // Update existing entity position
                 const entity = this.entities.get(gameEntity.id);
-                entity.container.x = gameEntity.x;
-                entity.container.y = gameEntity.y;
+                const scaleX = this.app.screen.width / this.gameWidth;
+                const scaleY = this.app.screen.height / this.gameHeight;
+                entity.container.x = gameEntity.x * scaleX;
+                entity.container.y = gameEntity.y * scaleY;
+                entity.x = entity.container.x;
+                entity.y = entity.container.y;
+                entity.gameX = gameEntity.x;
+                entity.gameY = gameEntity.y;
             } else {
                 // Create new visual entity
                 this.createEntityFromGameState(gameEntity);
@@ -374,6 +439,7 @@ class GameDemo {
             }
         }
 
+        // Create entity with game coordinates (createEntitySprite will convert to screen coordinates)
         this.createEntitySprite(gameEntity.id, gameEntity.x, gameEntity.y, vehicleType);
     }
 
