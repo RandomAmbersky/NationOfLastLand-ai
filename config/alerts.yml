@@ -1,0 +1,242 @@
+# Nation of Last Land - Alert/Event Configuration
+
+# Alert types and their configurations
+alert_types:
+  trash_alert:
+    name: "Trash Alert"
+    icon: "trash_pile"
+    description: "Common garbage scattered on the road"
+    base_reputation_reward: 10
+    reveal_distance: 25.0
+    entities:
+      - type: "trash_pile"
+        count: "1-3"
+        spawn_pattern: "random_cluster"
+
+  waste_alert:
+    name: "Waste Alert"
+    icon: "toxic_waste"
+    description: "Environmental contamination requiring cleanup"
+    base_reputation_reward: 25
+    reveal_distance: 30.0
+    entities:
+      - type: "toxic_waste"
+        count: "1-2"
+        spawn_pattern: "random_scatter"
+
+  mutant_alert:
+    name: "Mutant Alert"
+    icon: "mutant_creature"
+    description: "Hostile mutated creatures in the area"
+    base_reputation_reward: 50
+    reveal_distance: 35.0
+    entities:
+      - type: "mutant_creature"
+        count: "2-4"
+        spawn_pattern: "random_cluster"
+
+  raider_alert:
+    name: "Raider Alert"
+    icon: "raider_vehicle"
+    description: "Armed raiders operating in the region"
+    base_reputation_reward: 75
+    reveal_distance: 40.0
+    entities:
+      - type: "raider_vehicle"
+        count: "1-2"
+        spawn_pattern: "random_scatter"
+
+  survivor_alert:
+    name: "Survivor Alert"
+    icon: "survivor_group"
+    description: "Distress signal from survivors needing rescue"
+    base_reputation_reward: 60
+    reveal_distance: 35.0
+    time_limit: 300  # 5 minutes
+    entities:
+      - type: "survivor_group"
+        count: "1"
+        spawn_pattern: "central"
+      - type: "raider_vehicle"
+        count: "0-1"
+        spawn_pattern: "perimeter"
+
+  trader_alert:
+    name: "Trader Alert"
+    icon: "wandering_trader"
+    description: "Mobile trader offering rare items"
+    base_reputation_reward: 0  # No reputation reward, but trading opportunity
+    reveal_distance: 30.0
+    time_limit: 600  # 10 minutes
+    entities:
+      - type: "wandering_trader"
+        count: "1"
+        spawn_pattern: "central"
+
+  resource_deposit_alert:
+    name: "Resource Deposit Alert"
+    icon: "resource_deposit"
+    description: "Valuable resource deposit discovered"
+    base_reputation_reward: 40
+    reveal_distance: 28.0
+    entities:
+      - type: "resource_deposit"
+        count: "1"
+        spawn_pattern: "central"
+        variants:
+          - type: "silver"
+            weight: 60
+          - type: "gold"
+            weight: 30
+          - type: "platinum"
+            weight: 10
+
+# Entity configurations for alerts
+alert_entities:
+  trash_pile:
+    name: "Trash Pile"
+    health: 20
+    hostile: false
+    loot_table:
+      - type: "reputation"
+        amount: "5-15"
+        chance: 100
+
+  toxic_waste:
+    name: "Toxic Waste"
+    health: 30
+    hostile: false
+    damage_on_destroy:
+      type: "acid"
+      amount: 25
+      radius: 15.0
+    loot_table:
+      - type: "reputation"
+        amount: "15-30"
+        chance: 100
+      - type: "science"
+        category: "ecology"
+        amount: "1"
+        chance: 30
+
+  mutant_creature:
+    name: "Mutant Creature"
+    health: 80
+    hostile: true
+    movement_speed: 2.5
+    attack_damage: 15
+    attack_range: 10.0
+    attack_rate: 1.5
+    loot_table:
+      - type: "reputation"
+        amount: "20-40"
+        chance: 100
+      - type: "science"
+        category: "biology"
+        amount: "1-2"
+        chance: 50
+
+  raider_vehicle:
+    name: "Raider Vehicle"
+    health: 120
+    hostile: true
+    movement_speed: 4.0
+    weapon_damage: 20
+    weapon_range: 80.0
+    weapon_rate: 1.0
+    loot_table:
+      - type: "reputation"
+        amount: "30-60"
+        chance: 100
+      - type: "science"
+        category: "technology"
+        amount: "1"
+        chance: 40
+      - type: "resources"
+        silver: "10-25"
+        gold: "0-5"
+        chance: 25
+
+  survivor_group:
+    name: "Survivor Group"
+    health: 1  # Symbolic health
+    hostile: false
+    rescue_reward:
+      reputation: 40
+      bonus_chance: 20  # Chance for additional rewards
+    loot_table:
+      - type: "reputation"
+        amount: "40"
+        chance: 100
+      - type: "bonus"
+        items:
+          - type: "crew_recruit"
+            chance: 30
+          - type: "equipment"
+            chance: 20
+          - type: "resources"
+            silver: "20-40"
+            chance: 25
+
+  wandering_trader:
+    name: "Wandering Trader"
+    health: 1  # Non-combat entity
+    hostile: false
+    trade_inventory:
+      - item: "rare_device"
+        cost_reputation: 150
+        stock: 1
+      - item: "special_equipment"
+        cost_reputation: 100
+        stock: 2
+      - item: "crew_upgrade_token"
+        cost_reputation: 80
+        stock: 3
+      - item: "resource_converter"
+        cost_reputation: 50
+        stock: 5
+
+  resource_deposit:
+    name: "Resource Deposit"
+    health: 50
+    hostile: false
+    harvest_time: 10.0  # Time to collect resources
+    loot_table:
+      - type: "resources"
+        silver: "50-100"
+        chance: 100
+      - type: "reputation"
+        amount: "20-30"
+        chance: 100
+
+# Alert spawning rules
+spawning_rules:
+  base_spawn_rate: 0.02  # Base chance per second
+  max_active_alerts: 5
+  spawn_distance_min: 50.0
+  spawn_distance_max: 200.0
+
+  # Alert type weights for random selection
+  alert_weights:
+    trash_alert: 40
+    waste_alert: 25
+    mutant_alert: 20
+    raider_alert: 10
+    survivor_alert: 3
+    trader_alert: 1
+    resource_deposit_alert: 15
+
+  # Difficulty scaling
+  difficulty_scaling:
+    level_1:
+      reputation_multiplier: 1.0
+      health_multiplier: 1.0
+      damage_multiplier: 1.0
+    level_2:
+      reputation_multiplier: 1.2
+      health_multiplier: 1.3
+      damage_multiplier: 1.1
+    level_3:
+      reputation_multiplier: 1.5
+      health_multiplier: 1.6
+      damage_multiplier: 1.3

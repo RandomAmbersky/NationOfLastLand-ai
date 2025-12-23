@@ -1,0 +1,272 @@
+# Nation of Last Land - Unit Configuration
+
+# Vehicle configurations
+vehicles:
+  scout_car:
+    name: "Scout Car"
+    type: "scout_car"
+    base_health: 50
+    base_speed: 5.0
+    max_crew: 2
+    description: "Fast reconnaissance vehicle with low armor"
+    cost_reputation: 100
+    devices:
+      - type: "turret"
+        allowed: ["light_turret", "plasma_turret"]
+      - type: "accelerator"
+        allowed: ["speed_booster", "hover_module"]
+      - type: "armor"
+        allowed: ["energy_shield", "acid_resistant_coating"]
+      - type: "stealth"
+        allowed: ["noise_dampener", "decoy_launcher"]
+      - type: "other"
+        allowed: ["sensor_array"]
+
+  armored_truck:
+    name: "Armored Truck"
+    type: "armored_truck"
+    base_health: 150
+    base_speed: 3.0
+    max_crew: 3
+    description: "Well-balanced vehicle with good armor and moderate speed"
+    cost_reputation: 250
+    devices:
+      - type: "turret"
+        allowed: ["light_turret", "heavy_turret", "plasma_turret"]
+      - type: "accelerator"
+        allowed: ["speed_booster", "turbo_engine"]
+      - type: "armor"
+        allowed: ["reinforced_plates", "energy_shield", "radiation_shield"]
+      - type: "stealth"
+        allowed: ["noise_dampener"]
+      - type: "other"
+        allowed: ["cargo_expander", "repair_drone", "sensor_array"]
+
+  heavy_tank:
+    name: "Heavy Tank"
+    type: "heavy_tank"
+    base_health: 300
+    base_speed: 1.5
+    max_crew: 4
+    description: "Slow but heavily armored tank with powerful weapons"
+    cost_reputation: 500
+    devices:
+      - type: "turret"
+        allowed: ["heavy_turret", "plasma_turret", "acid_turret"]
+      - type: "accelerator"
+        allowed: ["turbo_engine"]
+      - type: "armor"
+        allowed: ["reinforced_plates", "energy_shield", "radiation_shield", "acid_resistant_coating"]
+      - type: "stealth"
+        allowed: []
+      - type: "other"
+        allowed: ["repair_drone", "sensor_array"]
+
+# Device configurations
+devices:
+  # Turrets
+  light_turret:
+    name: "Light Turret"
+    type: "turret"
+    category: "light_turret"
+    description: "Fast-firing turret with moderate damage"
+    damage: 15
+    damage_type: "physical"
+    fire_rate: 2.0
+    range: 100
+    cost_reputation: 50
+
+  heavy_turret:
+    name: "Heavy Turret"
+    type: "turret"
+    category: "heavy_turret"
+    description: "Slow but powerful turret"
+    damage: 40
+    damage_type: "physical"
+    fire_rate: 0.5
+    range: 120
+    cost_reputation: 150
+
+  plasma_turret:
+    name: "Plasma Turret"
+    type: "turret"
+    category: "plasma_turret"
+    description: "Energy weapon with high damage"
+    damage: 25
+    damage_type: "energy"
+    fire_rate: 1.0
+    range: 150
+    cost_reputation: 200
+
+  acid_turret:
+    name: "Acid Turret"
+    type: "turret"
+    category: "acid_turret"
+    description: "Sprays acid that damages over time"
+    damage: 10
+    damage_type: "acid"
+    fire_rate: 1.5
+    range: 80
+    cost_reputation: 180
+
+  # Accelerators
+  speed_booster:
+    name: "Speed Booster"
+    type: "accelerator"
+    category: "speed_booster"
+    description: "Increases base movement speed"
+    speed_bonus: 2.0
+    cost_reputation: 75
+
+  turbo_engine:
+    name: "Turbo Engine"
+    type: "accelerator"
+    category: "turbo_engine"
+    description: "Allows temporary speed bursts"
+    speed_bonus: 4.0
+    duration: 5.0
+    cooldown: 30.0
+    cost_reputation: 125
+
+  hover_module:
+    name: "Hover Module"
+    type: "accelerator"
+    category: "hover_module"
+    description: "Allows movement over difficult terrain"
+    speed_bonus: 1.0
+    terrain_bonus: 0.5
+    cost_reputation: 100
+
+  # Armor
+  reinforced_plates:
+    name: "Reinforced Plates"
+    type: "armor"
+    category: "reinforced_plates"
+    description: "Extra protection against physical damage"
+    resistances:
+      physical: 0.3
+    cost_reputation: 80
+
+  energy_shield:
+    name: "Energy Shield"
+    type: "armor"
+    category: "energy_shield"
+    description: "Protection against energy weapons"
+    resistances:
+      energy: 0.5
+    cost_reputation: 120
+
+  radiation_shield:
+    name: "Radiation Shield"
+    type: "armor"
+    category: "radiation_shield"
+    description: "Blocks radiation damage"
+    resistances:
+      radiation: 0.4
+    cost_reputation: 90
+
+  acid_resistant_coating:
+    name: "Acid Resistant Coating"
+    type: "armor"
+    category: "acid_resistant_coating"
+    description: "Resists acid damage"
+    resistances:
+      acid: 0.6
+    cost_reputation: 110
+
+  # Stealth
+  cloaking_device:
+    name: "Cloaking Device"
+    type: "stealth"
+    category: "cloaking_device"
+    description: "Makes vehicle invisible to enemies"
+    cloak_strength: 0.8
+    energy_drain: 10.0
+    cost_reputation: 300
+
+  noise_dampener:
+    name: "Noise Dampener"
+    type: "stealth"
+    category: "noise_dampener"
+    description: "Reduces detection range"
+    detection_reduction: 0.5
+    cost_reputation: 60
+
+  decoy_launcher:
+    name: "Decoy Launcher"
+    type: "stealth"
+    category: "decoy_launcher"
+    description: "Launches decoy targets"
+    decoy_count: 3
+    decoy_lifetime: 20.0
+    cost_reputation: 85
+
+  # Other
+  cargo_expander:
+    name: "Cargo Expander"
+    type: "other"
+    category: "cargo_expander"
+    description: "Increases resource carrying capacity"
+    capacity_bonus: 50
+    cost_reputation: 40
+
+  repair_drone:
+    name: "Repair Drone"
+    type: "other"
+    category: "repair_drone"
+    description: "Automatically repairs vehicle damage"
+    repair_rate: 5.0
+    cost_reputation: 200
+
+  sensor_array:
+    name: "Sensor Array"
+    type: "other"
+    category: "sensor_array"
+    description: "Increases detection and vision range"
+    detection_bonus: 50
+    vision_bonus: 30
+    cost_reputation: 70
+
+# Crew member configurations
+crew_members:
+  basic_driver:
+    name: "Basic Driver"
+    role: "driver"
+    base_level: 1
+    description: "Standard crew member for driving vehicles"
+    cost_reputation: 25
+
+  basic_gunner:
+    name: "Basic Gunner"
+    role: "gunner"
+    base_level: 1
+    description: "Standard crew member for operating weapons"
+    cost_reputation: 25
+
+  specialist_scout:
+    name: "Scout Specialist"
+    role: "driver"
+    base_level: 2
+    description: "Experienced scout with better navigation skills"
+    cost_reputation: 75
+
+  specialist_marksman:
+    name: "Marksman Specialist"
+    role: "gunner"
+    base_level: 2
+    description: "Accurate gunner with improved weapon handling"
+    cost_reputation: 75
+
+  elite_commander:
+    name: "Elite Commander"
+    role: "driver"
+    base_level: 3
+    description: "Veteran commander with tactical expertise"
+    cost_reputation: 200
+
+  elite_sniper:
+    name: "Elite Sniper"
+    role: "gunner"
+    base_level: 3
+    description: "Expert marksman with exceptional accuracy"
+    cost_reputation: 200
