@@ -212,6 +212,8 @@ class GameDemo {
                 this.updateStatus(`Target set: ${movementResult.message}`);
                 // Add visual target indicator
                 this.showTargetIndicator(x, y);
+                // Clear selection after setting target
+                this.deselectEntity();
             } else {
                 this.updateStatus(`Failed to set target: ${movementResult.message}`);
                 console.error('Failed to set target:', movementResult.message);
@@ -294,7 +296,10 @@ class GameDemo {
                     console.error('Update after spawn error:', error);
                 }
 
-                this.updateStatus(`Vehicle spawned!\nID: ${creationResult.id}\nType: ${vehicleType}\nPosition: (${x}, ${y})`);
+                // Automatically select the newly spawned vehicle
+                this.selectEntity(creationResult.id);
+
+                this.updateStatus(`Vehicle spawned and selected!\nID: ${creationResult.id}\nType: ${vehicleType}\nPosition: (${x}, ${y})`);
             } else {
                 this.updateStatus(`Failed to spawn vehicle: ${creationResult.message}`);
             }
