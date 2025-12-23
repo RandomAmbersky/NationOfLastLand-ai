@@ -609,11 +609,11 @@ class GameDemo {
                     gameState.debug_messages.forEach(message => {
                         // Check if message contains combat/damage info
                         if (message.includes('damage') || message.includes('combat') || message.includes('destroyed') || message.includes('Collision detected')) {
-                            console.log('⚔️ ' + message);
+                            // console.log('⚔️ ' + message);
                         } else if (message.includes('cooldown')) {
-                            console.log('⏱️ ' + message);
+                            // console.log('⏱️ ' + message);
                         } else {
-                            console.log('🔍 ' + message);
+                            // console.log('🔍 ' + message);
                         }
                     });
                 }
@@ -646,14 +646,8 @@ class GameDemo {
             this.updateStatus('Selected unit was destroyed!');
         }
 
-        // Clear alert highlight if the highlighted alert no longer exists
-        if (this.alertHighlight && this.alertHighlight.alertId && !alertIds.has(this.alertHighlight.alertId)) {
-            this.app.stage.removeChild(this.alertHighlight);
-            this.alertHighlight = null;
-        }
-
-        // Also clear alert highlight if there are no alerts at all (extra safety)
-        if (this.alertHighlight && alertIds.size === 0) {
+        // Always clear alert highlight on every update (most aggressive cleanup)
+        if (this.alertHighlight) {
             this.app.stage.removeChild(this.alertHighlight);
             this.alertHighlight = null;
         }
