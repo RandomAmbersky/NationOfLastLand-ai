@@ -1,9 +1,11 @@
 //! Combat system for automatic unit collisions and damage calculation
 
 use crate::game::components::{Position, Health, Damage, DamageResistance, Vehicle, CombatCooldown, FactionComponent, Faction};
+use crate::game::GameWorld;
 
 /// Update combat system: handle collisions and damage between units
-pub fn update_combat_system(world: &mut hecs::World, dt: f32) {
+pub fn update_combat_system(game_world: &mut GameWorld, dt: f32) {
+    let world = &mut game_world.world;
     // Update combat cooldowns first
     for (_entity, cooldown) in world.query::<&mut CombatCooldown>().iter() {
         cooldown.update(dt);
@@ -18,7 +20,7 @@ pub fn update_combat_system(world: &mut hecs::World, dt: f32) {
         }
     }
 
-    println!("Combat system: {} entities alive", combat_entities.len());
+    game_world.debug_messages.push(format!("Combat system: {} entities alive", combat_entities.len()));
 
     // Check for collisions between all pairs of combat entities
     for i in 0..combat_entities.len() {
@@ -29,18 +31,19 @@ pub fn update_combat_system(world: &mut hecs::World, dt: f32) {
             // Simple collision detection - units within 10 units of each other
             let distance = pos_a.distance_to(&pos_b);
             if distance < 10.0 {
-                println!("Collision detected between entities {:?} and {:?} at distance {:.1}",
-                    entity_a.id(), entity_b.id(), distance);
+                game_world.debug_messages.push(format!("Collision detected between entities {} and {} at distance {:.1}",
+                    entity_a.id(), entity_b.id(), distance));
                 // Collision detected - apply combat
-                apply_combat_damage(world, entity_a, entity_b);
+                apply_combat_damage(game_world, entity_a, entity_b);
             }
         }
     }
 }
 
 /// Apply combat damage between two colliding entities
-fn apply_combat_damage(world: &mut hecs::World, entity_a: hecs::Entity, entity_b: hecs::Entity) {
-    println!("Starting combat between entities {:?} and {:?}", entity_a.id(), entity_b.id());
+fn apply_combat_damage(game_world: &mut GameWorld, entity_a: hecs::Entity, entity_b: hecs::Entity) {
+    let world = &mut game_world.world;
+    game_world.debug_messages.push(format!("Starting combat between entities {} and {}", entity_a.id(), entity_b.id()));
 
     // Check factions first - same faction units don't attack each other
     let faction_a = world.get::<&FactionComponent>(entity_a)
@@ -52,11 +55,11 @@ fn apply_combat_damage(world: &mut hecs::World, entity_a: hecs::Entity, entity_b
         .unwrap_or(Faction::Player); // Default to player faction
 
     if !faction_a.is_hostile_towards(&faction_b) {
-        println!("Entities {:?} and {:?} are not hostile (faction {:?} vs {:?}), no combat", entity_a.id(), entity_b.id(), faction_a.name(), faction_b.name());
+        game_world.debug_messages.push(format!("Entities {} and {} are not hostile (faction {} vs {}), no combat", entity_a.id(), entity_b.id(), faction_a.name(), faction_b.name()));
         return;
     }
 
-    println!("Combat confirmed: {:?} vs {:?}", faction_a.name(), faction_b.name());
+    game_world.debug_messages.push(format!("Combat confirmed: {} vs {}", faction_a.name(), faction_b.name()));
 
     // Collect combat information first (to avoid borrow checker issues)
     let mut damage_events = Vec::new();
@@ -71,17 +74,17 @@ fn apply_combat_damage(world: &mut hecs::World, entity_a: hecs::Entity, entity_b
             if let Ok(resistance_b) = world.get::<&DamageResistance>(entity_b) {
                 let actual_damage = damage_a.calculate_damage(&resistance_b);
                 damage_events.push((entity_b, actual_damage, entity_a));
-                println!("Entity {:?} will deal {:.1} damage to entity {:?}", entity_a.id(), actual_damage, entity_b.id());
+                game_world.debug_messages.push(format!("Entity {} will deal {:.1} damage to entity {}", entity_a.id(), actual_damage, entity_b.id()));
             } else {
                 // No resistance, full damage
                 damage_events.push((entity_b, damage_a.amount, entity_a));
-                println!("Entity {:?} will deal {:.1} damage to entity {:?} (no resistance)", entity_a.id(), damage_a.amount, entity_b.id());
+                game_world.debug_messages.push(format!("Entity {} will deal {:.1} damage to entity {} (no resistance)", entity_a.id(), damage_a.amount, entity_b.id()));
             }
         } else {
-            println!("Entity {:?} has no damage component", entity_a.id());
+            game_world.debug_messages.push(format!("Entity {} has no damage component", entity_a.id()));
         }
     } else {
-        println!("Entity {:?} is on cooldown", entity_a.id());
+        game_world.debug_messages.push(format!("Entity {} is on cooldown", entity_a.id()));
     }
 
     // Check entity B's damage capabilities and cooldown (bidirectional)
@@ -94,17 +97,17 @@ fn apply_combat_damage(world: &mut hecs::World, entity_a: hecs::Entity, entity_b
             if let Ok(resistance_a) = world.get::<&DamageResistance>(entity_a) {
                 let actual_damage = damage_b.calculate_damage(&resistance_a);
                 damage_events.push((entity_a, actual_damage, entity_b));
-                println!("Entity {:?} will deal {:.1} damage to entity {:?}", entity_b.id(), actual_damage, entity_a.id());
+                game_world.debug_messages.push(format!("Entity {} will deal {:.1} damage to entity {}", entity_b.id(), actual_damage, entity_a.id()));
             } else {
                 // No resistance, full damage
                 damage_events.push((entity_a, damage_b.amount, entity_b));
-                println!("Entity {:?} will deal {:.1} damage to entity {:?} (no resistance)", entity_b.id(), damage_b.amount, entity_a.id());
+                game_world.debug_messages.push(format!("Entity {} will deal {:.1} damage to entity {} (no resistance)", entity_b.id(), damage_b.amount, entity_a.id()));
             }
         } else {
-            println!("Entity {:?} has no damage component", entity_b.id());
+            game_world.debug_messages.push(format!("Entity {} has no damage component", entity_b.id()));
         }
     } else {
-        println!("Entity {:?} is on cooldown", entity_b.id());
+        game_world.debug_messages.push(format!("Entity {} is on cooldown", entity_b.id()));
     }
 
     // Apply damage and handle deaths
@@ -116,30 +119,30 @@ fn apply_combat_damage(world: &mut hecs::World, entity_a: hecs::Entity, entity_b
             let died = health.take_damage(damage_amount);
 
             // Log combat event
-            println!("Entity {:?} dealt {:.1} damage to entity {:?} (health: {:.1} -> {:.1})",
-                attacker_entity.id(), damage_amount, target_entity.id(), current_health, health.current);
+            game_world.debug_messages.push(format!("Entity {} dealt {:.1} damage to entity {} (health: {:.1} -> {:.1})",
+                attacker_entity.id(), damage_amount, target_entity.id(), current_health, health.current));
 
             // Set cooldown for attacker
             if let Ok(mut cooldown) = world.get::<&mut CombatCooldown>(attacker_entity) {
                 cooldown.start_cooldown();
-                println!("Entity {:?} started cooldown", attacker_entity.id());
+                game_world.debug_messages.push(format!("Entity {} started cooldown", attacker_entity.id()));
             }
 
             if died {
-                println!("Entity {:?} was destroyed!", target_entity.id());
+                game_world.debug_messages.push(format!("Entity {} was destroyed!", target_entity.id()));
                 entities_to_despawn.push(target_entity);
             }
         } else {
-            println!("Could not get health for entity {:?}", target_entity.id());
+            game_world.debug_messages.push(format!("Could not get health for entity {}", target_entity.id()));
         }
     }
 
     let despawn_count = entities_to_despawn.len();
-    println!("Combat finished. {} entities to despawn.", despawn_count);
+    game_world.debug_messages.push(format!("Combat finished. {} entities to despawn.", despawn_count));
 
     // Despawn dead entities
     for entity in entities_to_despawn {
-        println!("Despawning entity {:?}", entity.id());
+        game_world.debug_messages.push(format!("Despawning entity {}", entity.id()));
         let _ = world.despawn(entity);
     }
 }

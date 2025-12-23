@@ -36,7 +36,7 @@ impl GameWorld {
         movement::update_movement_system(&mut self.world, dt);
 
         // Run combat systems
-        combat::update_combat_system(&mut self.world, dt);
+        combat::update_combat_system(self, dt);
     }
 }
 

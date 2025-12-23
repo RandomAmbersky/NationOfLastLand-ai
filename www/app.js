@@ -555,6 +555,20 @@ class GameDemo {
                 // Sync visual entities with game state
                 this.syncEntitiesWithGameState(gameState.entities);
 
+                // Log combat and damage events to console
+                if (gameState.debug_messages && gameState.debug_messages.length > 0) {
+                    gameState.debug_messages.forEach(message => {
+                        // Check if message contains combat/damage info
+                        if (message.includes('damage') || message.includes('combat') || message.includes('destroyed') || message.includes('Collision detected')) {
+                            // console.log('⚔️ ' + message);
+                        } else if (message.includes('cooldown')) {
+                            // console.log('⏱️ ' + message);
+                        } else {
+                            // console.log('🔍 ' + message);
+                        }
+                    });
+                }
+
             } catch (error) {
                 console.error('Game loop error:', error);
             }
