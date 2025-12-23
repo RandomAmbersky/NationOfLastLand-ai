@@ -439,37 +439,42 @@ class GameDemo {
                 break;
             default:
                 // Handle alert types with state information
-                if (vehicleType && vehicleType.includes('_')) {
-                    let [alertType, alertState] = vehicleType.split('_');
-                    if (alertType === 'alert') {
-                        if (alertState === 'Hidden') {
-                            // Hidden alerts - dimmed yellow with question mark style
-                            color = 0xFFEB3B;
-                            alpha = 0.5;
-                            graphics.lineStyle(1, color, alpha);
-                            graphics.drawCircle(0, 0, 8);
-                            // Question mark shape
-                            graphics.moveTo(-3, -6);
-                            graphics.lineTo(3, -6);
-                            graphics.lineTo(3, -2);
-                            graphics.lineTo(0, 0);
-                            graphics.lineTo(0, 4);
-                            graphics.moveTo(0, 6);
-                            graphics.lineTo(0, 7);
-                        } else {
-                            // Revealed alerts - bright yellow cross
-                            color = 0xFFEB3B;
-                            graphics.lineStyle(3, color, 1);
-                            graphics.drawCircle(0, 0, 12);
-                            graphics.moveTo(-10, 0);
-                            graphics.lineTo(10, 0);
-                            graphics.moveTo(0, -10);
-                            graphics.lineTo(0, 10);
-                        }
-                        break;
+                if (entityType === 'alert' || (vehicleType && vehicleType.includes('_'))) {
+                    let alertType, alertState;
+                    if (vehicleType && vehicleType.includes('_')) {
+                        [alertType, alertState] = vehicleType.split('_');
+                    } else {
+                        alertType = 'alert';
+                        alertState = 'Hidden'; // fallback
                     }
+
+                    if (alertState === 'Hidden') {
+                        // Hidden alerts - dimmed yellow with question mark style
+                        color = 0xFFEB3B;
+                        alpha = 0.5;
+                        graphics.lineStyle(1, color, alpha);
+                        graphics.drawCircle(0, 0, 8);
+                        // Question mark shape
+                        graphics.moveTo(-3, -6);
+                        graphics.lineTo(3, -6);
+                        graphics.lineTo(3, -2);
+                        graphics.lineTo(0, 0);
+                        graphics.lineTo(0, 4);
+                        graphics.moveTo(0, 6);
+                        graphics.lineTo(0, 7);
+                    } else {
+                        // Revealed alerts - bright yellow cross
+                        color = 0xFFEB3B;
+                        graphics.lineStyle(3, color, 1);
+                        graphics.drawCircle(0, 0, 12);
+                        graphics.moveTo(-10, 0);
+                        graphics.lineTo(10, 0);
+                        graphics.moveTo(0, -10);
+                        graphics.lineTo(0, 10);
+                    }
+                    break;
                 }
-                // Fallback for other alert types
+                // Fallback for unknown types
                 color = 0xFFEB3B; // Yellow for alerts
                 graphics.lineStyle(2, color, 1);
                 graphics.drawCircle(0, 0, 12);
@@ -609,8 +614,8 @@ class GameDemo {
                         vehicleType = 'scout';
                 }
             } else if (entityType === 'alert') {
-                // For alerts, we'll show them as special markers
-                vehicleType = 'alert';
+                // For alerts, use the subtype directly (includes alert type and state)
+                vehicleType = gameEntity.subtype;
             }
         }
 

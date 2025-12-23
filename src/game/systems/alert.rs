@@ -48,6 +48,10 @@ fn check_alert_reveals(world: &mut hecs::World) {
             alert.reveal(spawned_entity_ids);
             println!("Alert {:?} revealed at ({}, {})!", alert_type, position.x, position.y);
         }
+
+        // Remove the alert entity from the world after revealing
+        let _ = world.despawn(alert_entity);
+        println!("Alert entity {:?} removed after revelation", alert_entity.id());
     }
 }
 
