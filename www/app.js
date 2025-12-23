@@ -7,6 +7,7 @@ class GameDemo {
         this.isInitialized = false;
         this.lastUpdate = Date.now();
         this.selectedEntityId = null;
+        this.combatEffects = new Map(); // Store active combat visualizations
 
         this.initPixi();
         this.setupEventListeners();
@@ -555,16 +556,19 @@ class GameDemo {
                 // Sync visual entities with game state
                 this.syncEntitiesWithGameState(gameState.entities);
 
-                // Log combat and damage events to console
+                // Process combat messages and create visual effects
                 if (gameState.debug_messages && gameState.debug_messages.length > 0) {
+                    this.processCombatMessages(gameState.debug_messages);
+
+                    // Log combat and damage events to console
                     gameState.debug_messages.forEach(message => {
                         // Check if message contains combat/damage info
                         if (message.includes('damage') || message.includes('combat') || message.includes('destroyed') || message.includes('Collision detected')) {
-                            // console.log('⚔️ ' + message);
+                            console.log('⚔️ ' + message);
                         } else if (message.includes('cooldown')) {
-                            // console.log('⏱️ ' + message);
+                            console.log('⏱️ ' + message);
                         } else {
-                            // console.log('🔍 ' + message);
+                            console.log('🔍 ' + message);
                         }
                     });
                 }
@@ -639,6 +643,255 @@ class GameDemo {
 
     updateStatus(message) {
         document.getElementById('status').textContent = message;
+    }
+
+    // Parse combat messages from debug_messages and create visual effects
+    processCombatMessages(debugMessages) {
+        const combatEvents = [];
+
+        for (const message of debugMessages) {
+            // Parse damage messages: "Entity X dealt Y damage to entity Z"
+            const damageMatch = message.match(/Entity (\d+) dealt ([\d.]+) damage to entity (\d+)/);
+            if (damageMatch) {
+                const [, attackerId, damage, targetId] = damageMatch;
+                combatEvents.push({
+                    type: 'damage',
+                    attackerId: parseInt(attackerId),
+                    targetId: parseInt(targetId),
+                    damage: parseFloat(damage)
+                });
+                continue;
+            }
+
+            // Parse destruction messages: "Entity X was destroyed!"
+            const destroyMatch = message.match(/Entity (\d+) was destroyed!/);
+            if (destroyMatch) {
+                const [, entityId] = destroyMatch;
+                combatEvents.push({
+                    type: 'destroyed',
+                    entityId: parseInt(entityId)
+                });
+                continue;
+            }
+
+            // Parse collision messages: "Collision detected between entities X and Y"
+            const collisionMatch = message.match(/Collision detected between entities (\d+) and (\d+)/);
+            if (collisionMatch) {
+                const [, entityAId, entityBId] = collisionMatch;
+                combatEvents.push({
+                    type: 'collision',
+                    entityAId: parseInt(entityAId),
+                    entityBId: parseInt(entityBId)
+                });
+                continue;
+            }
+        }
+
+        // Process each combat event
+        for (const event of combatEvents) {
+            this.createCombatVisualization(event);
+        }
+    }
+
+    // Create visual effects for combat events
+    createCombatVisualization(event) {
+        switch (event.type) {
+            case 'damage':
+                this.createDamageEffect(event.attackerId, event.targetId, event.damage);
+                break;
+            case 'destroyed':
+                this.createDestructionEffect(event.entityId);
+                break;
+            case 'collision':
+                this.createCollisionEffect(event.entityAId, event.entityBId);
+                break;
+        }
+    }
+
+    // Create damage effect showing attack from attacker to target
+    createDamageEffect(attackerId, targetId, damage) {
+        const attacker = this.entities.get(attackerId);
+        const target = this.entities.get(targetId);
+
+        if (!attacker || !target) return;
+
+        // Create attack line from attacker to target
+        const graphics = new PIXI.Graphics();
+
+        // Red line for damage
+        graphics.lineStyle(3, 0xFF0000, 0.8);
+        graphics.moveTo(attacker.container.x, attacker.container.y);
+        graphics.lineTo(target.container.x, target.container.y);
+
+        // Add arrow head at target position
+        const angle = Math.atan2(target.container.y - attacker.container.y, target.container.x - attacker.container.x);
+        const arrowLength = 15;
+        const arrowAngle = Math.PI / 6; // 30 degrees
+
+        graphics.moveTo(target.container.x, target.container.y);
+        graphics.lineTo(
+            target.container.x - arrowLength * Math.cos(angle - arrowAngle),
+            target.container.y - arrowLength * Math.sin(angle - arrowAngle)
+        );
+        graphics.moveTo(target.container.x, target.container.y);
+        graphics.lineTo(
+            target.container.x - arrowLength * Math.cos(angle + arrowAngle),
+            target.container.y - arrowLength * Math.sin(angle + arrowAngle)
+        );
+
+        this.app.stage.addChild(graphics);
+
+        // Add damage text
+        const damageText = new PIXI.Text(`-${damage.toFixed(1)}`, {
+            fontSize: 14,
+            fill: 0xFF0000,
+            fontWeight: 'bold',
+            stroke: 0xFFFFFF,
+            strokeThickness: 2
+        });
+        damageText.anchor.set(0.5);
+        damageText.x = (attacker.container.x + target.container.x) / 2;
+        damageText.y = (attacker.container.y + target.container.y) / 2 - 10;
+
+        this.app.stage.addChild(damageText);
+
+        // Add flash effect at target
+        const flashGraphics = new PIXI.Graphics();
+        flashGraphics.beginFill(0xFF0000, 0.3);
+        flashGraphics.drawCircle(0, 0, 25);
+        flashGraphics.endFill();
+        flashGraphics.x = target.container.x;
+        flashGraphics.y = target.container.y;
+        this.app.stage.addChild(flashGraphics);
+
+        // Animate and remove effects
+        let alpha = 1.0;
+        const animate = () => {
+            alpha -= 0.05;
+            graphics.alpha = alpha;
+            damageText.alpha = alpha;
+            flashGraphics.alpha = alpha * 0.5;
+
+            if (alpha > 0) {
+                requestAnimationFrame(animate);
+            } else {
+                this.app.stage.removeChild(graphics);
+                this.app.stage.removeChild(damageText);
+                this.app.stage.removeChild(flashGraphics);
+            }
+        };
+        animate();
+
+        // Store effect reference for cleanup if needed
+        const effectId = `damage_${attackerId}_${targetId}_${Date.now()}`;
+        this.combatEffects.set(effectId, { graphics, damageText, flashGraphics });
+    }
+
+    // Create destruction effect for destroyed entities
+    createDestructionEffect(entityId) {
+        const entity = this.entities.get(entityId);
+        if (!entity) return;
+
+        // Create explosion effect
+        const explosionGraphics = new PIXI.Graphics();
+        explosionGraphics.beginFill(0xFFA500, 0.8);
+        explosionGraphics.drawCircle(0, 0, 5);
+        explosionGraphics.endFill();
+        explosionGraphics.x = entity.container.x;
+        explosionGraphics.y = entity.container.y;
+        this.app.stage.addChild(explosionGraphics);
+
+        // Add explosion particles
+        const particles = [];
+        for (let i = 0; i < 8; i++) {
+            const particle = new PIXI.Graphics();
+            particle.beginFill(0xFF4500, 0.6);
+            particle.drawCircle(0, 0, 2);
+            particle.endFill();
+            particle.x = entity.container.x;
+            particle.y = entity.container.y;
+            particle.vx = (Math.random() - 0.5) * 200;
+            particle.vy = (Math.random() - 0.5) * 200;
+            this.app.stage.addChild(particle);
+            particles.push(particle);
+        }
+
+        // Animate explosion
+        let scale = 1.0;
+        let particleAlpha = 1.0;
+        const animate = () => {
+            scale += 0.1;
+            explosionGraphics.scale.set(scale);
+            explosionGraphics.alpha = Math.max(0, 1.0 - scale * 0.2);
+
+            // Animate particles
+            particleAlpha -= 0.02;
+            for (const particle of particles) {
+                particle.x += particle.vx * 0.016;
+                particle.y += particle.vy * 0.016;
+                particle.alpha = particleAlpha;
+                particle.vx *= 0.98; // Slow down
+                particle.vy *= 0.98;
+            }
+
+            if (scale < 3.0) {
+                requestAnimationFrame(animate);
+            } else {
+                this.app.stage.removeChild(explosionGraphics);
+                for (const particle of particles) {
+                    this.app.stage.removeChild(particle);
+                }
+            }
+        };
+        animate();
+    }
+
+    // Create collision effect showing units in combat range
+    createCollisionEffect(entityAId, entityBId) {
+        const entityA = this.entities.get(entityAId);
+        const entityB = this.entities.get(entityBId);
+
+        if (!entityA || !entityB) return;
+
+        // Create combat zone circle around both entities
+        const centerX = (entityA.container.x + entityB.container.x) / 2;
+        const centerY = (entityA.container.y + entityB.container.y) / 2;
+        const radius = Math.sqrt(
+            Math.pow(entityA.container.x - entityB.container.x, 2) +
+            Math.pow(entityA.container.y - entityB.container.y, 2)
+        ) / 2 + 10;
+
+        const combatZoneGraphics = new PIXI.Graphics();
+        combatZoneGraphics.lineStyle(2, 0xFFFF00, 0.5);
+        combatZoneGraphics.drawCircle(0, 0, radius);
+        combatZoneGraphics.x = centerX;
+        combatZoneGraphics.y = centerY;
+        this.app.stage.addChild(combatZoneGraphics);
+
+        // Add pulsing effect
+        let pulseScale = 1.0;
+        let increasing = true;
+        const animate = () => {
+            if (increasing) {
+                pulseScale += 0.02;
+                if (pulseScale >= 1.2) increasing = false;
+            } else {
+                pulseScale -= 0.02;
+                if (pulseScale <= 1.0) increasing = true;
+            }
+
+            combatZoneGraphics.scale.set(pulseScale);
+            combatZoneGraphics.alpha = 0.3 + (pulseScale - 1.0) * 2;
+
+            requestAnimationFrame(animate);
+        };
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            this.app.stage.removeChild(combatZoneGraphics);
+        }, 3000);
+
+        animate();
     }
 }
 
