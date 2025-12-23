@@ -1,14 +1,24 @@
-use crate::api::init::GameState;
+use crate::api::init::{GameState, GAME_WORLD, get_entities_data};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn update(dt: f32) -> Result<String, JsValue> {
-    // TODO: Update game world
-    let state = GameState {
-        time: 0.0, // TODO: Get from actual world
-        entities_count: 0, // TODO: Get from actual world
-    };
+    unsafe {
+        if let Some(world) = &mut GAME_WORLD {
+            let world: &mut crate::game::GameWorld = world;
+            world.update(dt);
 
-    serde_json::to_string(&state)
-        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+            let entities = get_entities_data(&world.world);
+            let state = GameState {
+                time: world.time,
+                entities_count: world.world.len() as usize,
+                entities,
+            };
+
+            serde_json::to_string(&state)
+                .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+        } else {
+            Err(JsValue::from_str("Game world not initialized"))
+        }
+    }
 }

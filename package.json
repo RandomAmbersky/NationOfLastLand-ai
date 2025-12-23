@@ -1,0 +1,26 @@
+{
+  "name": "nation-of-last-land-demo",
+  "version": "0.1.0",
+  "description": "WebAssembly demo for Nation of Last Land game with Pixi.js rendering",
+  "main": "www/app.js",
+  "scripts": {
+    "build": "wasm-pack build --target web --out-dir www/pkg --dev",
+    "build-release": "wasm-pack build --target web --out-dir www/pkg --release",
+    "serve": "npx serve www -l 3000",
+    "dev": "npm run build && npm run serve",
+    "clean": "rm -rf www/pkg target/pkg"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1"
+  },
+  "keywords": [
+    "wasm",
+    "webassembly",
+    "rust",
+    "pixi.js",
+    "game",
+    "demo"
+  ],
+  "author": "Nation of Last Land Team",
+  "license": "MIT"
+}

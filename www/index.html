@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nation of Last Land - WebAssembly Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        .demo-section {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        #game-canvas {
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            background-color: #2a2a2a;
+        }
+
+        .controls {
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            min-width: 300px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background-color: #333;
+            color: #fff;
+        }
+
+        button {
+            background-color: #4CAF50;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        .info {
+            background-color: #1a4a1a;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #4CAF50;
+        }
+
+        .info h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧱 Nation of Last Land - WebAssembly Demo</h1>
+
+        <div class="demo-section">
+            <div>
+                <canvas id="game-canvas" width="800" height="600"></canvas>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="vehicle-type">Vehicle Type:</label>
+                    <select id="vehicle-type">
+                        <option value="scout">Scout</option>
+                        <option value="tank">Tank</option>
+                        <option value="transport">Transport</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="spawn-x">X Position:</label>
+                    <input type="number" id="spawn-x" value="400" min="0" max="800">
+                </div>
+
+                <div class="control-group">
+                    <label for="spawn-y">Y Position:</label>
+                    <input type="number" id="spawn-y" value="300" min="0" max="600">
+                </div>
+
+                <button id="spawn-btn">Spawn Vehicle</button>
+                <button id="init-btn">Initialize Game</button>
+                <button id="update-btn">Update Game</button>
+
+                <div id="status">Ready to initialize...</div>
+            </div>
+        </div>
+
+        <div class="info">
+            <h3>Demo Features</h3>
+            <ul>
+                <li><strong>WebAssembly Backend:</strong> Game logic runs in Rust compiled to WebAssembly</li>
+                <li><strong>Pixi.js Rendering:</strong> Real-time graphics rendering using Pixi.js</li>
+                <li><strong>Entity Management:</strong> ECS-based entity system with position components</li>
+                <li><strong>Live Updates:</strong> Real-time synchronization between Rust and JavaScript</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <script type="module" src="./app.js"></script>
+</body>
+</html>

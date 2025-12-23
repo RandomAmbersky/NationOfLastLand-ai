@@ -1,4 +1,5 @@
 use hecs::World;
+use crate::game::systems::movement;
 
 /// Game world containing all ECS entities and components
 pub struct GameWorld {
@@ -16,7 +17,9 @@ impl GameWorld {
 
     pub fn update(&mut self, dt: f32) {
         self.time += dt;
-        // TODO: Run ECS systems here
+
+        // Run movement systems
+        movement::demo_movement_system(&mut self.world, self.time);
     }
 }
 
