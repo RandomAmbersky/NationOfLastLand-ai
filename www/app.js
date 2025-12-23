@@ -231,6 +231,12 @@ class GameDemo {
         // Deselect previous entity
         this.deselectEntity();
 
+        // Clear any alert highlights
+        if (this.alertHighlight) {
+            this.app.stage.removeChild(this.alertHighlight);
+            this.alertHighlight = null;
+        }
+
         // Select new entity
         this.selectedEntityId = entityId;
         const entity = this.entities.get(entityId);
@@ -268,6 +274,11 @@ class GameDemo {
                 this.showTargetIndicator(x, y);
                 // Clear selection after setting target
                 this.deselectEntity();
+                // Clear any alert highlights
+                if (this.alertHighlight) {
+                    this.app.stage.removeChild(this.alertHighlight);
+                    this.alertHighlight = null;
+                }
             } else {
                 this.updateStatus(`Failed to set target: ${movementResult.message}`);
                 console.error('Failed to set target:', movementResult.message);
@@ -529,7 +540,8 @@ class GameDemo {
             gameX: x, // Store both screen and game coordinates
             gameY: y,
             vehicleType,
-            entityType
+            entityType,
+            faction
         });
     }
 
@@ -608,7 +620,7 @@ class GameDemo {
         // Update existing entities and add new ones
         for (const gameEntity of gameEntities) {
             if (this.entities.has(gameEntity.id)) {
-                // Update existing entity position
+                // Update existing entity position and faction
                 const entity = this.entities.get(gameEntity.id);
                 const scaleX = this.app.screen.width / this.gameWidth;
                 const scaleY = this.app.screen.height / this.gameHeight;
@@ -618,6 +630,7 @@ class GameDemo {
                 entity.y = entity.container.y;
                 entity.gameX = gameEntity.x;
                 entity.gameY = gameEntity.y;
+                entity.faction = gameEntity.faction || null;
             } else {
                 // Create new visual entity
                 this.createEntityFromGameState(gameEntity);
