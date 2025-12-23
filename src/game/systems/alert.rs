@@ -126,7 +126,7 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 let entity_pos = Position::new(position.x + offset_x, position.y + offset_y);
 
                 let health = Health::new(80.0);
-                let movement = crate::game::components::Movement::new(2.5);
+                let movement = crate::game::components::Movement::new(5.0);
                 let entity = world.spawn((entity_pos, health, movement));
                 spawned.push(entity.id());
 
@@ -148,7 +148,7 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 let entity_pos = Position::new(position.x + offset_x, position.y + offset_y);
 
                 let health = Health::new(100.0);
-                let movement = crate::game::components::Movement::new(4.0);
+                let movement = crate::game::components::Movement::new(8.0); // Give them movement capability
                 let vehicle = crate::game::components::Vehicle::new(crate::game::components::VehicleType::ArmoredTruck);
                 let entity = world.spawn((entity_pos, health, movement, vehicle));
                 spawned.push(entity.id());
@@ -203,13 +203,19 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
     spawned
 }
 
+/// Spawn a random alert in the game world
+pub fn spawn_random_alert(world: &mut hecs::World) {
+    let alert = generate_random_alert();
+    world.spawn((alert,));
+}
+
 /// Generate a random alert at a random position
 pub fn generate_random_alert() -> Alert {
     let mut rng = rand::thread_rng();
 
-    // Random position (assuming 1000x1000 map for now)
-    let x = rng.gen_range(0.0..1000.0);
-    let y = rng.gen_range(0.0..1000.0);
+    // Random position within visible map area (800x600), with margin from edges
+    let x = rng.gen_range(50.0..750.0);
+    let y = rng.gen_range(50.0..550.0);
 
     // Random alert type with weights
     let alert_types = [

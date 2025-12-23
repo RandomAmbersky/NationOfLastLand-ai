@@ -31,10 +31,10 @@
 
 ## What's Left to Build
 
-### Critical Path Systems 🚧
-- **Movement System**: ✅ Unit movement toward targets implemented, collision detection pending
-- **Combat System**: Damage calculation, health reduction, and entity destruction
-- **Alert System**: Random event generation, reveal mechanics, and mission management
+### Critical Path Systems ✅
+- **Movement System**: ✅ Unit movement toward targets implemented with smooth interpolation
+- **Combat System**: ✅ Automatic collision detection, damage calculation, health reduction, and entity destruction
+- **Alert System**: ✅ Random event generation, reveal mechanics, entity spawning, and periodic spawning
 - **Pathfinding**: Navigation system for unit movement around obstacles
 
 ### Core Game Mechanics 📋
@@ -107,9 +107,9 @@
 
 ### Current Development Pace
 - **Foundation Phase**: Complete (2-4 weeks)
-- **Core Systems**: In progress, estimated 4-6 weeks remaining
-- **Game Mechanics**: Planned for next phase
-- **Advanced Features**: Future development phases
+- **Core Systems**: Complete - movement, combat, alerts all functional
+- **Game Mechanics**: In progress - testing full gameplay loop
+- **Advanced Features**: Next phase - base building, research, crew management
 
 ### Bottlenecks Identified
 - **WASM Learning Curve**: Initial setup took longer than expected
@@ -133,11 +133,13 @@
 
 ## Next Priority Actions
 
-### Immediate (This Week)
-1. Implement basic movement system with position updates
-2. Connect movement system to update() API function
-3. Add entity creation in create_vehicle() function
-4. Create basic game state serialization
+### Immediate (This Week) ✅
+1. ✅ Implement basic movement system with position updates
+2. ✅ Connect movement system to update() API function
+3. ✅ Add entity creation in create_vehicle() function
+4. ✅ Create basic game state serialization
+5. ✅ Add automatic alert generation and reveal system
+6. ✅ Enable combat system activation between hostile units
 
 ### Short-term (Next 2 Weeks)
 1. Implement combat system with damage calculation

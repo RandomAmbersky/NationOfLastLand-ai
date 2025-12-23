@@ -132,6 +132,10 @@ class GameDemo {
             return;
         }
 
+        // Convert screen coordinates to game coordinates
+        const gameX = (screenX / this.app.screen.width) * this.gameWidth;
+        const gameY = (screenY / this.app.screen.height) * this.gameHeight;
+
         // First, try to select entity at clicked position (higher priority)
         const entityAtPosition = this.findEntityAtPosition(screenX, screenY);
 
@@ -139,20 +143,34 @@ class GameDemo {
             // Clicked on an entity - select it
             this.selectEntity(entityAtPosition);
         } else if (this.selectedEntityId !== null) {
-            // Clicked on empty space and entity is selected - set target
-            const gameX = (screenX / this.app.screen.width) * this.gameWidth;
-            const gameY = (screenY / this.app.screen.height) * this.gameHeight;
-            this.setEntityTarget(this.selectedEntityId, gameX, gameY);
+            // Check if clicked on an alert
+            const alertAtPosition = this.findAlertAtPosition(gameX, gameY);
+
+            if (alertAtPosition !== null) {
+                // Clicked on an alert - set it as target for selected unit
+                this.setEntityTarget(this.selectedEntityId, alertAtPosition.x, alertAtPosition.y);
+                this.updateStatus(`Moving to alert at (${alertAtPosition.x.toFixed(1)}, ${alertAtPosition.y.toFixed(1)})`);
+                // Add visual feedback - highlight the target alert
+                this.highlightTargetAlert(alertAtPosition);
+            } else {
+                // Clicked on empty space - set movement target
+                this.setEntityTarget(this.selectedEntityId, gameX, gameY);
+            }
         }
         // If no entity selected and clicked on empty space - do nothing
     }
 
     findEntityAtPosition(x, y) {
         // Find entity closest to click position (within 20 pixels)
+        // Only consider vehicles, not alerts
         let closestEntity = null;
         let closestDistance = 20;
 
         for (const [id, entity] of this.entities) {
+            // Skip alerts - they should not be selectable
+            if (entity.entityType === 'alert') {
+                continue;
+            }
             // Use current container position for accurate hit detection
             const distance = Math.sqrt((entity.container.x - x) ** 2 + (entity.container.y - y) ** 2);
             if (distance < closestDistance) {
@@ -162,6 +180,25 @@ class GameDemo {
         }
 
         return closestEntity;
+    }
+
+    findAlertAtPosition(gameX, gameY) {
+        // Find alert closest to click position (within 50 game units)
+        // Use already rendered entities instead of calling update()
+        let closestAlert = null;
+        let closestDistance = 50;
+
+        for (const [id, entity] of this.entities) {
+            if (entity.entityType === 'alert') {
+                const distance = Math.sqrt((entity.gameX - gameX) ** 2 + (entity.gameY - gameY) ** 2);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestAlert = { x: entity.gameX, y: entity.gameY, id: id };
+                }
+            }
+        }
+
+        return closestAlert;
     }
 
     selectEntityAtPosition(x, y) {
@@ -260,12 +297,48 @@ class GameDemo {
         }, 2000);
     }
 
+    highlightTargetAlert(alert) {
+        // Remove existing alert highlight
+        if (this.alertHighlight) {
+            this.app.stage.removeChild(this.alertHighlight);
+        }
+
+        // Convert game coordinates to screen coordinates
+        const scaleX = this.app.screen.width / this.gameWidth;
+        const scaleY = this.app.screen.height / this.gameHeight;
+        const screenX = alert.x * scaleX;
+        const screenY = alert.y * scaleY;
+
+        // Create highlight circle around the alert
+        const graphics = new PIXI.Graphics();
+        graphics.lineStyle(4, 0x00FF00, 1); // Green highlight
+        graphics.drawCircle(0, 0, 20); // Larger than alert to show it's selected
+
+        graphics.x = screenX;
+        graphics.y = screenY;
+
+        this.app.stage.addChild(graphics);
+        this.alertHighlight = graphics;
+
+        // Remove highlight after 3 seconds
+        setTimeout(() => {
+            if (this.alertHighlight) {
+                this.app.stage.removeChild(this.alertHighlight);
+                this.alertHighlight = null;
+            }
+        }, 3000);
+    }
+
     async initializeGame() {
         try {
             const result = gameInit();
             const gameState = JSON.parse(result);
             this.isInitialized = true;
-            this.updateStatus(`Game initialized!\nTime: ${gameState.time}\nEntities: ${gameState.entities_count}`);
+            let status = `Game initialized!\nTime: ${gameState.time}\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`;
+            if (gameState.debug_messages && gameState.debug_messages.length > 0) {
+                status += '\n\nDebug:\n' + gameState.debug_messages.join('\n');
+            }
+            this.updateStatus(status);
         } catch (error) {
             this.updateStatus(`Game initialization failed: ${error.message}`);
             console.error('Game init error:', error);
@@ -309,7 +382,7 @@ class GameDemo {
         }
     }
 
-    createEntitySprite(id, x, y, vehicleType) {
+    createEntitySprite(id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
         // Convert game coordinates to screen coordinates
         const scaleX = this.app.screen.width / this.gameWidth;
         const scaleY = this.app.screen.height / this.gameHeight;
@@ -319,25 +392,72 @@ class GameDemo {
         // Create a sprite for the entity
         const graphics = new PIXI.Graphics();
 
-        // Different colors for different vehicle types
+        // Different colors and shapes for different entity types
+        // Colors depend on faction: Player uses bright colors, Enemy uses darker/muted colors
         let color;
+        let alpha = 1.0; // Default opacity
+        const isEnemy = faction === 'Enemy';
+
         switch (vehicleType) {
             case 'scout':
-                color = 0x4CAF50; // Green
+                color = isEnemy ? 0x2E7D32 : 0x4CAF50; // Dark green for enemy, bright green for player
                 graphics.beginFill(color);
                 graphics.drawCircle(0, 0, 8);
                 break;
             case 'tank':
-                color = 0xFF5722; // Red
+                color = isEnemy ? 0xB71C1C : 0xFF5722; // Dark red for enemy, bright red for player
                 graphics.beginFill(color);
                 graphics.drawRect(-10, -8, 20, 16);
                 break;
             case 'transport':
-                color = 0x2196F3; // Blue
+                color = isEnemy ? 0x0D47A1 : 0x2196F3; // Dark blue for enemy, bright blue for player
                 graphics.beginFill(color);
                 graphics.drawRect(-12, -10, 24, 20);
                 break;
+            default:
+                // Handle alert types with state information
+                if (vehicleType && vehicleType.includes('_')) {
+                    let [alertType, alertState] = vehicleType.split('_');
+                    if (alertType === 'alert') {
+                        if (alertState === 'Hidden') {
+                            // Hidden alerts - dimmed yellow with question mark style
+                            color = 0xFFEB3B;
+                            alpha = 0.5;
+                            graphics.lineStyle(1, color, alpha);
+                            graphics.drawCircle(0, 0, 8);
+                            // Question mark shape
+                            graphics.moveTo(-3, -6);
+                            graphics.lineTo(3, -6);
+                            graphics.lineTo(3, -2);
+                            graphics.lineTo(0, 0);
+                            graphics.lineTo(0, 4);
+                            graphics.moveTo(0, 6);
+                            graphics.lineTo(0, 7);
+                        } else {
+                            // Revealed alerts - bright yellow cross
+                            color = 0xFFEB3B;
+                            graphics.lineStyle(3, color, 1);
+                            graphics.drawCircle(0, 0, 12);
+                            graphics.moveTo(-10, 0);
+                            graphics.lineTo(10, 0);
+                            graphics.moveTo(0, -10);
+                            graphics.lineTo(0, 10);
+                        }
+                        break;
+                    }
+                }
+                // Fallback for other alert types
+                color = 0xFFEB3B; // Yellow for alerts
+                graphics.lineStyle(2, color, 1);
+                graphics.drawCircle(0, 0, 12);
+                graphics.moveTo(-8, 0);
+                graphics.lineTo(8, 0);
+                graphics.moveTo(0, -8);
+                graphics.lineTo(0, 8);
+                break;
         }
+
+        graphics.alpha = alpha;
 
         graphics.endFill();
 
@@ -364,7 +484,7 @@ class GameDemo {
             gameX: x, // Store both screen and game coordinates
             gameY: y,
             vehicleType,
-            entityType: 'vehicle'
+            entityType
         });
     }
 
@@ -381,7 +501,7 @@ class GameDemo {
         try {
             const result = update(dt);
             const gameState = JSON.parse(result);
-            this.updateStatus(`Game updated!\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nDelta Time: ${dt.toFixed(3)}s`);
+            this.updateStatus(`Game updated!\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}\nDelta Time: ${dt.toFixed(3)}s`);
         } catch (error) {
             this.updateStatus(`Game update failed: ${error.message}`);
             console.error('Game update error:', error);
@@ -401,7 +521,7 @@ class GameDemo {
 
                 // Update status occasionally (not every frame to avoid spam)
                 if (Math.random() < 0.01) { // ~1% chance per frame
-                    this.updateStatus(`Running...\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}`);
+                    this.updateStatus(`Running...\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`);
                 }
 
                 // Sync visual entities with game state
@@ -444,27 +564,35 @@ class GameDemo {
     }
 
     createEntityFromGameState(gameEntity) {
-        // Determine vehicle type from game entity data
+        // Determine entity type and subtype from game entity data
         let vehicleType = 'scout'; // Default
-        if (gameEntity.vehicle_type) {
-            // Convert from Rust enum names to JS names
-            switch (gameEntity.vehicle_type) {
-                case 'Scout Car':
-                    vehicleType = 'scout';
-                    break;
-                case 'Heavy Tank':
-                    vehicleType = 'tank';
-                    break;
-                case 'Armored Truck':
-                    vehicleType = 'transport';
-                    break;
-                default:
-                    vehicleType = 'scout';
+        let entityType = gameEntity.entity_type || 'vehicle';
+        let faction = gameEntity.faction || null;
+
+        if (gameEntity.subtype) {
+            if (entityType === 'vehicle') {
+                // Convert from Rust enum names to JS names
+                switch (gameEntity.subtype) {
+                    case 'Scout Car':
+                        vehicleType = 'scout';
+                        break;
+                    case 'Heavy Tank':
+                        vehicleType = 'tank';
+                        break;
+                    case 'Armored Truck':
+                        vehicleType = 'transport';
+                        break;
+                    default:
+                        vehicleType = 'scout';
+                }
+            } else if (entityType === 'alert') {
+                // For alerts, we'll show them as special markers
+                vehicleType = 'alert';
             }
         }
 
         // Create entity with game coordinates (createEntitySprite will convert to screen coordinates)
-        this.createEntitySprite(gameEntity.id, gameEntity.x, gameEntity.y, vehicleType);
+        this.createEntitySprite(gameEntity.id, gameEntity.x, gameEntity.y, vehicleType, faction, entityType);
     }
 
     updateStatus(message) {

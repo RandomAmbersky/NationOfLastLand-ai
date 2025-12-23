@@ -6,7 +6,7 @@ vehicles:
     name: "Scout Car"
     type: "scout_car"
     base_health: 50
-    base_speed: 5.0
+    base_speed: 150.0
     max_crew: 2
     description: "Fast reconnaissance vehicle with low armor"
     cost_reputation: 100
@@ -26,7 +26,7 @@ vehicles:
     name: "Armored Truck"
     type: "armored_truck"
     base_health: 150
-    base_speed: 3.0
+    base_speed: 9.0
     max_crew: 3
     description: "Well-balanced vehicle with good armor and moderate speed"
     cost_reputation: 250
@@ -46,7 +46,7 @@ vehicles:
     name: "Heavy Tank"
     type: "heavy_tank"
     base_health: 300
-    base_speed: 1.5
+    base_speed: 4.5
     max_crew: 4
     description: "Slow but heavily armored tank with powerful weapons"
     cost_reputation: 500

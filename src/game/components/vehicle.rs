@@ -23,9 +23,9 @@ impl VehicleType {
     /// Get base speed for vehicle type
     pub fn base_speed(&self) -> f32 {
         match self {
-            VehicleType::ScoutCar => 5.0,
-            VehicleType::ArmoredTruck => 3.0,
-            VehicleType::HeavyTank => 1.5,
+            VehicleType::ScoutCar => 15.0,
+            VehicleType::ArmoredTruck => 9.0,
+            VehicleType::HeavyTank => 4.5,
         }
     }
 
@@ -75,7 +75,10 @@ impl Vehicle {
 
     /// Get all devices of a specific type
     pub fn devices_of_type(&self, device_type: DeviceType) -> Vec<&Device> {
-        self.devices.iter().filter(|d| d.device_type == device_type).collect()
+        self.devices
+            .iter()
+            .filter(|d| d.device_type == device_type)
+            .collect()
     }
 }
 

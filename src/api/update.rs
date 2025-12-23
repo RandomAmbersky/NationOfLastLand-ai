@@ -1,4 +1,5 @@
 use crate::api::init::{GameState, GAME_WORLD, get_entities_data};
+use crate::game::Alert;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -9,10 +10,15 @@ pub fn update(dt: f32) -> Result<String, JsValue> {
             world.update(dt);
 
             let entities = get_entities_data(&world.world);
+            let alerts_count = world.world.query::<&Alert>().iter().count();
+            let debug_messages = world.debug_messages.clone();
+            world.debug_messages.clear(); // Clear after sending
             let state = GameState {
                 time: world.time,
                 entities_count: world.world.len() as usize,
                 entities,
+                alerts_count,
+                debug_messages,
             };
 
             serde_json::to_string(&state)
