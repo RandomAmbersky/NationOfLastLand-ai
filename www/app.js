@@ -95,7 +95,8 @@ class GameDemo {
         let closestDistance = 20;
 
         for (const [id, entity] of this.entities) {
-            const distance = Math.sqrt((entity.x - x) ** 2 + (entity.y - y) ** 2);
+            // Use current container position for accurate hit detection
+            const distance = Math.sqrt((entity.container.x - x) ** 2 + (entity.container.y - y) ** 2);
             if (distance < closestDistance) {
                 closestDistance = distance;
                 closestEntity = id;
@@ -214,8 +215,15 @@ class GameDemo {
             const creationResult = JSON.parse(result);
 
             if (creationResult.success) {
-                // Create visual representation
-                this.createEntitySprite(creationResult.id, x, y, vehicleType);
+                // Trigger immediate update to get the new entity in game state
+                try {
+                    const updateResult = update(0.016); // Small dt to trigger update
+                    const gameState = JSON.parse(updateResult);
+                    this.syncEntitiesWithGameState(gameState.entities);
+                } catch (error) {
+                    console.error('Update after spawn error:', error);
+                }
+
                 this.updateStatus(`Vehicle spawned!\nID: ${creationResult.id}\nType: ${vehicleType}\nPosition: (${x}, ${y})`);
             } else {
                 this.updateStatus(`Failed to spawn vehicle: ${creationResult.message}`);
@@ -268,7 +276,13 @@ class GameDemo {
         container.y = y;
 
         this.app.stage.addChild(container);
-        this.entities.set(id, { container, x, y, vehicleType });
+        this.entities.set(id, {
+            container,
+            x,
+            y,
+            vehicleType,
+            entityType: 'vehicle'
+        });
     }
 
     manualUpdate() {
@@ -341,37 +355,26 @@ class GameDemo {
     }
 
     createEntityFromGameState(gameEntity) {
-        // Create a sprite for the entity based on game state
-        const graphics = new PIXI.Graphics();
+        // Determine vehicle type from game entity data
+        let vehicleType = 'scout'; // Default
+        if (gameEntity.vehicle_type) {
+            // Convert from Rust enum names to JS names
+            switch (gameEntity.vehicle_type) {
+                case 'Scout Car':
+                    vehicleType = 'scout';
+                    break;
+                case 'Heavy Tank':
+                    vehicleType = 'tank';
+                    break;
+                case 'Armored Truck':
+                    vehicleType = 'transport';
+                    break;
+                default:
+                    vehicleType = 'scout';
+            }
+        }
 
-        // Different colors for different entity types (for now just vehicles)
-        const color = 0x4CAF50; // Green for vehicles
-        graphics.beginFill(color);
-        graphics.drawCircle(0, 0, 8);
-        graphics.endFill();
-
-        // Add a small label with ID
-        const text = new PIXI.Text(gameEntity.id.toString(), {
-            fontSize: 10,
-            fill: 0xFFFFFF,
-            align: 'center'
-        });
-        text.anchor.set(0.5);
-        text.y = -20;
-
-        const container = new PIXI.Container();
-        container.addChild(graphics);
-        container.addChild(text);
-        container.x = gameEntity.x;
-        container.y = gameEntity.y;
-
-        this.app.stage.addChild(container);
-        this.entities.set(gameEntity.id, {
-            container,
-            x: gameEntity.x,
-            y: gameEntity.y,
-            entityType: gameEntity.entity_type
-        });
+        this.createEntitySprite(gameEntity.id, gameEntity.x, gameEntity.y, vehicleType);
     }
 
     updateStatus(message) {

@@ -9,6 +9,7 @@ pub struct EntityData {
     pub x: f32,
     pub y: f32,
     pub entity_type: String,
+    pub vehicle_type: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -41,15 +42,29 @@ pub fn init() -> Result<String, JsValue> {
     }
 }
 
+use crate::game::components::Vehicle;
+
 pub fn get_entities_data(world: &World) -> Vec<EntityData> {
     let mut entities = Vec::new();
 
     for (entity, position) in world.query::<&Position>().iter() {
+        // Try to get vehicle type if entity has Vehicle component
+        let vehicle_type = if let Ok(mut query) = world.query_one::<&Vehicle>(entity) {
+            if let Some(vehicle) = query.get() {
+                Some(vehicle.vehicle_type.name().to_string())
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         entities.push(EntityData {
             id: entity.id(),
             x: position.x,
             y: position.y,
             entity_type: "vehicle".to_string(), // For now, all entities are vehicles
+            vehicle_type,
         });
     }
 
