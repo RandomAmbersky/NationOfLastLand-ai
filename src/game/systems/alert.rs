@@ -94,7 +94,7 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 let entity_pos = Position::new(position.x + offset_x, position.y + offset_y);
 
                 let health = Health::new(30.0);
-                let movement = crate::game::components::Movement::new(4.0);
+                let movement = crate::game::components::Movement::new(6.0);
                 let entity = world.spawn((entity_pos, health, movement));
                 spawned.push(entity.id());
 
@@ -116,7 +116,7 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 let entity_pos = Position::new(position.x + offset_x, position.y + offset_y);
 
                 let health = Health::new(50.0);
-                let movement = crate::game::components::Movement::new(5.0);
+                let movement = crate::game::components::Movement::new(7.0);
                 let entity = world.spawn((entity_pos, health, movement));
                 spawned.push(entity.id());
 
@@ -138,7 +138,7 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 let entity_pos = Position::new(position.x + offset_x, position.y + offset_y);
 
                 let health = Health::new(80.0);
-                let movement = crate::game::components::Movement::new(5.0);
+                let movement = crate::game::components::Movement::new(7.0);
                 let entity = world.spawn((entity_pos, health, movement));
                 spawned.push(entity.id());
 

@@ -149,6 +149,11 @@ class GameDemo {
                 if (selectedEntity && targetEntity) {
                     // Check if factions are hostile
                     if (this.areFactionsHostile(selectedEntity.faction, targetEntity.faction)) {
+                        // Clear any alert highlights before attacking
+                        if (this.alertHighlight) {
+                            this.app.stage.removeChild(this.alertHighlight);
+                            this.alertHighlight = null;
+                        }
                         // Set the clicked unit as target for selected unit
                         this.setEntityTarget(this.selectedEntityId, targetEntity.gameX, targetEntity.gameY);
                         this.updateStatus(`Attacking enemy unit!`);
@@ -331,6 +336,17 @@ class GameDemo {
             this.app.stage.removeChild(this.alertHighlight);
         }
 
+        // Find the alert entity ID
+        let alertId = null;
+        for (const [id, entity] of this.entities) {
+            if (entity.entityType === 'alert' &&
+                Math.abs(entity.gameX - alert.x) < 1 &&
+                Math.abs(entity.gameY - alert.y) < 1) {
+                alertId = id;
+                break;
+            }
+        }
+
         // Convert game coordinates to screen coordinates
         const scaleX = this.app.screen.width / this.gameWidth;
         const scaleY = this.app.screen.height / this.gameHeight;
@@ -341,6 +357,7 @@ class GameDemo {
         const graphics = new PIXI.Graphics();
         graphics.lineStyle(4, 0x00FF00, 1); // Green highlight
         graphics.drawCircle(0, 0, 20); // Larger than alert to show it's selected
+        graphics.alertId = alertId; // Store alert ID for cleanup
 
         graphics.x = screenX;
         graphics.y = screenY;
@@ -350,7 +367,7 @@ class GameDemo {
 
         // Remove highlight after 3 seconds
         setTimeout(() => {
-            if (this.alertHighlight) {
+            if (this.alertHighlight && this.alertHighlight === graphics) {
                 this.app.stage.removeChild(this.alertHighlight);
                 this.alertHighlight = null;
             }
@@ -610,11 +627,35 @@ class GameDemo {
     syncEntitiesWithGameState(gameEntities) {
         // Remove entities that no longer exist in game state
         const gameEntityIds = new Set(gameEntities.map(e => e.id));
+        const alertIds = new Set(gameEntities.filter(e => e.entity_type === 'alert').map(e => e.id));
+
         for (const [id, entity] of this.entities) {
             if (!gameEntityIds.has(id)) {
+                // Remove any selection indicators before removing container
+                if (entity.selectionIndicator) {
+                    entity.container.removeChild(entity.selectionIndicator);
+                }
                 this.app.stage.removeChild(entity.container);
                 this.entities.delete(id);
             }
+        }
+
+        // Clear selection if selected entity no longer exists
+        if (this.selectedEntityId !== null && !gameEntityIds.has(this.selectedEntityId)) {
+            this.deselectEntity();
+            this.updateStatus('Selected unit was destroyed!');
+        }
+
+        // Clear alert highlight if the highlighted alert no longer exists
+        if (this.alertHighlight && this.alertHighlight.alertId && !alertIds.has(this.alertHighlight.alertId)) {
+            this.app.stage.removeChild(this.alertHighlight);
+            this.alertHighlight = null;
+        }
+
+        // Also clear alert highlight if there are no alerts at all (extra safety)
+        if (this.alertHighlight && alertIds.size === 0) {
+            this.app.stage.removeChild(this.alertHighlight);
+            this.alertHighlight = null;
         }
 
         // Update existing entities and add new ones
@@ -631,6 +672,12 @@ class GameDemo {
                 entity.gameX = gameEntity.x;
                 entity.gameY = gameEntity.y;
                 entity.faction = gameEntity.faction || null;
+
+                // Clear selection indicator if this entity is not currently selected
+                if (this.selectedEntityId !== gameEntity.id && entity.selectionIndicator) {
+                    entity.container.removeChild(entity.selectionIndicator);
+                    entity.selectionIndicator = null;
+                }
             } else {
                 // Create new visual entity
                 this.createEntityFromGameState(gameEntity);
