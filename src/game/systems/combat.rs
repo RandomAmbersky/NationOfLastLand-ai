@@ -153,9 +153,9 @@ pub fn add_combat_to_vehicle(world: &mut hecs::World, entity: hecs::Entity) {
     // If no vehicle component, use default stats for creatures/units
     let (damage_amount, damage_type, attack_cooldown) = if let Ok(vehicle) = world.get::<&Vehicle>(entity) {
         match vehicle.vehicle_type {
-            crate::game::components::VehicleType::ScoutCar => (10.0, crate::game::components::DamageType::Physical, 1.0),
-            crate::game::components::VehicleType::ArmoredTruck => (15.0, crate::game::components::DamageType::Physical, 1.5),
-            crate::game::components::VehicleType::HeavyTank => (25.0, crate::game::components::DamageType::Energy, 2.0),
+        crate::game::components::VehicleType::ScoutCar => (10.0, crate::game::components::DamageType::Physical, 1.0),
+        crate::game::components::VehicleType::ArmoredTruck => (15.0, crate::game::components::DamageType::Physical, 1.5),
+        crate::game::components::VehicleType::HeavyTank => (25.0, crate::game::components::DamageType::Energy, 2.0),
         }
     } else {
         // Default stats for creatures/units without vehicle components
@@ -169,9 +169,9 @@ pub fn add_combat_to_vehicle(world: &mut hecs::World, entity: hecs::Entity) {
     // Add basic damage resistance based on vehicle type or default for creatures
     let resistance = if let Ok(vehicle) = world.get::<&Vehicle>(entity) {
         match vehicle.vehicle_type {
-            crate::game::components::VehicleType::ScoutCar => DamageResistance::new(0.0, 0.0, 0.0, 0.0, 0.0),
-            crate::game::components::VehicleType::ArmoredTruck => DamageResistance::new(0.1, 0.0, 0.0, 0.0, 0.0),
-            crate::game::components::VehicleType::HeavyTank => DamageResistance::new(0.2, 0.1, 0.1, 0.0, 0.0),
+        crate::game::components::VehicleType::ScoutCar => DamageResistance::new(0.0, 0.0, 0.0, 0.0, 0.0),
+        crate::game::components::VehicleType::ArmoredTruck => DamageResistance::new(0.1, 0.0, 0.0, 0.0, 0.0),
+        crate::game::components::VehicleType::HeavyTank => DamageResistance::new(0.2, 0.1, 0.1, 0.0, 0.0),
         }
     } else {
         // Default resistance for creatures/units

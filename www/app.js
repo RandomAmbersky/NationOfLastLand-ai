@@ -963,45 +963,8 @@ class GameDemo {
 
         if (!entityA || !entityB) return;
 
-        // Create combat zone circle around both entities
-        const centerX = (entityA.container.x + entityB.container.x) / 2;
-        const centerY = (entityA.container.y + entityB.container.y) / 2;
-        const radius = Math.sqrt(
-            Math.pow(entityA.container.x - entityB.container.x, 2) +
-            Math.pow(entityA.container.y - entityB.container.y, 2)
-        ) / 2 + 10;
-
-        const combatZoneGraphics = new PIXI.Graphics();
-        combatZoneGraphics.lineStyle(2, 0xFFFF00, 0.5);
-        combatZoneGraphics.drawCircle(0, 0, radius);
-        combatZoneGraphics.x = centerX;
-        combatZoneGraphics.y = centerY;
-        this.app.stage.addChild(combatZoneGraphics);
-
-        // Add pulsing effect
-        let pulseScale = 1.0;
-        let increasing = true;
-        const animate = () => {
-            if (increasing) {
-                pulseScale += 0.02;
-                if (pulseScale >= 1.2) increasing = false;
-            } else {
-                pulseScale -= 0.02;
-                if (pulseScale <= 1.0) increasing = true;
-            }
-
-            combatZoneGraphics.scale.set(pulseScale);
-            combatZoneGraphics.alpha = 0.3 + (pulseScale - 1.0) * 2;
-
-            requestAnimationFrame(animate);
-        };
-
-        // Remove after 3 seconds
-        setTimeout(() => {
-            this.app.stage.removeChild(combatZoneGraphics);
-        }, 3000);
-
-        animate();
+        // Yellow rings removed - they were behaving incorrectly during attacks
+        // Previous code created pulsing yellow circles around colliding entities
     }
 }
 
