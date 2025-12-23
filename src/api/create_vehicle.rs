@@ -1,6 +1,5 @@
 use crate::api::init::GAME_WORLD;
-use crate::game::components::{Position, Vehicle, VehicleType};
-use hecs::Entity;
+use crate::game::components::{Position, Movement, Vehicle, VehicleType};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -23,12 +22,13 @@ pub fn create_vehicle(vehicle_type: &str, x: f32, y: f32) -> Result<String, JsVa
                 _ => VehicleType::ScoutCar, // Default to scout
             };
 
-            // Create position and vehicle components
+            // Create position, movement and vehicle components
             let position = Position::new(x, y);
+            let movement = Movement::new(vehicle_type_enum.base_speed());
             let vehicle = Vehicle::new(vehicle_type_enum);
 
             // Spawn entity in ECS world
-            let entity = world.world.spawn((position, vehicle));
+            let entity = world.world.spawn((position, movement, vehicle));
 
             let result = VehicleCreationResult {
                 id: entity.id(),

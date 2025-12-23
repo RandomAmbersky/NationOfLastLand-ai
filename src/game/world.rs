@@ -19,7 +19,7 @@ impl GameWorld {
         self.time += dt;
 
         // Run movement systems
-        movement::demo_movement_system(&mut self.world, self.time);
+        movement::update_movement_system(&mut self.world, dt);
     }
 }
 

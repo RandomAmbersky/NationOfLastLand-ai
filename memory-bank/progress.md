@@ -19,8 +19,9 @@
 ### API Foundation ✅
 - **WebAssembly Exports**: Core functions exposed to JavaScript
 - **Game Initialization**: `init()` function returns initial game state
-- **Unit Creation**: `create_vehicle()` function for spawning units
-- **Game Loop**: `update()` function for game state updates
+- **Unit Creation**: `create_vehicle()` function for spawning units with movement components
+- **Movement Control**: `set_entity_target()` function for controlling unit movement
+- **Game Loop**: `update()` function for game state updates with real movement system
 - **JSON Serialization**: State communication through JSON format
 
 ### Configuration System ✅
@@ -31,7 +32,7 @@
 ## What's Left to Build
 
 ### Critical Path Systems 🚧
-- **Movement System**: Unit movement toward targets with collision detection
+- **Movement System**: ✅ Unit movement toward targets implemented, collision detection pending
 - **Combat System**: Damage calculation, health reduction, and entity destruction
 - **Alert System**: Random event generation, reveal mechanics, and mission management
 - **Pathfinding**: Navigation system for unit movement around obstacles

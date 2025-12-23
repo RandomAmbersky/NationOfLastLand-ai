@@ -1,4 +1,4 @@
-import init, { init as gameInit, create_vehicle, update } from '../pkg/nation_of_last_land.js';
+import init, { init as gameInit, create_vehicle, update, set_entity_target } from '../pkg/nation_of_last_land.js';
 
 class GameDemo {
     constructor() {
@@ -6,6 +6,7 @@ class GameDemo {
         this.entities = new Map();
         this.isInitialized = false;
         this.lastUpdate = Date.now();
+        this.selectedEntityId = null;
 
         this.initPixi();
         this.setupEventListeners();
@@ -40,6 +41,9 @@ class GameDemo {
         // Add a grid for reference
         this.drawGrid();
 
+        // Add click handler for canvas
+        this.app.view.addEventListener('click', (event) => this.handleCanvasClick(event));
+
         // Start render loop
         this.app.ticker.add(() => this.gameLoop());
     }
@@ -67,6 +71,120 @@ class GameDemo {
         document.getElementById('init-btn').addEventListener('click', () => this.initializeGame());
         document.getElementById('spawn-btn').addEventListener('click', () => this.spawnVehicle());
         document.getElementById('update-btn').addEventListener('click', () => this.manualUpdate());
+    }
+
+    handleCanvasClick(event) {
+        if (!this.isInitialized) return;
+
+        const rect = this.app.view.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        if (this.selectedEntityId !== null) {
+            // Set target for selected entity
+            this.setEntityTarget(this.selectedEntityId, x, y);
+        } else {
+            // Try to select entity at clicked position
+            this.selectEntityAtPosition(x, y);
+        }
+    }
+
+    selectEntityAtPosition(x, y) {
+        // Find entity closest to click position (within 20 pixels)
+        let closestEntity = null;
+        let closestDistance = 20;
+
+        for (const [id, entity] of this.entities) {
+            const distance = Math.sqrt((entity.x - x) ** 2 + (entity.y - y) ** 2);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestEntity = id;
+            }
+        }
+
+        if (closestEntity !== null) {
+            this.selectEntity(closestEntity);
+        } else {
+            this.deselectEntity();
+        }
+    }
+
+    selectEntity(entityId) {
+        // Deselect previous entity
+        this.deselectEntity();
+
+        // Select new entity
+        this.selectedEntityId = entityId;
+        const entity = this.entities.get(entityId);
+        if (entity) {
+            // Add selection indicator (yellow border)
+            const selectionGraphics = new PIXI.Graphics();
+            selectionGraphics.lineStyle(3, 0xFFFF00, 1);
+            selectionGraphics.drawCircle(0, 0, 12);
+            entity.container.addChild(selectionGraphics);
+            entity.selectionIndicator = selectionGraphics;
+
+            this.updateStatus(`Entity ${entityId} selected. Click on map to set movement target.`);
+        }
+    }
+
+    deselectEntity() {
+        if (this.selectedEntityId !== null) {
+            const entity = this.entities.get(this.selectedEntityId);
+            if (entity && entity.selectionIndicator) {
+                entity.container.removeChild(entity.selectionIndicator);
+                entity.selectionIndicator = null;
+            }
+            this.selectedEntityId = null;
+        }
+    }
+
+    async setEntityTarget(entityId, x, y) {
+        try {
+            const result = set_entity_target(entityId, x, y);
+            const movementResult = JSON.parse(result);
+
+            if (movementResult.success) {
+                this.updateStatus(`Target set: ${movementResult.message}`);
+                // Add visual target indicator
+                this.showTargetIndicator(x, y);
+            } else {
+                this.updateStatus(`Failed to set target: ${movementResult.message}`);
+            }
+        } catch (error) {
+            this.updateStatus(`Error setting target: ${error.message}`);
+            console.error('Target setting error:', error);
+        }
+    }
+
+    showTargetIndicator(x, y) {
+        // Remove existing target indicator
+        if (this.targetIndicator) {
+            this.app.stage.removeChild(this.targetIndicator);
+        }
+
+        // Create new target indicator
+        const graphics = new PIXI.Graphics();
+        graphics.lineStyle(2, 0xFF0000, 1);
+        graphics.drawCircle(0, 0, 10);
+        graphics.moveTo(-15, 0);
+        graphics.lineTo(15, 0);
+        graphics.moveTo(0, -15);
+        graphics.lineTo(0, 15);
+
+        graphics.x = x;
+        graphics.y = y;
+
+        this.app.stage.addChild(graphics);
+        this.targetIndicator = graphics;
+
+        // Remove after 2 seconds
+        setTimeout(() => {
+            if (this.targetIndicator) {
+                this.app.stage.removeChild(this.targetIndicator);
+                this.targetIndicator = null;
+            }
+        }, 2000);
     }
 
     async initializeGame() {
