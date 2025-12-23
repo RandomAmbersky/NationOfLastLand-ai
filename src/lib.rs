@@ -1,6 +1,6 @@
-pub mod game;
-pub mod config;
 pub mod api;
+pub mod config;
+pub mod game;
 pub mod types;
 
 use wasm_bindgen::prelude::*;
