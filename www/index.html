@@ -124,26 +124,38 @@
 
         .info {
             background-color: #1a4a1a;
-            padding: 12px;
+            padding: 8px;
             border-radius: 8px;
             border: 1px solid #4CAF50;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             flex-shrink: 0;
+            max-height: 150px;
+            overflow-y: auto;
         }
 
         .info h3 {
-            margin: 0 0 8px 0;
+            margin: 0 0 6px 0;
             color: #4CAF50;
-            font-size: 1rem;
+            font-size: 0.9rem;
         }
 
         .info ul {
-            margin: 0;
-            padding-left: 20px;
+            margin: 0 0 8px 0;
+            padding-left: 16px;
         }
 
         .info li {
-            margin-bottom: 4px;
+            margin-bottom: 2px;
+            line-height: 1.3;
+        }
+
+        .info ol {
+            margin: 0;
+            padding-left: 16px;
+        }
+
+        .info ol li {
+            margin-bottom: 2px;
         }
 
         /* Медиа-запросы для мобильных устройств */
@@ -183,12 +195,13 @@
             }
 
             .info {
-                padding: 8px;
-                font-size: 0.8rem;
+                padding: 6px;
+                font-size: 0.7rem;
+                max-height: 120px;
             }
 
             .info h3 {
-                font-size: 0.9rem;
+                font-size: 0.8rem;
             }
         }
 
@@ -207,6 +220,16 @@
             button {
                 font-size: 0.85rem;
                 padding: 6px;
+            }
+
+            .info {
+                padding: 4px;
+                font-size: 0.65rem;
+                max-height: 100px;
+            }
+
+            .info h3 {
+                font-size: 0.75rem;
             }
         }
     </style>
@@ -251,43 +274,20 @@
         </div>
 
         <div class="info">
-            <h3>Demo Features</h3>
-            <ul>
-                <li><strong>WebAssembly Backend:</strong> Game logic runs in Rust compiled to WebAssembly</li>
-                <li><strong>Pixi.js Rendering:</strong> Real-time graphics rendering using Pixi.js</li>
-                <li><strong>Entity Management:</strong> ECS-based entity system with position components</li>
-                <li><strong>Live Updates:</strong> Real-time synchronization between Rust and JavaScript</li>
-                <li><strong>Movement System:</strong> Click entities to select them, then click map or alerts to set
-                    movement targets</li>
-                <li><strong>Real-time Movement:</strong> Entities move smoothly toward their targets at different speeds
-                    (Scout: 15, Truck: 9, Tank: 4.5 units/sec)</li>
-                <li><strong>Alert System:</strong> Click on yellow alert markers (?) to send units to investigate and
-                    reveal missions</li>
-                <li><strong>Group Selection:</strong> Drag to select multiple units at once, or hold Ctrl/Cmd while
-                    clicking to add/remove individual units from selection</li>
-                <li><strong>Group Commands:</strong> Click anywhere on the map with multiple units selected to move them
-                    as a group in formation</li>
-                <li><strong>Combat Visualization:</strong> Red attack lines show which units are attacking each other,
-                    with damage numbers and explosion effects for destroyed units</li>
-                <li><strong>Live Combat Effects:</strong> Watch units engage in real-time battles with visual feedback
-                    for damage, collisions, and destruction</li>
-            </ul>
-            <h3>How to Use</h3>
+            <h3>Controls</h3>
             <ol>
                 <li>Click "Initialize Game" to start</li>
-                <li>Click "Spawn Vehicle" to create and automatically select units</li>
-                <li><strong>Single Selection:</strong> Click on any vehicle to select it (yellow ring appears)</li>
-                <li><strong>Multiple Selection:</strong> Hold Ctrl/Cmd and click units to add them to selection, or drag
-                    a rectangle to select multiple units at once</li>
-                <li><strong>Group Movement:</strong> With multiple units selected, click anywhere on the map to move
-                    them as a group in formation</li>
-                <li><strong>Group Combat:</strong> With multiple units selected, click on enemy units to attack as a
-                    group</li>
-                <li>Click on yellow alert markers (?) to send selected units to investigate missions</li>
-                <li>Click "Clear Selection" to deselect all units</li>
-                <li>Spawn multiple units from different factions to watch them engage in combat!</li>
-                <li>Observe red attack lines, damage numbers, and explosion effects during battles</li>
+                <li>Click "Spawn Vehicle" to create units</li>
+                <li><strong>Selection:</strong> Click unit (yellow ring) or drag rectangle for group</li>
+                <li><strong>Ctrl+Click:</strong> Add/remove individual units from selection</li>
+                <li><strong>Move Group:</strong> With selected units, click map position</li>
+                <li><strong>Attack:</strong> Click enemy units to attack as group</li>
+                <li><strong>Alerts:</strong> Click yellow (?) markers to investigate</li>
+                <li><strong>Combat:</strong> Watch red attack lines and damage effects</li>
             </ol>
+            <p style="margin: 4px 0 0 0; font-size: 0.7rem; color: #aaa;">
+                Rust/WebAssembly • ECS Architecture • Real-time Strategy
+            </p>
         </div>
     </div>
 
