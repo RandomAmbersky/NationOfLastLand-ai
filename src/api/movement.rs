@@ -34,19 +34,27 @@ pub fn set_entity_target(entity_id: u32, target_x: f32, target_y: f32) -> Result
 
                                 let result = MovementResult {
                                     success: true,
-                                    message: format!("Target set for entity {}: ({}, {})", entity_id, target_x, target_y),
+                                    message: format!(
+                                        "Target set for entity {}: ({}, {})",
+                                        entity_id, target_x, target_y
+                                    ),
                                 };
 
-                                serde_json::to_string(&result)
-                                    .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+                                serde_json::to_string(&result).map_err(|e| {
+                                    JsValue::from_str(&format!("Serialization error: {}", e))
+                                })
                             } else {
                                 let result = MovementResult {
                                     success: false,
-                                    message: format!("Entity {} does not have movement component", entity_id),
+                                    message: format!(
+                                        "Entity {} does not have movement component",
+                                        entity_id
+                                    ),
                                 };
 
-                                serde_json::to_string(&result)
-                                    .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+                                serde_json::to_string(&result).map_err(|e| {
+                                    JsValue::from_str(&format!("Serialization error: {}", e))
+                                })
                             }
                         }
                         Err(_) => {
@@ -55,8 +63,9 @@ pub fn set_entity_target(entity_id: u32, target_x: f32, target_y: f32) -> Result
                                 message: format!("Entity {} not found", entity_id),
                             };
 
-                            serde_json::to_string(&result)
-                                .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+                            serde_json::to_string(&result).map_err(|e| {
+                                JsValue::from_str(&format!("Serialization error: {}", e))
+                            })
                         }
                     }
                 }
