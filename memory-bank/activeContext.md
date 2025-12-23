@@ -10,9 +10,10 @@ The project is in early development with core architecture established but minim
 ### Immediate Priorities
 1. **Core System Implementation**: Movement, combat, and alert systems ✅ (Combat system fixed for entities without Vehicle components)
 2. **Unit Targeting System**: ✅ Added click-to-attack functionality for hostile units
-3. **API Completion**: Full WebAssembly API with game loop integration
-4. **Configuration System**: YAML-based unit and balance configuration
-5. **Basic Gameplay Loop**: Functional game with unit creation and updates
+3. **Selection Management**: ✅ Added automatic selection clearing when spawning new vehicles (only newly spawned vehicle remains selected)
+4. **API Completion**: Full WebAssembly API with game loop integration
+5. **Configuration System**: YAML-based unit and balance configuration
+6. **Basic Gameplay Loop**: Functional game with unit creation and updates
 
 ### Active Development Areas
 - **ECS Component Design**: Refining component structure for game systems
@@ -33,6 +34,7 @@ The project is in early development with core architecture established but minim
 - **Component Library**: Basic ECS components (Position, Health, Movement, etc.) defined
 - **API Skeleton**: WebAssembly functions for init, create_vehicle, and update implemented
 - **Configuration Framework**: YAML loading infrastructure in place
+- **Selection Management**: Automatic clearing of unit selection when spawning new vehicles (only newly spawned vehicle remains selected)
 
 ## Next Steps & Roadmap
 

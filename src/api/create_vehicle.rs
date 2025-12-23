@@ -1,3 +1,4 @@
+use crate::api::group::clear_selection;
 use crate::api::init::{get_game_config, GAME_WORLD};
 use crate::game::components::{
     Faction, Health, Movement, Position, Selection, Vehicle, VehicleType,
@@ -17,6 +18,9 @@ pub struct VehicleCreationResult {
 pub fn create_vehicle(vehicle_type: &str, x: f32, y: f32) -> Result<String, JsValue> {
     unsafe {
         if let Some(world) = &mut GAME_WORLD {
+            // Clear current selection before creating new vehicle
+            let _ = clear_selection();
+
             // Parse vehicle type from string
             let vehicle_config_key = match vehicle_type {
                 "scout" => "scout_car",

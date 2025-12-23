@@ -645,7 +645,7 @@ class GameDemo {
                     console.error('Update after spawn error:', error);
                 }
 
-                // Automatically select the newly spawned vehicle
+                // Select only the newly spawned vehicle
                 this.selectEntity(creationResult.id);
 
                 this.updateStatus(`Vehicle spawned and selected!\nID: ${creationResult.id}\nType: ${vehicleType}\nPosition: (${x}, ${y})`);
