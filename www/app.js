@@ -8,6 +8,7 @@ class GameDemo {
         this.lastUpdate = Date.now();
         this.selectedEntityIds = new Set(); // Changed to support multiple selections
         this.combatEffects = new Map(); // Store active combat visualizations
+        this.isSelecting = false; // Prevent concurrent selection operations
         this.dragSelection = {
             isDragging: false,
             startX: 0,
@@ -126,13 +127,9 @@ class GameDemo {
         document.getElementById('init-btn').addEventListener('click', () => this.initializeGame());
         document.getElementById('spawn-btn').addEventListener('click', () => this.spawnVehicle());
         document.getElementById('update-btn').addEventListener('click', () => this.manualUpdate());
-        document.getElementById('clear-selection-btn').addEventListener('click', () => this.clearSelection());
+        document.getElementById('clear-selection-btn').addEventListener('click', () => this.clearAllSelections());
     }
 
-    clearSelection() {
-        this.deselectEntity();
-        this.updateStatus('Selection cleared. Click on a unit to select it.');
-    }
 
     handleCanvasClick(event) {
         if (!this.isInitialized) return;
@@ -179,7 +176,7 @@ class GameDemo {
             }
         } else {
             // Clicked on empty space with no selection - clear any existing selection
-            this.clearSelection();
+            this.clearAllSelections();
         }
     }
 
@@ -250,44 +247,51 @@ class GameDemo {
         const wasDragging = this.dragSelection.hasDragged;
         this.dragSelection.isDragging = false;
 
+        // Prevent concurrent selection operations
+        if (this.isSelecting) return;
+        this.isSelecting = true;
 
-        // Only process selection if user actually dragged
-        if (wasDragging) {
-            // Prevent the click event from firing
-            this.dragSelection.justFinishedDrag = true;
+        try {
+            // Only process selection if user actually dragged
+            if (wasDragging) {
+                // Prevent the click event from firing
+                this.dragSelection.justFinishedDrag = true;
 
-            // Calculate selection rectangle bounds
-            const x = Math.min(this.dragSelection.startX, this.dragSelection.currentX);
-            const y = Math.min(this.dragSelection.startY, this.dragSelection.currentY);
-            const width = Math.abs(this.dragSelection.currentX - this.dragSelection.startX);
-            const height = Math.abs(this.dragSelection.currentY - this.dragSelection.startY);
+                // Calculate selection rectangle bounds
+                const x = Math.min(this.dragSelection.startX, this.dragSelection.currentX);
+                const y = Math.min(this.dragSelection.startY, this.dragSelection.currentY);
+                const width = Math.abs(this.dragSelection.currentX - this.dragSelection.startX);
+                const height = Math.abs(this.dragSelection.currentY - this.dragSelection.startY);
 
 
-            // Find all entities within the selection rectangle
-            const selectedEntities = [];
-            for (const [id, entity] of this.entities) {
-                // Skip alerts - they should not be selectable
-                if (entity.entityType === 'alert') continue;
+                // Find all entities within the selection rectangle
+                const selectedEntities = [];
+                for (const [id, entity] of this.entities) {
+                    // Skip alerts - they should not be selectable
+                    if (entity.entityType === 'alert') continue;
 
-                // Check if entity is within selection bounds
-                if (entity.container.x >= x && entity.container.x <= x + width &&
-                    entity.container.y >= y && entity.container.y <= y + height) {
-                    selectedEntities.push(id);
+                    // Check if entity is within selection bounds
+                    if (entity.container.x >= x && entity.container.x <= x + width &&
+                        entity.container.y >= y && entity.container.y <= y + height) {
+                        selectedEntities.push(id);
+                    }
+                }
+
+
+                if (selectedEntities.length > 0) {
+                    // Clear previous selection and select the new group
+                    this.clearAllSelections();
+                    for (const entityId of selectedEntities) {
+                        this.selectEntity(entityId, true);
+                    }
+                    this.updateStatus(`Selected ${selectedEntities.length} units`);
+                } else {
+                    // No entities selected, clear selection
+                    this.clearAllSelections();
                 }
             }
-
-
-            if (selectedEntities.length > 0) {
-                // Clear previous selection and select the new group
-                this.clearSelection();
-                for (const entityId of selectedEntities) {
-                    this.selectEntity(entityId);
-                }
-                this.updateStatus(`Selected ${selectedEntities.length} units`);
-            } else {
-                // No entities selected, clear selection
-                this.clearSelection();
-            }
+        } finally {
+            this.isSelecting = false;
         }
 
         // Remove selection rectangle
@@ -301,45 +305,53 @@ class GameDemo {
         const entity = this.entities.get(entityId);
         if (!entity) return;
 
-        // Check if this is an attack scenario (different faction and hostile)
-        if (this.selectedEntityIds.size > 0 && !isMultiSelect) {
-            const targetEntity = entity;
-            let shouldAttack = false;
+        // Prevent concurrent selection operations
+        if (this.isSelecting) return;
+        this.isSelecting = true;
 
-            // Check if any selected unit is hostile towards this target
-            for (const selectedId of this.selectedEntityIds) {
-                const selectedEntity = this.entities.get(selectedId);
-                if (selectedEntity && this.areFactionsHostile(selectedEntity.faction, targetEntity.faction)) {
-                    shouldAttack = true;
-                    break;
+        try {
+            // Check if this is an attack scenario (different faction and hostile)
+            if (this.selectedEntityIds.size > 0 && !isMultiSelect) {
+                const targetEntity = entity;
+                let shouldAttack = false;
+
+                // Check if any selected unit is hostile towards this target
+                for (const selectedId of this.selectedEntityIds) {
+                    const selectedEntity = this.entities.get(selectedId);
+                    if (selectedEntity && this.areFactionsHostile(selectedEntity.faction, targetEntity.faction)) {
+                        shouldAttack = true;
+                        break;
+                    }
+                }
+
+                if (shouldAttack) {
+                    // Clear any alert highlights before attacking
+                    if (this.alertHighlight) {
+                        this.app.stage.removeChild(this.alertHighlight);
+                        this.alertHighlight = null;
+                    }
+                    // Set the clicked unit as target for all selected units
+                    this.setGroupTarget(targetEntity.gameX, targetEntity.gameY);
+                    this.updateStatus(`Group attacking enemy unit!`);
+                    return;
                 }
             }
 
-            if (shouldAttack) {
-                // Clear any alert highlights before attacking
-                if (this.alertHighlight) {
-                    this.app.stage.removeChild(this.alertHighlight);
-                    this.alertHighlight = null;
+            // Handle selection
+            if (isMultiSelect) {
+                // Multi-select mode: toggle selection
+                if (this.selectedEntityIds.has(entityId)) {
+                    this.deselectEntity(entityId, true);
+                } else {
+                    this.selectEntity(entityId, true);
                 }
-                // Set the clicked unit as target for all selected units
-                this.setGroupTarget(targetEntity.gameX, targetEntity.gameY);
-                this.updateStatus(`Group attacking enemy unit!`);
-                return;
-            }
-        }
-
-        // Handle selection
-        if (isMultiSelect) {
-            // Multi-select mode: toggle selection
-            if (this.selectedEntityIds.has(entityId)) {
-                this.deselectEntity(entityId);
             } else {
-                this.selectEntity(entityId);
+                // Single select mode: clear previous selection and select this entity
+                this.clearAllSelections();
+                this.selectEntity(entityId, true);
             }
-        } else {
-            // Single select mode: clear previous selection and select this entity
-            this.clearSelection();
-            this.selectEntity(entityId);
+        } finally {
+            this.isSelecting = false;
         }
     }
 
@@ -393,7 +405,10 @@ class GameDemo {
         }
     }
 
-    selectEntity(entityId) {
+    selectEntity(entityId, bypassCheck = false) {
+        // Prevent concurrent operations unless bypassed (for internal calls)
+        if (!bypassCheck && this.isSelecting) return;
+
         // Don't re-select if already selected
         if (this.selectedEntityIds.has(entityId)) return;
 
@@ -425,7 +440,10 @@ class GameDemo {
         }
     }
 
-    deselectEntity(entityId) {
+    deselectEntity(entityId, bypassCheck = false) {
+        // Prevent concurrent operations unless bypassed (for internal calls)
+        if (!bypassCheck && this.isSelecting) return;
+
         if (!this.selectedEntityIds.has(entityId)) return;
 
         // Deselect entity via API
@@ -452,7 +470,10 @@ class GameDemo {
         }
     }
 
-    clearSelection() {
+    clearAllSelections() {
+        // Prevent concurrent selection operations
+        if (this.isSelecting) return;
+
         // Clear selection via API
         try {
             const result = clear_selection();
@@ -484,7 +505,7 @@ class GameDemo {
                 // Add visual target indicator
                 this.showTargetIndicator(x, y);
                 // Clear selection after setting target
-                this.deselectEntity();
+                this.clearAllSelections();
                 // Clear any alert highlights
                 if (this.alertHighlight) {
                     this.app.stage.removeChild(this.alertHighlight);
@@ -646,7 +667,7 @@ class GameDemo {
                 }
 
                 // Select only the newly spawned vehicle
-                this.selectEntity(creationResult.id);
+                this.selectEntity(creationResult.id, true);
 
                 this.updateStatus(`Vehicle spawned and selected!\nID: ${creationResult.id}\nType: ${vehicleType}\nPosition: (${x}, ${y})`);
             } else {
@@ -879,7 +900,7 @@ class GameDemo {
             }
         }
         for (const entityId of entitiesToRemove) {
-            this.deselectEntity(entityId);
+            this.deselectEntity(entityId, true);
         }
         if (entitiesToRemove.length > 0) {
             this.updateStatus(`${entitiesToRemove.length} selected unit(s) were destroyed!`);
