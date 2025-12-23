@@ -112,6 +112,12 @@ class GameDemo {
         document.getElementById('init-btn').addEventListener('click', () => this.initializeGame());
         document.getElementById('spawn-btn').addEventListener('click', () => this.spawnVehicle());
         document.getElementById('update-btn').addEventListener('click', () => this.manualUpdate());
+        document.getElementById('clear-selection-btn').addEventListener('click', () => this.clearSelection());
+    }
+
+    clearSelection() {
+        this.deselectEntity();
+        this.updateStatus('Selection cleared. Click on a unit to select it.');
     }
 
     handleCanvasClick(event) {
@@ -126,20 +132,22 @@ class GameDemo {
             return;
         }
 
-        // Convert screen coordinates to game world coordinates
-        const gameX = (screenX / this.app.screen.width) * this.gameWidth;
-        const gameY = (screenY / this.app.screen.height) * this.gameHeight;
+        // First, try to select entity at clicked position (higher priority)
+        const entityAtPosition = this.findEntityAtPosition(screenX, screenY);
 
-        if (this.selectedEntityId !== null) {
-            // Set target for selected entity
+        if (entityAtPosition !== null) {
+            // Clicked on an entity - select it
+            this.selectEntity(entityAtPosition);
+        } else if (this.selectedEntityId !== null) {
+            // Clicked on empty space and entity is selected - set target
+            const gameX = (screenX / this.app.screen.width) * this.gameWidth;
+            const gameY = (screenY / this.app.screen.height) * this.gameHeight;
             this.setEntityTarget(this.selectedEntityId, gameX, gameY);
-        } else {
-            // Try to select entity at clicked position
-            this.selectEntityAtPosition(screenX, screenY);
         }
+        // If no entity selected and clicked on empty space - do nothing
     }
 
-    selectEntityAtPosition(x, y) {
+    findEntityAtPosition(x, y) {
         // Find entity closest to click position (within 20 pixels)
         let closestEntity = null;
         let closestDistance = 20;
@@ -153,8 +161,13 @@ class GameDemo {
             }
         }
 
-        if (closestEntity !== null) {
-            this.selectEntity(closestEntity);
+        return closestEntity;
+    }
+
+    selectEntityAtPosition(x, y) {
+        const entityId = this.findEntityAtPosition(x, y);
+        if (entityId !== null) {
+            this.selectEntity(entityId);
         } else {
             this.deselectEntity();
         }
