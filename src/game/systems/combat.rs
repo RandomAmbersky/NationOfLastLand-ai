@@ -28,9 +28,9 @@ pub fn update_combat_system(game_world: &mut GameWorld, dt: f32) {
             let (entity_a, pos_a, _health_a) = combat_entities[i];
             let (entity_b, pos_b, _health_b) = combat_entities[j];
 
-            // Simple collision detection - units within 10 units of each other
+            // Simple collision detection - units within 20 units of each other
             let distance = pos_a.distance_to(&pos_b);
-            if distance < 10.0 {
+            if distance < 20.0 {
                 game_world.debug_messages.push(format!("Collision detected between entities {} and {} at distance {:.1}",
                     entity_a.id(), entity_b.id(), distance));
                 // Collision detected - apply combat
@@ -150,29 +150,32 @@ fn apply_combat_damage(game_world: &mut GameWorld, entity_a: hecs::Entity, entit
 /// Add combat capabilities to a vehicle entity
 pub fn add_combat_to_vehicle(world: &mut hecs::World, entity: hecs::Entity) {
     // Get vehicle type to determine combat capabilities
-    let vehicle_type = {
-        if let Ok(vehicle) = world.get::<&Vehicle>(entity) {
-            vehicle.vehicle_type
-        } else {
-            return; // No vehicle component, nothing to do
+    // If no vehicle component, use default stats for creatures/units
+    let (damage_amount, damage_type, attack_cooldown) = if let Ok(vehicle) = world.get::<&Vehicle>(entity) {
+        match vehicle.vehicle_type {
+            crate::game::components::VehicleType::ScoutCar => (10.0, crate::game::components::DamageType::Physical, 1.0),
+            crate::game::components::VehicleType::ArmoredTruck => (15.0, crate::game::components::DamageType::Physical, 1.5),
+            crate::game::components::VehicleType::HeavyTank => (25.0, crate::game::components::DamageType::Energy, 2.0),
         }
-    };
-
-    let (damage_amount, damage_type, attack_cooldown) = match vehicle_type {
-        crate::game::components::VehicleType::ScoutCar => (10.0, crate::game::components::DamageType::Physical, 1.0),
-        crate::game::components::VehicleType::ArmoredTruck => (15.0, crate::game::components::DamageType::Physical, 1.5),
-        crate::game::components::VehicleType::HeavyTank => (25.0, crate::game::components::DamageType::Energy, 2.0),
+    } else {
+        // Default stats for creatures/units without vehicle components
+        (8.0, crate::game::components::DamageType::Physical, 1.2)
     };
 
     // Add damage component
     let damage = Damage::new(damage_amount, damage_type);
     let _ = world.insert_one(entity, damage);
 
-    // Add basic damage resistance based on vehicle type
-    let resistance = match vehicle_type {
-        crate::game::components::VehicleType::ScoutCar => DamageResistance::new(0.0, 0.0, 0.0, 0.0, 0.0),
-        crate::game::components::VehicleType::ArmoredTruck => DamageResistance::new(0.1, 0.0, 0.0, 0.0, 0.0),
-        crate::game::components::VehicleType::HeavyTank => DamageResistance::new(0.2, 0.1, 0.1, 0.0, 0.0),
+    // Add basic damage resistance based on vehicle type or default for creatures
+    let resistance = if let Ok(vehicle) = world.get::<&Vehicle>(entity) {
+        match vehicle.vehicle_type {
+            crate::game::components::VehicleType::ScoutCar => DamageResistance::new(0.0, 0.0, 0.0, 0.0, 0.0),
+            crate::game::components::VehicleType::ArmoredTruck => DamageResistance::new(0.1, 0.0, 0.0, 0.0, 0.0),
+            crate::game::components::VehicleType::HeavyTank => DamageResistance::new(0.2, 0.1, 0.1, 0.0, 0.0),
+        }
+    } else {
+        // Default resistance for creatures/units
+        DamageResistance::new(0.0, 0.0, 0.0, 0.0, 0.0)
     };
     let _ = world.insert_one(entity, resistance);
 

@@ -19,6 +19,10 @@ impl Faction {
             (Faction::Player, Faction::Enemy) => true,
             (Faction::Enemy, Faction::Player) => true,
 
+            // Player considers Wild creatures hostile
+            (Faction::Player, Faction::Wild) => true,
+            (Faction::Wild, Faction::Player) => true,
+
             // Wild creatures attack everyone except their own kind
             (Faction::Wild, Faction::Wild) => false,
             (Faction::Wild, _) => true,

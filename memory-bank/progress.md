@@ -33,7 +33,8 @@
 
 ### Critical Path Systems ✅
 - **Movement System**: ✅ Unit movement toward targets implemented with smooth interpolation
-- **Combat System**: ✅ Automatic collision detection, damage calculation, health reduction, and entity destruction
+- **Combat System**: ✅ Automatic collision detection, damage calculation, health reduction, and entity destruction (fixed entities without Vehicle components)
+- **Unit Targeting**: ✅ Click-to-attack functionality for hostile units of different factions
 - **Alert System**: ✅ Random event generation, reveal mechanics, entity spawning, and periodic spawning
 - **Pathfinding**: Navigation system for unit movement around obstacles
 

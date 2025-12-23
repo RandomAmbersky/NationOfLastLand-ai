@@ -141,7 +141,23 @@ class GameDemo {
         const entityAtPosition = this.findEntityAtPosition(screenX, screenY);
 
         if (entityAtPosition !== null) {
-            // Clicked on an entity - select it
+            // Check if we have a selected unit and clicked on a different unit
+            if (this.selectedEntityId !== null && this.selectedEntityId !== entityAtPosition) {
+                const selectedEntity = this.entities.get(this.selectedEntityId);
+                const targetEntity = this.entities.get(entityAtPosition);
+
+                if (selectedEntity && targetEntity) {
+                    // Check if factions are hostile
+                    if (this.areFactionsHostile(selectedEntity.faction, targetEntity.faction)) {
+                        // Set the clicked unit as target for selected unit
+                        this.setEntityTarget(this.selectedEntityId, targetEntity.gameX, targetEntity.gameY);
+                        this.updateStatus(`Attacking enemy unit!`);
+                        return;
+                    }
+                }
+            }
+
+            // Default behavior: select the clicked entity
             this.selectEntity(entityAtPosition);
         } else if (this.selectedEntityId !== null) {
             // Check if clicked on an alert
@@ -639,6 +655,46 @@ class GameDemo {
 
         // Create entity with game coordinates (createEntitySprite will convert to screen coordinates)
         this.createEntitySprite(gameEntity.id, gameEntity.x, gameEntity.y, vehicleType, faction, entityType);
+    }
+
+    areFactionsHostile(factionA, factionB) {
+        // Check if two factions are hostile towards each other
+        // Based on the faction logic from faction.rs
+        if (!factionA || !factionB) return false;
+
+        switch (`${factionA}-${factionB}`) {
+            // Player and Enemy are hostile to each other
+            case 'Player-Enemy':
+            case 'Enemy-Player':
+                return true;
+
+            // Player considers Wild creatures hostile
+            case 'Player-Wild':
+            case 'Wild-Player':
+                return true;
+
+            // Wild creatures attack everyone except their own kind
+            case 'Wild-Wild':
+                return false;
+            default:
+                if (factionA.startsWith('Wild-') || factionB.startsWith('Wild-')) {
+                    return true;
+                }
+                break;
+        }
+
+        // Neutral entities don't attack anyone
+        if (factionA === 'Neutral' || factionB === 'Neutral') {
+            return false;
+        }
+
+        // Same faction - never hostile
+        if (factionA === factionB) {
+            return false;
+        }
+
+        // Default: not hostile
+        return false;
     }
 
     updateStatus(message) {
