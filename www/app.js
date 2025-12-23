@@ -121,6 +121,11 @@ class GameDemo {
         const screenX = event.clientX - rect.left;
         const screenY = event.clientY - rect.top;
 
+        // Check if click is within canvas bounds
+        if (screenX < 0 || screenX > this.app.screen.width || screenY < 0 || screenY > this.app.screen.height) {
+            return;
+        }
+
         // Convert screen coordinates to game world coordinates
         const gameX = (screenX / this.app.screen.width) * this.gameWidth;
         const gameY = (screenY / this.app.screen.height) * this.gameHeight;
@@ -196,6 +201,7 @@ class GameDemo {
                 this.showTargetIndicator(x, y);
             } else {
                 this.updateStatus(`Failed to set target: ${movementResult.message}`);
+                console.error('Failed to set target:', movementResult.message);
             }
         } catch (error) {
             this.updateStatus(`Error setting target: ${error.message}`);
