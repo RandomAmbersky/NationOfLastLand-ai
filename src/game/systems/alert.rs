@@ -82,39 +82,47 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
 
     match alert_type {
         AlertType::TrashAlert => {
-            // Spawn 1-3 trash piles (neutral entities)
+            // Spawn 1-3 hostile scavengers (wild faction - hostile to everyone)
             let count = rng.gen_range(1..=3);
             for _i in 0..count {
                 let offset_x = rng.gen_range(-10.0..10.0);
                 let offset_y = rng.gen_range(-10.0..10.0);
                 let entity_pos = Position::new(position.x + offset_x, position.y + offset_y);
 
-                let health = Health::new(20.0);
-                let entity = world.spawn((entity_pos, health));
+                let health = Health::new(30.0);
+                let movement = crate::game::components::Movement::new(4.0);
+                let entity = world.spawn((entity_pos, health, movement));
                 spawned.push(entity.id());
 
-                // Add neutral faction
-                combat::add_faction_to_entity(world, entity, Faction::Neutral);
+                // Add combat capabilities
+                combat::add_combat_to_vehicle(world, entity);
 
-                println!("Spawned trash pile at ({}, {})", entity_pos.x, entity_pos.y);
+                // Add wild faction (hostile to everyone)
+                combat::add_faction_to_entity(world, entity, Faction::Wild);
+
+                println!("Spawned hostile scavenger at ({}, {})", entity_pos.x, entity_pos.y);
             }
         }
         AlertType::WasteAlert => {
-            // Spawn 1-2 toxic waste (neutral entities)
+            // Spawn 1-2 toxic mutants (wild faction - hostile to everyone)
             let count = rng.gen_range(1..=2);
             for _i in 0..count {
                 let offset_x = rng.gen_range(-15.0..15.0);
                 let offset_y = rng.gen_range(-15.0..15.0);
                 let entity_pos = Position::new(position.x + offset_x, position.y + offset_y);
 
-                let health = Health::new(30.0);
-                let entity = world.spawn((entity_pos, health));
+                let health = Health::new(50.0);
+                let movement = crate::game::components::Movement::new(5.0);
+                let entity = world.spawn((entity_pos, health, movement));
                 spawned.push(entity.id());
 
-                // Add neutral faction
-                combat::add_faction_to_entity(world, entity, Faction::Neutral);
+                // Add combat capabilities
+                combat::add_combat_to_vehicle(world, entity);
 
-                println!("Spawned toxic waste at ({}, {})", entity_pos.x, entity_pos.y);
+                // Add wild faction (hostile to everyone)
+                combat::add_faction_to_entity(world, entity, Faction::Wild);
+
+                println!("Spawned toxic mutant at ({}, {})", entity_pos.x, entity_pos.y);
             }
         }
         AlertType::MutantAlert => {

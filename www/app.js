@@ -393,24 +393,47 @@ class GameDemo {
         const graphics = new PIXI.Graphics();
 
         // Different colors and shapes for different entity types
-        // Colors depend on faction: Player uses bright colors, Enemy uses darker/muted colors
+        // Colors depend on faction: Player uses bright colors, Enemy uses dark colors, Wild uses brown, Neutral uses cyan
         let color;
         let alpha = 1.0; // Default opacity
-        const isEnemy = faction === 'Enemy';
 
         switch (vehicleType) {
             case 'scout':
-                color = isEnemy ? 0x2E7D32 : 0x4CAF50; // Dark green for enemy, bright green for player
+                if (faction === 'Neutral') {
+                    color = 0x00BCD4; // Cyan for neutral
+                } else if (faction === 'Wild') {
+                    color = 0x8D6E63; // Brown for wild creatures
+                } else if (faction === 'Enemy') {
+                    color = 0x2E7D32; // Dark green for enemy
+                } else {
+                    color = 0x4CAF50; // Bright green for player
+                }
                 graphics.beginFill(color);
                 graphics.drawCircle(0, 0, 8);
                 break;
             case 'tank':
-                color = isEnemy ? 0xB71C1C : 0xFF5722; // Dark red for enemy, bright red for player
+                if (faction === 'Neutral') {
+                    color = 0x00BCD4; // Cyan for neutral
+                } else if (faction === 'Wild') {
+                    color = 0x8D6E63; // Brown for wild creatures
+                } else if (faction === 'Enemy') {
+                    color = 0xB71C1C; // Dark red for enemy
+                } else {
+                    color = 0xFF5722; // Bright red for player
+                }
                 graphics.beginFill(color);
                 graphics.drawRect(-10, -8, 20, 16);
                 break;
             case 'transport':
-                color = isEnemy ? 0x0D47A1 : 0x2196F3; // Dark blue for enemy, bright blue for player
+                if (faction === 'Neutral') {
+                    color = 0x00BCD4; // Cyan for neutral
+                } else if (faction === 'Wild') {
+                    color = 0x8D6E63; // Brown for wild creatures
+                } else if (faction === 'Enemy') {
+                    color = 0x0D47A1; // Dark blue for enemy
+                } else {
+                    color = 0x2196F3; // Bright blue for player
+                }
                 graphics.beginFill(color);
                 graphics.drawRect(-12, -10, 24, 20);
                 break;
