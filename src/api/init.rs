@@ -1,6 +1,8 @@
-use crate::game::{GameWorld, Alert, components::{Position, FactionComponent, Vehicle}};
 use crate::config::GameConfig;
-use wasm_bindgen::prelude::*;
+use crate::game::{
+    components::{FactionComponent, Position, Selection, Vehicle},
+    Alert, GameWorld,
+};
 use hecs::World;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -13,6 +15,7 @@ pub struct EntityData {
     pub entity_type: String,
     pub subtype: Option<String>, // vehicle_type for vehicles, alert_type for alerts
     pub faction: Option<String>, // faction name (Player, Enemy, Neutral, Wild)
+    pub is_selected: bool,       // whether this entity is currently selected
 }
 
 #[derive(Serialize, Deserialize)]
@@ -42,7 +45,9 @@ pub fn init() -> Result<String, JsValue> {
             for _ in 0..2 {
                 spawn_random_alert(&mut world.world);
             }
-            world.debug_messages.push("Added 2 initial alerts for testing".to_string());
+            world
+                .debug_messages
+                .push("Added 2 initial alerts for testing".to_string());
         }
 
         if let Some(world) = &GAME_WORLD {
@@ -92,6 +97,17 @@ pub fn get_entities_data(world: &World) -> Vec<EntityData> {
             None
         };
 
+        // Try to get selection state if entity has Selection component
+        let is_selected = if let Ok(mut query) = world.query_one::<&Selection>(entity) {
+            if let Some(selection) = query.get() {
+                selection.is_selected
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
         entities.push(EntityData {
             id: entity.id(),
             x: position.x,
@@ -99,6 +115,7 @@ pub fn get_entities_data(world: &World) -> Vec<EntityData> {
             entity_type: "vehicle".to_string(), // For now, all entities are vehicles
             subtype: vehicle_type,
             faction,
+            is_selected,
         });
     }
 
@@ -110,7 +127,8 @@ pub fn get_entities_data(world: &World) -> Vec<EntityData> {
             y: alert.position.y,
             entity_type: "alert".to_string(),
             subtype: Some(format!("{:?}_{:?}", alert.alert_type, alert.state)),
-            faction: None, // Alerts don't have factions
+            faction: None,      // Alerts don't have factions
+            is_selected: false, // Alerts cannot be selected
         });
     }
 
@@ -127,7 +145,7 @@ pub fn load_config(yaml_str: &str) -> Result<(), JsValue> {
             }
             Ok(())
         }
-        Err(e) => Err(JsValue::from_str(&format!("Failed to parse config: {}", e)))
+        Err(e) => Err(JsValue::from_str(&format!("Failed to parse config: {}", e))),
     }
 }
 
@@ -137,11 +155,9 @@ pub fn load_default_config() {
     let default_config_yaml = include_str!("../../config/units.yml");
 
     match GameConfig::from_yaml(default_config_yaml) {
-        Ok(config) => {
-            unsafe {
-                GAME_CONFIG = Some(config);
-            }
-        }
+        Ok(config) => unsafe {
+            GAME_CONFIG = Some(config);
+        },
         Err(e) => {
             // In a real application, this would be a fatal error
             // For now, we'll use default values

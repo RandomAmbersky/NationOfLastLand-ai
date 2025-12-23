@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,14 +10,16 @@
             box-sizing: border-box;
         }
 
-        html, body {
+        html,
+        body {
             margin: 0;
             padding: 0;
             height: 100%;
             font-family: Arial, sans-serif;
             background-color: #1a1a1a;
             color: #ffffff;
-            overflow: hidden; /* Предотвращает прокрутку */
+            overflow: hidden;
+            /* Предотвращает прокрутку */
         }
 
         .container {
@@ -39,14 +42,16 @@
             flex: 1;
             display: flex;
             gap: 15px;
-            min-height: 0; /* Позволяет flex элементам сжиматься */
+            min-height: 0;
+            /* Позволяет flex элементам сжиматься */
         }
 
         .game-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            min-width: 0; /* Позволяет сжиматься */
+            min-width: 0;
+            /* Позволяет сжиматься */
         }
 
         #game-canvas {
@@ -82,7 +87,9 @@
             font-size: 0.9rem;
         }
 
-        input, select, button {
+        input,
+        select,
+        button {
             padding: 8px;
             border: 1px solid #555;
             border-radius: 4px;
@@ -195,13 +202,16 @@
                 min-width: unset;
             }
 
-            input, select, button {
+            input,
+            select,
+            button {
                 font-size: 0.85rem;
                 padding: 6px;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>🧱 Nation of Last Land - WebAssembly Demo</h1>
@@ -247,20 +257,34 @@
                 <li><strong>Pixi.js Rendering:</strong> Real-time graphics rendering using Pixi.js</li>
                 <li><strong>Entity Management:</strong> ECS-based entity system with position components</li>
                 <li><strong>Live Updates:</strong> Real-time synchronization between Rust and JavaScript</li>
-                <li><strong>Movement System:</strong> Click entities to select them, then click map or alerts to set movement targets</li>
-                <li><strong>Real-time Movement:</strong> Entities move smoothly toward their targets at different speeds (Scout: 15, Truck: 9, Tank: 4.5 units/sec)</li>
-                <li><strong>Alert System:</strong> Click on yellow alert markers (?) to send units to investigate and reveal missions</li>
-                <li><strong>Combat Visualization:</strong> Red attack lines show which units are attacking each other, with damage numbers and explosion effects for destroyed units</li>
-                <li><strong>Live Combat Effects:</strong> Watch units engage in real-time battles with visual feedback for damage, collisions, and destruction</li>
+                <li><strong>Movement System:</strong> Click entities to select them, then click map or alerts to set
+                    movement targets</li>
+                <li><strong>Real-time Movement:</strong> Entities move smoothly toward their targets at different speeds
+                    (Scout: 15, Truck: 9, Tank: 4.5 units/sec)</li>
+                <li><strong>Alert System:</strong> Click on yellow alert markers (?) to send units to investigate and
+                    reveal missions</li>
+                <li><strong>Group Selection:</strong> Drag to select multiple units at once, or hold Ctrl/Cmd while
+                    clicking to add/remove individual units from selection</li>
+                <li><strong>Group Commands:</strong> Click anywhere on the map with multiple units selected to move them
+                    as a group in formation</li>
+                <li><strong>Combat Visualization:</strong> Red attack lines show which units are attacking each other,
+                    with damage numbers and explosion effects for destroyed units</li>
+                <li><strong>Live Combat Effects:</strong> Watch units engage in real-time battles with visual feedback
+                    for damage, collisions, and destruction</li>
             </ul>
             <h3>How to Use</h3>
             <ol>
                 <li>Click "Initialize Game" to start</li>
                 <li>Click "Spawn Vehicle" to create and automatically select units</li>
-                <li>Click anywhere on the map to set a movement target (red cross appears, selection clears)</li>
-                <li>Click on yellow alert markers (?) to send units to investigate missions</li>
-                <li>Click on any vehicle to select it</li>
-                <li>Repeat to command multiple units</li>
+                <li><strong>Single Selection:</strong> Click on any vehicle to select it (yellow ring appears)</li>
+                <li><strong>Multiple Selection:</strong> Hold Ctrl/Cmd and click units to add them to selection, or drag
+                    a rectangle to select multiple units at once</li>
+                <li><strong>Group Movement:</strong> With multiple units selected, click anywhere on the map to move
+                    them as a group in formation</li>
+                <li><strong>Group Combat:</strong> With multiple units selected, click on enemy units to attack as a
+                    group</li>
+                <li>Click on yellow alert markers (?) to send selected units to investigate missions</li>
+                <li>Click "Clear Selection" to deselect all units</li>
                 <li>Spawn multiple units from different factions to watch them engage in combat!</li>
                 <li>Observe red attack lines, damage numbers, and explosion effects during battles</li>
             </ol>
@@ -270,4 +294,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <script type="module" src="./app.js"></script>
 </body>
+
 </html>

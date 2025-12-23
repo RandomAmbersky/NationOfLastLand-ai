@@ -1,4 +1,4 @@
-import init, { init as gameInit, create_vehicle, update, set_entity_target } from '../pkg/nation_of_last_land.js';
+import init, { init as gameInit, create_vehicle, update, set_entity_target, select_entity, deselect_entity, clear_selection, set_group_target, get_selected_entities } from '../pkg/nation_of_last_land.js';
 
 class GameDemo {
     constructor() {
@@ -6,8 +6,18 @@ class GameDemo {
         this.entities = new Map();
         this.isInitialized = false;
         this.lastUpdate = Date.now();
-        this.selectedEntityId = null;
+        this.selectedEntityIds = new Set(); // Changed to support multiple selections
         this.combatEffects = new Map(); // Store active combat visualizations
+        this.dragSelection = {
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0,
+            graphics: null,
+            hasDragged: false,
+            justFinishedDrag: false
+        };
 
         this.initPixi();
         this.setupEventListeners();
@@ -51,7 +61,10 @@ class GameDemo {
         // Add a grid for reference
         this.drawGrid();
 
-        // Add click handler for canvas
+        // Add mouse event handlers for canvas (DOM events)
+        this.app.view.addEventListener('mousedown', (event) => this.handleMouseDown(event));
+        this.app.view.addEventListener('mousemove', (event) => this.handleMouseMove(event));
+        this.app.view.addEventListener('mouseup', (event) => this.handleMouseUp(event));
         this.app.view.addEventListener('click', (event) => this.handleCanvasClick(event));
 
         // Add resize handler
@@ -124,6 +137,13 @@ class GameDemo {
     handleCanvasClick(event) {
         if (!this.isInitialized) return;
 
+        // Prevent click if we just finished a drag selection
+        if (this.dragSelection.justFinishedDrag) {
+            this.dragSelection.justFinishedDrag = false;
+            return;
+        }
+
+        // Debug info
         const rect = this.app.view.getBoundingClientRect();
         const screenX = event.clientX - rect.left;
         const screenY = event.clientY - rect.top;
@@ -141,45 +161,186 @@ class GameDemo {
         const entityAtPosition = this.findEntityAtPosition(screenX, screenY);
 
         if (entityAtPosition !== null) {
-            // Check if we have a selected unit and clicked on a different unit
-            if (this.selectedEntityId !== null && this.selectedEntityId !== entityAtPosition) {
-                const selectedEntity = this.entities.get(this.selectedEntityId);
-                const targetEntity = this.entities.get(entityAtPosition);
-
-                if (selectedEntity && targetEntity) {
-                    // Check if factions are hostile
-                    if (this.areFactionsHostile(selectedEntity.faction, targetEntity.faction)) {
-                        // Clear any alert highlights before attacking
-                        if (this.alertHighlight) {
-                            this.app.stage.removeChild(this.alertHighlight);
-                            this.alertHighlight = null;
-                        }
-                        // Set the clicked unit as target for selected unit
-                        this.setEntityTarget(this.selectedEntityId, targetEntity.gameX, targetEntity.gameY);
-                        this.updateStatus(`Attacking enemy unit!`);
-                        return;
-                    }
-                }
-            }
-
-            // Default behavior: select the clicked entity
-            this.selectEntity(entityAtPosition);
-        } else if (this.selectedEntityId !== null) {
+            // Handle entity click
+            this.handleEntityClick(entityAtPosition, event.ctrlKey || event.metaKey);
+        } else if (this.selectedEntityIds.size > 0) {
             // Check if clicked on an alert
             const alertAtPosition = this.findAlertAtPosition(gameX, gameY);
 
             if (alertAtPosition !== null) {
-                // Clicked on an alert - set it as target for selected unit
-                this.setEntityTarget(this.selectedEntityId, alertAtPosition.x, alertAtPosition.y);
-                this.updateStatus(`Moving to alert at (${alertAtPosition.x.toFixed(1)}, ${alertAtPosition.y.toFixed(1)})`);
+                // Clicked on an alert - set it as target for selected group
+                this.setGroupTarget(alertAtPosition.x, alertAtPosition.y);
+                this.updateStatus(`Moving group to alert at (${alertAtPosition.x.toFixed(1)}, ${alertAtPosition.y.toFixed(1)})`);
                 // Add visual feedback - highlight the target alert
                 this.highlightTargetAlert(alertAtPosition);
             } else {
-                // Clicked on empty space - set movement target
-                this.setEntityTarget(this.selectedEntityId, gameX, gameY);
+                // Clicked on empty space - set movement target for group
+                this.setGroupTarget(gameX, gameY);
+            }
+        } else {
+            // Clicked on empty space with no selection - clear any existing selection
+            this.clearSelection();
+        }
+    }
+
+    handleMouseDown(event) {
+        if (!this.isInitialized) return;
+
+        const rect = this.app.view.getBoundingClientRect();
+        const screenX = event.clientX - rect.left;
+        const screenY = event.clientY - rect.top;
+
+        // Always start drag selection tracking, but only show rectangle if dragged enough
+        this.dragSelection.isDragging = true;
+        this.dragSelection.startX = screenX;
+        this.dragSelection.startY = screenY;
+        this.dragSelection.currentX = screenX;
+        this.dragSelection.currentY = screenY;
+        this.dragSelection.hasDragged = false; // Track if user actually dragged
+
+        // Create selection rectangle (initially invisible)
+        this.dragSelection.graphics = new PIXI.Graphics();
+        this.dragSelection.graphics.alpha = 0; // Start invisible
+        this.dragSelection.graphics.zIndex = 1000; // High z-index
+        this.app.stage.addChild(this.dragSelection.graphics);
+
+    }
+
+    handleMouseMove(event) {
+        if (!this.dragSelection.isDragging) return;
+
+        const rect = this.app.view.getBoundingClientRect();
+        const newX = event.clientX - rect.left;
+        const newY = event.clientY - rect.top;
+
+        this.dragSelection.currentX = newX;
+        this.dragSelection.currentY = newY;
+
+        // Check if user has dragged enough to show selection rectangle
+        const dragDistance = Math.sqrt(
+            (newX - this.dragSelection.startX) ** 2 +
+            (newY - this.dragSelection.startY) ** 2
+        );
+
+        if (dragDistance > 5) { // Minimum drag distance of 5 pixels
+            if (!this.dragSelection.hasDragged) {
+                this.dragSelection.hasDragged = true;
+            }
+            this.dragSelection.graphics.alpha = 1; // Make visible
+
+            // Update selection rectangle
+            if (this.dragSelection.graphics) {
+                this.dragSelection.graphics.clear();
+                this.dragSelection.graphics.lineStyle(2, 0x00FF00, 0.8);
+                this.dragSelection.graphics.beginFill(0x00FF00, 0.2);
+
+                const x = Math.min(this.dragSelection.startX, this.dragSelection.currentX);
+                const y = Math.min(this.dragSelection.startY, this.dragSelection.currentY);
+                const width = Math.abs(this.dragSelection.currentX - this.dragSelection.startX);
+                const height = Math.abs(this.dragSelection.currentY - this.dragSelection.startY);
+
+                this.dragSelection.graphics.drawRect(x, y, width, height);
             }
         }
-        // If no entity selected and clicked on empty space - do nothing
+    }
+
+    handleMouseUp(event) {
+        if (!this.dragSelection.isDragging) return;
+
+        const wasDragging = this.dragSelection.hasDragged;
+        this.dragSelection.isDragging = false;
+
+
+        // Only process selection if user actually dragged
+        if (wasDragging) {
+            // Prevent the click event from firing
+            this.dragSelection.justFinishedDrag = true;
+
+            // Calculate selection rectangle bounds
+            const x = Math.min(this.dragSelection.startX, this.dragSelection.currentX);
+            const y = Math.min(this.dragSelection.startY, this.dragSelection.currentY);
+            const width = Math.abs(this.dragSelection.currentX - this.dragSelection.startX);
+            const height = Math.abs(this.dragSelection.currentY - this.dragSelection.startY);
+
+
+            // Find all entities within the selection rectangle
+            const selectedEntities = [];
+            for (const [id, entity] of this.entities) {
+                // Skip alerts - they should not be selectable
+                if (entity.entityType === 'alert') continue;
+
+                // Check if entity is within selection bounds
+                if (entity.container.x >= x && entity.container.x <= x + width &&
+                    entity.container.y >= y && entity.container.y <= y + height) {
+                    selectedEntities.push(id);
+                }
+            }
+
+
+            if (selectedEntities.length > 0) {
+                // Clear previous selection and select the new group
+                this.clearSelection();
+                for (const entityId of selectedEntities) {
+                    this.selectEntity(entityId);
+                }
+                this.updateStatus(`Selected ${selectedEntities.length} units`);
+            } else {
+                // No entities selected, clear selection
+                this.clearSelection();
+            }
+        }
+
+        // Remove selection rectangle
+        if (this.dragSelection.graphics) {
+            this.app.stage.removeChild(this.dragSelection.graphics);
+            this.dragSelection.graphics = null;
+        }
+    }
+
+    handleEntityClick(entityId, isMultiSelect) {
+        const entity = this.entities.get(entityId);
+        if (!entity) return;
+
+        // Check if this is an attack scenario (different faction and hostile)
+        if (this.selectedEntityIds.size > 0 && !isMultiSelect) {
+            const targetEntity = entity;
+            let shouldAttack = false;
+
+            // Check if any selected unit is hostile towards this target
+            for (const selectedId of this.selectedEntityIds) {
+                const selectedEntity = this.entities.get(selectedId);
+                if (selectedEntity && this.areFactionsHostile(selectedEntity.faction, targetEntity.faction)) {
+                    shouldAttack = true;
+                    break;
+                }
+            }
+
+            if (shouldAttack) {
+                // Clear any alert highlights before attacking
+                if (this.alertHighlight) {
+                    this.app.stage.removeChild(this.alertHighlight);
+                    this.alertHighlight = null;
+                }
+                // Set the clicked unit as target for all selected units
+                this.setGroupTarget(targetEntity.gameX, targetEntity.gameY);
+                this.updateStatus(`Group attacking enemy unit!`);
+                return;
+            }
+        }
+
+        // Handle selection
+        if (isMultiSelect) {
+            // Multi-select mode: toggle selection
+            if (this.selectedEntityIds.has(entityId)) {
+                this.deselectEntity(entityId);
+            } else {
+                this.selectEntity(entityId);
+            }
+        } else {
+            // Single select mode: clear previous selection and select this entity
+            this.clearSelection();
+            this.selectEntity(entityId);
+        }
     }
 
     findEntityAtPosition(x, y) {
@@ -233,38 +394,83 @@ class GameDemo {
     }
 
     selectEntity(entityId) {
-        // Deselect previous entity
-        this.deselectEntity();
+        // Don't re-select if already selected
+        if (this.selectedEntityIds.has(entityId)) return;
 
-        // Clear any alert highlights
-        if (this.alertHighlight) {
-            this.app.stage.removeChild(this.alertHighlight);
-            this.alertHighlight = null;
-        }
+        // Select entity via API
+        try {
+            const result = select_entity(entityId);
+            const selectionResult = JSON.parse(result);
+            if (selectionResult.success) {
+                this.selectedEntityIds.add(entityId);
+                const entity = this.entities.get(entityId);
+                if (entity) {
+                    // Add selection indicator (yellow border)
+                    const selectionGraphics = new PIXI.Graphics();
+                    selectionGraphics.lineStyle(3, 0xFFFF00, 1);
+                    selectionGraphics.drawCircle(0, 0, 12);
+                    entity.container.addChild(selectionGraphics);
+                    entity.selectionIndicator = selectionGraphics;
+                }
 
-        // Select new entity
-        this.selectedEntityId = entityId;
-        const entity = this.entities.get(entityId);
-        if (entity) {
-            // Add selection indicator (yellow border)
-            const selectionGraphics = new PIXI.Graphics();
-            selectionGraphics.lineStyle(3, 0xFFFF00, 1);
-            selectionGraphics.drawCircle(0, 0, 12);
-            entity.container.addChild(selectionGraphics);
-            entity.selectionIndicator = selectionGraphics;
-
-            this.updateStatus(`Entity ${entityId} selected. Click on map to set movement target.`);
+                const count = this.selectedEntityIds.size;
+                if (count === 1) {
+                    this.updateStatus(`Entity ${entityId} selected. Hold Ctrl/Cmd and click to select multiple units, or drag to select area.`);
+                } else {
+                    this.updateStatus(`${count} entities selected. Click on map to set group movement target.`);
+                }
+            }
+        } catch (error) {
+            console.error('Selection error:', error);
         }
     }
 
-    deselectEntity() {
-        if (this.selectedEntityId !== null) {
-            const entity = this.entities.get(this.selectedEntityId);
-            if (entity && entity.selectionIndicator) {
-                entity.container.removeChild(entity.selectionIndicator);
-                entity.selectionIndicator = null;
+    deselectEntity(entityId) {
+        if (!this.selectedEntityIds.has(entityId)) return;
+
+        // Deselect entity via API
+        try {
+            const result = deselect_entity(entityId);
+            const selectionResult = JSON.parse(result);
+            if (selectionResult.success) {
+                this.selectedEntityIds.delete(entityId);
+                const entity = this.entities.get(entityId);
+                if (entity && entity.selectionIndicator) {
+                    entity.container.removeChild(entity.selectionIndicator);
+                    entity.selectionIndicator = null;
+                }
+
+                const count = this.selectedEntityIds.size;
+                if (count === 0) {
+                    this.updateStatus('Selection cleared.');
+                } else {
+                    this.updateStatus(`${count} entities selected.`);
+                }
             }
-            this.selectedEntityId = null;
+        } catch (error) {
+            console.error('Deselection error:', error);
+        }
+    }
+
+    clearSelection() {
+        // Clear selection via API
+        try {
+            const result = clear_selection();
+            const selectionResult = JSON.parse(result);
+            if (selectionResult.success) {
+                // Clear all visual indicators
+                for (const entityId of this.selectedEntityIds) {
+                    const entity = this.entities.get(entityId);
+                    if (entity && entity.selectionIndicator) {
+                        entity.container.removeChild(entity.selectionIndicator);
+                        entity.selectionIndicator = null;
+                    }
+                }
+                this.selectedEntityIds.clear();
+                this.updateStatus('Selection cleared.');
+            }
+        } catch (error) {
+            console.error('Clear selection error:', error);
         }
     }
 
@@ -291,6 +497,31 @@ class GameDemo {
         } catch (error) {
             this.updateStatus(`Error setting target: ${error.message}`);
             console.error('Target setting error:', error);
+        }
+    }
+
+    async setGroupTarget(x, y) {
+        try {
+            const result = set_group_target(x, y);
+            const groupResult = JSON.parse(result);
+
+            if (groupResult.success) {
+                this.updateStatus(`Group target set: ${groupResult.message}`);
+                // Add visual target indicator
+                this.showTargetIndicator(x, y);
+                // Don't clear selection for group commands
+                // Clear any alert highlights
+                if (this.alertHighlight) {
+                    this.app.stage.removeChild(this.alertHighlight);
+                    this.alertHighlight = null;
+                }
+            } else {
+                this.updateStatus(`Failed to set group target: ${groupResult.message}`);
+                console.error('Failed to set group target:', groupResult.message);
+            }
+        } catch (error) {
+            this.updateStatus(`Error setting group target: ${error.message}`);
+            console.error('Group target setting error:', error);
         }
     }
 
@@ -640,10 +871,18 @@ class GameDemo {
             }
         }
 
-        // Clear selection if selected entity no longer exists
-        if (this.selectedEntityId !== null && !gameEntityIds.has(this.selectedEntityId)) {
-            this.deselectEntity();
-            this.updateStatus('Selected unit was destroyed!');
+        // Clear selection for entities that no longer exist
+        const entitiesToRemove = [];
+        for (const entityId of this.selectedEntityIds) {
+            if (!gameEntityIds.has(entityId)) {
+                entitiesToRemove.push(entityId);
+            }
+        }
+        for (const entityId of entitiesToRemove) {
+            this.deselectEntity(entityId);
+        }
+        if (entitiesToRemove.length > 0) {
+            this.updateStatus(`${entitiesToRemove.length} selected unit(s) were destroyed!`);
         }
 
         // Always clear alert highlight on every update (most aggressive cleanup)
@@ -667,10 +906,20 @@ class GameDemo {
                 entity.gameY = gameEntity.y;
                 entity.faction = gameEntity.faction || null;
 
-                // Clear selection indicator if this entity is not currently selected
-                if (this.selectedEntityId !== gameEntity.id && entity.selectionIndicator) {
+                // Update selection indicator based on server state
+                if (gameEntity.is_selected && !entity.selectionIndicator) {
+                    // Add selection indicator if server says selected but we don't have one
+                    const selectionGraphics = new PIXI.Graphics();
+                    selectionGraphics.lineStyle(3, 0xFFFF00, 1);
+                    selectionGraphics.drawCircle(0, 0, 12);
+                    entity.container.addChild(selectionGraphics);
+                    entity.selectionIndicator = selectionGraphics;
+                    this.selectedEntityIds.add(gameEntity.id);
+                } else if (!gameEntity.is_selected && entity.selectionIndicator) {
+                    // Remove selection indicator if server says not selected but we have one
                     entity.container.removeChild(entity.selectionIndicator);
                     entity.selectionIndicator = null;
+                    this.selectedEntityIds.delete(gameEntity.id);
                 }
             } else {
                 // Create new visual entity

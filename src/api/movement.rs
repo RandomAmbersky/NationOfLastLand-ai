@@ -1,6 +1,5 @@
 use crate::api::init::GAME_WORLD;
 use crate::game::components::Movement;
-use hecs::Entity;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 

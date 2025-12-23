@@ -1,5 +1,7 @@
-use crate::api::init::{GAME_WORLD, get_game_config};
-use crate::game::components::{Position, Movement, Vehicle, VehicleType, Health, Faction};
+use crate::api::init::{get_game_config, GAME_WORLD};
+use crate::game::components::{
+    Faction, Health, Movement, Position, Selection, Vehicle, VehicleType,
+};
 use crate::game::systems::combat;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -58,9 +60,12 @@ pub fn create_vehicle(vehicle_type: &str, x: f32, y: f32) -> Result<String, JsVa
             let movement = Movement::new(base_speed);
             let vehicle = Vehicle::new(vehicle_type_enum);
             let health = Health::new(base_health);
+            let selection = Selection::new();
 
             // Spawn entity in ECS world
-            let entity = world.world.spawn((position, movement, vehicle, health));
+            let entity = world
+                .world
+                .spawn((position, movement, vehicle, health, selection));
 
             // Add combat capabilities
             combat::add_combat_to_vehicle(&mut world.world, entity);
