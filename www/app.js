@@ -247,7 +247,6 @@ class GameDemo {
             if (!this.dragSelection.hasDragged) {
                 this.dragSelection.hasDragged = true;
             }
-            this.dragSelection.graphics.alpha = 1; // Make visible
 
             // Update selection rectangle
             if (this.dragSelection.graphics) {
@@ -260,7 +259,13 @@ class GameDemo {
                 const width = Math.abs(this.dragSelection.currentX - this.dragSelection.startX);
                 const height = Math.abs(this.dragSelection.currentY - this.dragSelection.startY);
 
-                this.dragSelection.graphics.drawRect(x, y, width, height);
+                // Only draw and make visible if rectangle has meaningful size
+                if (width > 1 && height > 1) {
+                    this.dragSelection.graphics.drawRect(x, y, width, height);
+                    this.dragSelection.graphics.alpha = 1; // Make visible
+                } else {
+                    this.dragSelection.graphics.alpha = 0; // Keep invisible
+                }
             }
         }
     }
@@ -291,14 +296,16 @@ class GameDemo {
         try {
             // Only process selection if user actually dragged
             if (wasDragging) {
-                // Prevent the click event from firing
-                this.dragSelection.justFinishedDrag = true;
-
                 // Calculate selection rectangle bounds
                 const x = Math.min(this.dragSelection.startX, this.dragSelection.currentX);
                 const y = Math.min(this.dragSelection.startY, this.dragSelection.currentY);
                 const width = Math.abs(this.dragSelection.currentX - this.dragSelection.startX);
                 const height = Math.abs(this.dragSelection.currentY - this.dragSelection.startY);
+
+                // Only process if rectangle has meaningful size (not just a click)
+                if (width > 5 && height > 5) {
+                    // Prevent the click event from firing
+                    this.dragSelection.justFinishedDrag = true;
 
 
                 // Find all entities within the selection rectangle
@@ -326,15 +333,19 @@ class GameDemo {
                     // No entities selected, clear selection
                     this.clearAllSelections();
                 }
+                } else {
+                    // Rectangle too small, treat as click - don't prevent click event
+                    this.dragSelection.justFinishedDrag = false;
+                }
             }
         } finally {
             this.isSelecting = false;
-        }
 
-        // Remove selection rectangle
-        if (this.dragSelection.graphics) {
-            this.app.stage.removeChild(this.dragSelection.graphics);
-            this.dragSelection.graphics = null;
+            // Remove selection rectangle
+            if (this.dragSelection.graphics) {
+                this.app.stage.removeChild(this.dragSelection.graphics);
+                this.dragSelection.graphics = null;
+            }
         }
     }
 
