@@ -17,7 +17,8 @@ class GameDemo {
             currentY: 0,
             graphics: null,
             hasDragged: false,
-            justFinishedDrag: false
+            justFinishedDrag: false,
+            mouseLeftCanvas: false
         };
 
         this.initPixi();
@@ -67,6 +68,7 @@ class GameDemo {
         this.app.view.addEventListener('mousemove', (event) => this.handleMouseMove(event));
         this.app.view.addEventListener('mouseup', (event) => this.handleMouseUp(event));
         this.app.view.addEventListener('mouseleave', (event) => this.handleMouseLeave(event));
+        this.app.view.addEventListener('mouseenter', (event) => this.handleMouseEnter(event));
         this.app.view.addEventListener('click', (event) => this.handleCanvasClick(event));
 
         // Add resize handler
@@ -195,6 +197,13 @@ class GameDemo {
         this.dragSelection.currentX = screenX;
         this.dragSelection.currentY = screenY;
         this.dragSelection.hasDragged = false; // Track if user actually dragged
+        this.dragSelection.mouseLeftCanvas = false; // Reset flag for new drag
+
+        // Remove any existing selection rectangle first
+        if (this.dragSelection.graphics) {
+            this.app.stage.removeChild(this.dragSelection.graphics);
+            this.dragSelection.graphics = null;
+        }
 
         // Create selection rectangle (initially invisible)
         this.dragSelection.graphics = new PIXI.Graphics();
@@ -206,6 +215,16 @@ class GameDemo {
 
     handleMouseMove(event) {
         if (!this.dragSelection.isDragging) return;
+
+        // If mouse left canvas during this drag, don't continue selection
+        if (this.dragSelection.mouseLeftCanvas) {
+            // Make sure graphics is removed if it somehow still exists
+            if (this.dragSelection.graphics) {
+                this.app.stage.removeChild(this.dragSelection.graphics);
+                this.dragSelection.graphics = null;
+            }
+            return;
+        }
 
         const rect = this.app.view.getBoundingClientRect();
         const newX = event.clientX - rect.left;
@@ -220,8 +239,8 @@ class GameDemo {
 
         // Check if user has dragged enough to show selection rectangle
         const dragDistance = Math.sqrt(
-            (newX - this.dragSelection.startX) ** 2 +
-            (newY - this.dragSelection.startY) ** 2
+            (clampedX - this.dragSelection.startX) ** 2 +
+            (clampedY - this.dragSelection.startY) ** 2
         );
 
         if (dragDistance > 5) { // Minimum drag distance of 5 pixels
@@ -248,6 +267,19 @@ class GameDemo {
 
     handleMouseUp(event) {
         if (!this.dragSelection.isDragging) return;
+
+        // If mouse left canvas during this drag, cancel selection entirely
+        if (this.dragSelection.mouseLeftCanvas) {
+            this.dragSelection.isDragging = false;
+            this.dragSelection.mouseLeftCanvas = false;
+
+            // Remove selection rectangle
+            if (this.dragSelection.graphics) {
+                this.app.stage.removeChild(this.dragSelection.graphics);
+                this.dragSelection.graphics = null;
+            }
+            return;
+        }
 
         const wasDragging = this.dragSelection.hasDragged;
         this.dragSelection.isDragging = false;
@@ -309,6 +341,9 @@ class GameDemo {
     handleMouseLeave(event) {
         if (!this.dragSelection.isDragging) return;
 
+        // Mark that mouse left canvas during drag
+        this.dragSelection.mouseLeftCanvas = true;
+
         // Cancel drag selection when mouse leaves canvas
         this.dragSelection.isDragging = false;
         this.dragSelection.hasDragged = false;
@@ -318,6 +353,11 @@ class GameDemo {
             this.app.stage.removeChild(this.dragSelection.graphics);
             this.dragSelection.graphics = null;
         }
+    }
+
+    handleMouseEnter(event) {
+        // Mouse entered canvas - no specific action needed, but we can log or validate state
+        // The drag state should be properly managed by mouseleave/mousedown events
     }
 
     handleEntityClick(entityId, isMultiSelect) {
