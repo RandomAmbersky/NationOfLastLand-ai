@@ -74,6 +74,9 @@ class GameDemo {
         // Add resize handler
         window.addEventListener('resize', () => this.handleResize());
 
+        // Clean up any existing graphics on startup
+        this.cleanupOrphanedGraphics();
+
         // Start render loop
         this.app.ticker.add(() => this.gameLoop());
     }
@@ -183,12 +186,49 @@ class GameDemo {
         }
     }
 
+    // Clean up any orphaned graphics objects
+    cleanupOrphanedGraphics() {
+        let removedCount = 0;
+        // Find and remove any PIXI.Graphics objects that might be selection rectangles
+        // Be ultra aggressive - remove all graphics except essential ones
+        for (let i = this.app.stage.children.length - 1; i >= 0; i--) {
+            const child = this.app.stage.children[i];
+            if (child instanceof PIXI.Graphics) {
+                // Keep only essential graphics: grid, target indicators, alert highlights
+                const isEssential = child === this.gridContainer ||
+                    child === this.targetIndicator ||
+                    child === this.alertHighlight;
+                if (!isEssential) {
+                    console.log('Removing orphaned graphics:', child);
+                    this.app.stage.removeChild(child);
+                    removedCount++;
+                }
+            }
+        }
+        if (removedCount > 0) {
+            console.log(`Cleaned up ${removedCount} orphaned graphics objects`);
+        }
+    }
+
     handleMouseDown(event) {
         if (!this.isInitialized) return;
+
+        // Clean up any orphaned graphics before starting new drag
+        this.cleanupOrphanedGraphics();
 
         const rect = this.app.view.getBoundingClientRect();
         const screenX = event.clientX - rect.left;
         const screenY = event.clientY - rect.top;
+
+        // If we have a pending drag from mouse leaving canvas, clean it up
+        if (this.dragSelection.mouseLeftCanvas) {
+            this.dragSelection.isDragging = false;
+            this.dragSelection.mouseLeftCanvas = false;
+            if (this.dragSelection.graphics) {
+                this.app.stage.removeChild(this.dragSelection.graphics);
+                this.dragSelection.graphics = null;
+            }
+        }
 
         // Always start drag selection tracking, but only show rectangle if dragged enough
         this.dragSelection.isDragging = true;
@@ -210,14 +250,19 @@ class GameDemo {
         this.dragSelection.graphics.alpha = 0; // Start invisible
         this.dragSelection.graphics.zIndex = 1000; // High z-index
         this.app.stage.addChild(this.dragSelection.graphics);
+        console.log('Created selection graphics:', this.dragSelection.graphics);
 
     }
 
     handleMouseMove(event) {
-        if (!this.dragSelection.isDragging) return;
+        if (!this.dragSelection.isDragging) {
+            return;
+        }
 
-        // If mouse left canvas during this drag, don't continue selection
+        // If mouse left canvas during this drag, don't continue selection and clean up
         if (this.dragSelection.mouseLeftCanvas) {
+            this.dragSelection.isDragging = false;
+            this.dragSelection.hasDragged = false;
             // Make sure graphics is removed if it somehow still exists
             if (this.dragSelection.graphics) {
                 this.app.stage.removeChild(this.dragSelection.graphics);
@@ -271,6 +316,14 @@ class GameDemo {
     }
 
     handleMouseUp(event) {
+        // Clean up any leftover graphics from interrupted drags
+        if (this.dragSelection.graphics && !this.dragSelection.isDragging) {
+            console.log('Removing selection graphics:', this.dragSelection.graphics);
+            this.app.stage.removeChild(this.dragSelection.graphics);
+            this.dragSelection.graphics = null;
+            return;
+        }
+
         if (!this.dragSelection.isDragging) return;
 
         // If mouse left canvas during this drag, cancel selection entirely
@@ -280,6 +333,7 @@ class GameDemo {
 
             // Remove selection rectangle
             if (this.dragSelection.graphics) {
+                console.log('Removing selection graphics:', this.dragSelection.graphics);
                 this.app.stage.removeChild(this.dragSelection.graphics);
                 this.dragSelection.graphics = null;
             }
@@ -308,31 +362,31 @@ class GameDemo {
                     this.dragSelection.justFinishedDrag = true;
 
 
-                // Find all entities within the selection rectangle
-                const selectedEntities = [];
-                for (const [id, entity] of this.entities) {
-                    // Skip alerts - they should not be selectable
-                    if (entity.entityType === 'alert') continue;
+                    // Find all entities within the selection rectangle
+                    const selectedEntities = [];
+                    for (const [id, entity] of this.entities) {
+                        // Skip alerts - they should not be selectable
+                        if (entity.entityType === 'alert') continue;
 
-                    // Check if entity is within selection bounds
-                    if (entity.container.x >= x && entity.container.x <= x + width &&
-                        entity.container.y >= y && entity.container.y <= y + height) {
-                        selectedEntities.push(id);
+                        // Check if entity is within selection bounds
+                        if (entity.container.x >= x && entity.container.x <= x + width &&
+                            entity.container.y >= y && entity.container.y <= y + height) {
+                            selectedEntities.push(id);
+                        }
                     }
-                }
 
 
-                if (selectedEntities.length > 0) {
-                    // Clear previous selection and select the new group
-                    this.clearAllSelections();
-                    for (const entityId of selectedEntities) {
-                        this.selectEntity(entityId, true);
+                    if (selectedEntities.length > 0) {
+                        // Clear previous selection and select the new group
+                        this.clearAllSelections();
+                        for (const entityId of selectedEntities) {
+                            this.selectEntity(entityId, true);
+                        }
+                        this.updateStatus(`Selected ${selectedEntities.length} units`);
+                    } else {
+                        // No entities selected, clear selection
+                        this.clearAllSelections();
                     }
-                    this.updateStatus(`Selected ${selectedEntities.length} units`);
-                } else {
-                    // No entities selected, clear selection
-                    this.clearAllSelections();
-                }
                 } else {
                     // Rectangle too small, treat as click - don't prevent click event
                     this.dragSelection.justFinishedDrag = false;
@@ -343,6 +397,7 @@ class GameDemo {
 
             // Remove selection rectangle
             if (this.dragSelection.graphics) {
+                console.log('Removing selection graphics:', this.dragSelection.graphics);
                 this.app.stage.removeChild(this.dragSelection.graphics);
                 this.dragSelection.graphics = null;
             }
@@ -367,8 +422,8 @@ class GameDemo {
     }
 
     handleMouseEnter(event) {
-        // Mouse entered canvas - no specific action needed, but we can log or validate state
-        // The drag state should be properly managed by mouseleave/mousedown events
+        // Mouse entered canvas - no action needed for drag selection
+        // mouseLeftCanvas flag is reset in handleMouseDown for new drags
     }
 
     handleEntityClick(entityId, isMultiSelect) {
@@ -697,6 +752,9 @@ class GameDemo {
     }
 
     async initializeGame() {
+        // Clean up any orphaned graphics before initializing
+        this.cleanupOrphanedGraphics();
+
         try {
             const result = gameInit();
             const gameState = JSON.parse(result);
