@@ -11,54 +11,53 @@ pub struct GroupOperationResult {
 }
 
 #[wasm_bindgen]
-pub fn select_entity(entity_id: u32) -> Result<String, JsValue> {
+pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue> {
     unsafe {
         if let Some(world) = &mut GAME_WORLD {
-            // Find the entity by ID
-            let mut found_entity_id = None;
-            for (entity, _) in world.world.query::<&Selection>().iter() {
+            // Use a single mutable query to handle all selection logic
+            let mut target_entity = None;
+            let mut cleared_count = 0;
+
+            // Iterate through all selection components and handle selection logic
+            for (entity, selection) in world.world.query::<&mut Selection>().iter() {
                 if entity.id() == entity_id {
-                    found_entity_id = Some(entity);
-                    break;
+                    // Found the target entity
+                    target_entity = Some(entity);
+                    // Select this entity (will be done after clearing others if exclusive)
+                } else if exclusive && selection.is_selected {
+                    // Clear other selections only if exclusive mode
+                    selection.deselect();
+                    cleared_count += 1;
                 }
             }
 
-            match found_entity_id {
+            match target_entity {
                 Some(entity) => {
-                    // Get mutable access to the selection component
-                    match world.world.query_one::<&mut Selection>(entity) {
-                        Ok(mut query) => {
-                            if let Some(selection) = query.get() {
-                                selection.select();
+                    // Now select the target entity (we already know it has a Selection component)
+                    if let Ok(mut query) = world.world.query_one::<&mut Selection>(entity) {
+                        if let Some(selection) = query.get() {
+                            selection.select();
+                            println!("Selected entity {} (cleared {} others)", entity_id, cleared_count);
 
-                                let result = GroupOperationResult {
-                                    success: true,
-                                    message: format!("Entity {} selected", entity_id),
-                                    selected_count: None,
-                                };
+                            let result = GroupOperationResult {
+                                success: true,
+                                message: format!(
+                                    "Entity {} selected (cleared {} other selections)",
+                                    entity_id, cleared_count
+                                ),
+                                selected_count: Some(1),
+                            };
 
-                                serde_json::to_string(&result).map_err(|e| {
-                                    JsValue::from_str(&format!("Serialization error: {}", e))
-                                })
-                            } else {
-                                let result = GroupOperationResult {
-                                    success: false,
-                                    message: format!(
-                                        "Entity {} does not have selection component",
-                                        entity_id
-                                    ),
-                                    selected_count: None,
-                                };
-
-                                serde_json::to_string(&result).map_err(|e| {
-                                    JsValue::from_str(&format!("Serialization error: {}", e))
-                                })
-                            }
-                        }
-                        Err(_) => {
+                            serde_json::to_string(&result).map_err(|e| {
+                                JsValue::from_str(&format!("Serialization error: {}", e))
+                            })
+                        } else {
                             let result = GroupOperationResult {
                                 success: false,
-                                message: format!("Entity {} not found", entity_id),
+                                message: format!(
+                                    "Entity {} does not have selection component",
+                                    entity_id
+                                ),
                                 selected_count: None,
                             };
 
@@ -66,6 +65,16 @@ pub fn select_entity(entity_id: u32) -> Result<String, JsValue> {
                                 JsValue::from_str(&format!("Serialization error: {}", e))
                             })
                         }
+                    } else {
+                        let result = GroupOperationResult {
+                            success: false,
+                            message: format!("Entity {} not found", entity_id),
+                            selected_count: None,
+                        };
+
+                        serde_json::to_string(&result).map_err(|e| {
+                            JsValue::from_str(&format!("Serialization error: {}", e))
+                        })
                     }
                 }
                 None => {

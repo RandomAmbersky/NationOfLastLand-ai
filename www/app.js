@@ -9,6 +9,7 @@ class GameDemo {
         this.selectedEntityIds = new Set(); // Changed to support multiple selections
         this.combatEffects = new Map(); // Store active combat visualizations
         this.isSelecting = false; // Prevent concurrent selection operations
+        this.selectionOperationInProgress = false; // Prevent server sync from overriding local selection changes
         this.dragSelection = {
             isDragging: false,
             startX: 0,
@@ -164,8 +165,8 @@ class GameDemo {
         const entityAtPosition = this.findEntityAtPosition(screenX, screenY);
 
         if (entityAtPosition !== null) {
-            // Handle entity click
-            this.handleEntityClick(entityAtPosition, event.ctrlKey || event.metaKey);
+            // Handle entity click - always exclusive selection since user has only mouse
+            this.handleEntityClick(entityAtPosition, false);
         } else if (this.selectedEntityIds.size > 0) {
             // Check if clicked on an alert
             const alertAtPosition = this.findAlertAtPosition(gameX, gameY);
@@ -346,6 +347,7 @@ class GameDemo {
         // Prevent concurrent selection operations
         if (this.isSelecting) return;
         this.isSelecting = true;
+        this.selectionOperationInProgress = true;
 
         try {
             // Only process selection if user actually dragged
@@ -377,15 +379,24 @@ class GameDemo {
 
 
                     if (selectedEntities.length > 0) {
-                        // Clear previous selection and select the new group
-                        this.clearAllSelections();
-                        for (const entityId of selectedEntities) {
-                            this.selectEntity(entityId, true);
+                        // Update selection: keep intersection, add new ones, remove old ones not in new selection
+                        const selectedEntitiesSet = new Set(selectedEntities);
+
+                        // Remove units that are currently selected but not in the new selection
+                        for (const entityId of this.selectedEntityIds) {
+                            if (!selectedEntitiesSet.has(entityId)) {
+                                this.deselectEntity(entityId, true);
+                            }
                         }
-                        this.updateStatus(`Selected ${selectedEntities.length} units`);
-                    } else {
-                        // No entities selected, clear selection
-                        this.clearAllSelections();
+
+                        // Add units from new selection that aren't already selected
+                        for (const entityId of selectedEntities) {
+                            if (!this.selectedEntityIds.has(entityId)) {
+                                this.selectEntity(entityId, true, false); // exclusive = false for drag selection
+                            }
+                        }
+
+                        this.updateStatus(`Selected ${selectedEntities.length} units (updated group)`);
                     }
                 } else {
                     // Rectangle too small, treat as click - don't prevent click event
@@ -394,6 +405,10 @@ class GameDemo {
             }
         } finally {
             this.isSelecting = false;
+            // Reset flag after a short delay to allow server sync to complete
+            setTimeout(() => {
+                this.selectionOperationInProgress = false;
+            }, 100);
 
             // Remove selection rectangle
             if (this.dragSelection.graphics) {
@@ -433,6 +448,7 @@ class GameDemo {
         // Prevent concurrent selection operations
         if (this.isSelecting) return;
         this.isSelecting = true;
+        this.selectionOperationInProgress = true;
 
         try {
             // Check if this is an attack scenario (different faction and hostile)
@@ -468,15 +484,19 @@ class GameDemo {
                 if (this.selectedEntityIds.has(entityId)) {
                     this.deselectEntity(entityId, true);
                 } else {
-                    this.selectEntity(entityId, true);
+                    this.selectEntity(entityId, true, false); // exclusive = false for multi-select
                 }
             } else {
                 // Single select mode: clear previous selection and select this entity
-                this.clearAllSelections();
-                this.selectEntity(entityId, true);
+                this.clearAllSelections(true);
+                this.selectEntity(entityId, true, true); // exclusive = true for single-select
             }
         } finally {
             this.isSelecting = false;
+            // Reset flag after a short delay to allow server sync to complete
+            setTimeout(() => {
+                this.selectionOperationInProgress = false;
+            }, 100);
         }
     }
 
@@ -498,7 +518,6 @@ class GameDemo {
                 closestEntity = id;
             }
         }
-
         return closestEntity;
     }
 
@@ -524,13 +543,13 @@ class GameDemo {
     selectEntityAtPosition(x, y) {
         const entityId = this.findEntityAtPosition(x, y);
         if (entityId !== null) {
-            this.selectEntity(entityId);
+            this.selectEntity(entityId, false, true); // exclusive = true for single position select
         } else {
             this.deselectEntity();
         }
     }
 
-    selectEntity(entityId, bypassCheck = false) {
+    selectEntity(entityId, bypassCheck = false, exclusive = true) {
         // Prevent concurrent operations unless bypassed (for internal calls)
         if (!bypassCheck && this.isSelecting) return;
 
@@ -539,7 +558,7 @@ class GameDemo {
 
         // Select entity via API
         try {
-            const result = select_entity(entityId);
+            const result = select_entity(entityId, exclusive);
             const selectionResult = JSON.parse(result);
             if (selectionResult.success) {
                 this.selectedEntityIds.add(entityId);
@@ -595,9 +614,10 @@ class GameDemo {
         }
     }
 
-    clearAllSelections() {
-        // Prevent concurrent selection operations
-        if (this.isSelecting) return;
+    clearAllSelections(bypassCheck = false) {
+        // Prevent concurrent selection operations unless bypassed (for internal calls)
+        if (!bypassCheck && this.isSelecting) return;
+        this.selectionOperationInProgress = true;
 
         // Clear selection via API
         try {
@@ -618,7 +638,13 @@ class GameDemo {
         } catch (error) {
             console.error('Clear selection error:', error);
         }
+
+        // Reset flag after a short delay to allow server sync to complete
+        setTimeout(() => {
+            this.selectionOperationInProgress = false;
+        }, 100);
     }
+
 
     async setEntityTarget(entityId, x, y) {
         try {
@@ -795,7 +821,7 @@ class GameDemo {
                 }
 
                 // Select only the newly spawned vehicle
-                this.selectEntity(creationResult.id, true);
+                this.selectEntity(creationResult.id, true, true);
 
                 this.updateStatus(`Vehicle spawned and selected!\nID: ${creationResult.id}\nType: ${vehicleType}\nPosition: (${x}, ${y})`);
             } else {
@@ -1055,20 +1081,24 @@ class GameDemo {
                 entity.gameY = gameEntity.y;
                 entity.faction = gameEntity.faction || null;
 
-                // Update selection indicator based on server state
-                if (gameEntity.is_selected && !entity.selectionIndicator) {
-                    // Add selection indicator if server says selected but we don't have one
-                    const selectionGraphics = new PIXI.Graphics();
-                    selectionGraphics.lineStyle(3, 0xFFFF00, 1);
-                    selectionGraphics.drawCircle(0, 0, 12);
-                    entity.container.addChild(selectionGraphics);
-                    entity.selectionIndicator = selectionGraphics;
-                    this.selectedEntityIds.add(gameEntity.id);
-                } else if (!gameEntity.is_selected && entity.selectionIndicator) {
-                    // Remove selection indicator if server says not selected but we have one
-                    entity.container.removeChild(entity.selectionIndicator);
-                    entity.selectionIndicator = null;
-                    this.selectedEntityIds.delete(gameEntity.id);
+                // Update selection indicator based on server state, but only if it differs from local state
+                // and we're not in the middle of a local selection operation
+                const locallySelected = this.selectedEntityIds.has(gameEntity.id);
+                if (!this.selectionOperationInProgress && gameEntity.is_selected !== locallySelected) {
+                    if (gameEntity.is_selected && !entity.selectionIndicator) {
+                        // Add selection indicator if server says selected but we don't have one
+                        const selectionGraphics = new PIXI.Graphics();
+                        selectionGraphics.lineStyle(3, 0xFFFF00, 1);
+                        selectionGraphics.drawCircle(0, 0, 12);
+                        entity.container.addChild(selectionGraphics);
+                        entity.selectionIndicator = selectionGraphics;
+                        this.selectedEntityIds.add(gameEntity.id);
+                    } else if (!gameEntity.is_selected && entity.selectionIndicator) {
+                        // Remove selection indicator if server says not selected but we have one
+                        entity.container.removeChild(entity.selectionIndicator);
+                        entity.selectionIndicator = null;
+                        this.selectedEntityIds.delete(gameEntity.id);
+                    }
                 }
             } else {
                 // Create new visual entity
