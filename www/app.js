@@ -66,6 +66,7 @@ class GameDemo {
         this.app.view.addEventListener('mousedown', (event) => this.handleMouseDown(event));
         this.app.view.addEventListener('mousemove', (event) => this.handleMouseMove(event));
         this.app.view.addEventListener('mouseup', (event) => this.handleMouseUp(event));
+        this.app.view.addEventListener('mouseleave', (event) => this.handleMouseLeave(event));
         this.app.view.addEventListener('click', (event) => this.handleCanvasClick(event));
 
         // Add resize handler
@@ -210,8 +211,12 @@ class GameDemo {
         const newX = event.clientX - rect.left;
         const newY = event.clientY - rect.top;
 
-        this.dragSelection.currentX = newX;
-        this.dragSelection.currentY = newY;
+        // Clamp coordinates to canvas bounds to prevent issues when mouse goes outside
+        const clampedX = Math.max(0, Math.min(newX, this.app.screen.width));
+        const clampedY = Math.max(0, Math.min(newY, this.app.screen.height));
+
+        this.dragSelection.currentX = clampedX;
+        this.dragSelection.currentY = clampedY;
 
         // Check if user has dragged enough to show selection rectangle
         const dragDistance = Math.sqrt(
@@ -295,6 +300,20 @@ class GameDemo {
         }
 
         // Remove selection rectangle
+        if (this.dragSelection.graphics) {
+            this.app.stage.removeChild(this.dragSelection.graphics);
+            this.dragSelection.graphics = null;
+        }
+    }
+
+    handleMouseLeave(event) {
+        if (!this.dragSelection.isDragging) return;
+
+        // Cancel drag selection when mouse leaves canvas
+        this.dragSelection.isDragging = false;
+        this.dragSelection.hasDragged = false;
+
+        // Remove selection rectangle if it exists
         if (this.dragSelection.graphics) {
             this.app.stage.removeChild(this.dragSelection.graphics);
             this.dragSelection.graphics = null;
