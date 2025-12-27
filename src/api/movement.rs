@@ -12,7 +12,9 @@ pub struct MovementResult {
 #[wasm_bindgen]
 pub fn set_entity_target(entity_id: u32, target_x: f32, target_y: f32) -> Result<String, JsValue> {
     if let Some(world) = GAME_WORLD.get() {
-        let mut world = world.write().map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
+        let world = world
+            .write()
+            .map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
         // Find the entity by ID
         let mut found_entity_id = None;
         for (entity, _) in world.world.query::<&Movement>().iter() {
@@ -62,9 +64,8 @@ pub fn set_entity_target(entity_id: u32, target_x: f32, target_y: f32) -> Result
                             message: format!("Entity {} not found", entity_id),
                         };
 
-                        serde_json::to_string(&result).map_err(|e| {
-                            JsValue::from_str(&format!("Serialization error: {}", e))
-                        })
+                        serde_json::to_string(&result)
+                            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
                     }
                 }
             }

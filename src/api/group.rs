@@ -13,7 +13,9 @@ pub struct GroupOperationResult {
 #[wasm_bindgen]
 pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue> {
     if let Some(world) = GAME_WORLD.get() {
-        let mut world = world.write().map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
+        let world = world
+            .write()
+            .map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
         // Use a single mutable query to handle all selection logic
         let mut target_entity = None;
         let mut cleared_count = 0;
@@ -37,7 +39,10 @@ pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue>
                 if let Ok(mut query) = world.world.query_one::<&mut Selection>(entity) {
                     if let Some(selection) = query.get() {
                         selection.select();
-                        println!("Selected entity {} (cleared {} others)", entity_id, cleared_count);
+                        println!(
+                            "Selected entity {} (cleared {} others)",
+                            entity_id, cleared_count
+                        );
 
                         let result = GroupOperationResult {
                             success: true,
@@ -48,9 +53,8 @@ pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue>
                             selected_count: Some(1),
                         };
 
-                        serde_json::to_string(&result).map_err(|e| {
-                            JsValue::from_str(&format!("Serialization error: {}", e))
-                        })
+                        serde_json::to_string(&result)
+                            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
                     } else {
                         let result = GroupOperationResult {
                             success: false,
@@ -61,9 +65,8 @@ pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue>
                             selected_count: None,
                         };
 
-                        serde_json::to_string(&result).map_err(|e| {
-                            JsValue::from_str(&format!("Serialization error: {}", e))
-                        })
+                        serde_json::to_string(&result)
+                            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
                     }
                 } else {
                     let result = GroupOperationResult {
@@ -72,9 +75,8 @@ pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue>
                         selected_count: None,
                     };
 
-                    serde_json::to_string(&result).map_err(|e| {
-                        JsValue::from_str(&format!("Serialization error: {}", e))
-                    })
+                    serde_json::to_string(&result)
+                        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
                 }
             }
             None => {
@@ -103,7 +105,9 @@ pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue>
 #[wasm_bindgen]
 pub fn deselect_entity(entity_id: u32) -> Result<String, JsValue> {
     if let Some(world) = GAME_WORLD.get() {
-        let mut world = world.write().map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
+        let world = world
+            .write()
+            .map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
         // Find the entity by ID
         let mut found_entity_id = None;
         for (entity, _) in world.world.query::<&Selection>().iter() {
@@ -152,9 +156,8 @@ pub fn deselect_entity(entity_id: u32) -> Result<String, JsValue> {
                             selected_count: None,
                         };
 
-                        serde_json::to_string(&result).map_err(|e| {
-                            JsValue::from_str(&format!("Serialization error: {}", e))
-                        })
+                        serde_json::to_string(&result)
+                            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
                     }
                 }
             }
@@ -184,7 +187,9 @@ pub fn deselect_entity(entity_id: u32) -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn clear_selection() -> Result<String, JsValue> {
     if let Some(world) = GAME_WORLD.get() {
-        let mut world = world.write().map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
+        let world = world
+            .write()
+            .map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
         let mut count = 0;
         // Clear selection for all entities
         for (_, selection) in world.world.query::<&mut Selection>().iter() {
@@ -217,7 +222,9 @@ pub fn clear_selection() -> Result<String, JsValue> {
 #[wasm_bindgen]
 pub fn set_group_target(target_x: f32, target_y: f32) -> Result<String, JsValue> {
     if let Some(world) = GAME_WORLD.get() {
-        let mut world = world.write().map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
+        let world = world
+            .write()
+            .map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
         let mut selected_entities = Vec::new();
 
         // Find all selected entities
@@ -295,7 +302,9 @@ pub fn set_group_target(target_x: f32, target_y: f32) -> Result<String, JsValue>
 #[wasm_bindgen]
 pub fn get_selected_entities() -> Result<String, JsValue> {
     if let Some(world) = GAME_WORLD.get() {
-        let world = world.read().map_err(|_| JsValue::from_str("Failed to acquire read lock"))?;
+        let world = world
+            .read()
+            .map_err(|_| JsValue::from_str("Failed to acquire read lock"))?;
         let mut selected_ids = Vec::new();
 
         // Find all selected entities
