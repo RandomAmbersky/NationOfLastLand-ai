@@ -14,37 +14,35 @@ pub struct AlertCreationResult {
 #[wasm_bindgen]
 #[allow(static_mut_refs)]
 pub fn create_random_alert() -> Result<String, JsValue> {
-    unsafe {
-        if let Some(world) = unsafe { &mut GAME_WORLD } {
-            // Generate a random alert
-            let alert = generate_random_alert();
-            let alert_type = alert.alert_type;
-            let position = alert.position;
+    if let Some(world) = unsafe { &mut GAME_WORLD } {
+        // Generate a random alert
+        let alert = generate_random_alert();
+        let alert_type = alert.alert_type;
+        let position = alert.position;
 
-            // Spawn alert entity
-            let entity = world.world.spawn((alert,));
+        // Spawn alert entity
+        let entity = world.world.spawn((alert,));
 
-            let result = AlertCreationResult {
-                id: entity.id(),
-                success: true,
-                message: format!(
-                    "Created random alert of type {:?} at ({}, {})",
-                    alert_type, position.x, position.y
-                ),
-            };
+        let result = AlertCreationResult {
+            id: entity.id(),
+            success: true,
+            message: format!(
+                "Created random alert of type {:?} at ({}, {})",
+                alert_type, position.x, position.y
+            ),
+        };
 
-            serde_json::to_string(&result)
-                .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
-        } else {
-            let result = AlertCreationResult {
-                id: 0,
-                success: false,
-                message: "Game world not initialized".to_string(),
-            };
+        serde_json::to_string(&result)
+            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+    } else {
+        let result = AlertCreationResult {
+            id: 0,
+            success: false,
+            message: "Game world not initialized".to_string(),
+        };
 
-            serde_json::to_string(&result)
-                .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
-        }
+        serde_json::to_string(&result)
+            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
     }
 }
 

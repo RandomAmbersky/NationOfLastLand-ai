@@ -5,6 +5,7 @@ use crate::game::{
 };
 use hecs::World;
 use serde::{Deserialize, Serialize};
+use std::sync::OnceLock;
 use wasm_bindgen::prelude::*;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -28,7 +29,7 @@ pub struct GameState {
 }
 
 pub static mut GAME_WORLD: Option<GameWorld> = None;
-pub static mut GAME_CONFIG: Option<GameConfig> = None;
+pub static GAME_CONFIG: OnceLock<GameConfig> = OnceLock::new();
 
 #[wasm_bindgen]
 #[allow(static_mut_refs)]
@@ -141,9 +142,9 @@ pub fn get_entities_data(world: &World) -> Vec<EntityData> {
 pub fn load_config(yaml_str: &str) -> Result<(), JsValue> {
     match GameConfig::from_yaml(yaml_str) {
         Ok(config) => {
-            unsafe {
-                GAME_CONFIG = Some(config);
-            }
+            GAME_CONFIG
+                .set(config)
+                .map_err(|_| JsValue::from_str("Config already loaded"))?;
             Ok(())
         }
         Err(e) => Err(JsValue::from_str(&format!("Failed to parse config: {}", e))),
@@ -155,22 +156,20 @@ pub fn load_default_config() {
     // Default configuration embedded in code
     let default_config_yaml = include_str!("../../config/units.yml");
 
-    match GameConfig::from_yaml(default_config_yaml) {
-        Ok(config) => unsafe {
-            GAME_CONFIG = Some(config);
-        },
-        Err(e) => {
-            // In a real application, this would be a fatal error
-            // For now, we'll use default values
-            eprintln!("Failed to load default config: {}", e);
-            unsafe {
-                GAME_CONFIG = Some(GameConfig::default());
+    GAME_CONFIG.get_or_init(|| {
+        match GameConfig::from_yaml(default_config_yaml) {
+            Ok(config) => config,
+            Err(e) => {
+                // In a real application, this would be a fatal error
+                // For now, we'll use default values
+                eprintln!("Failed to load default config: {}", e);
+                GameConfig::default()
             }
         }
-    }
+    });
 }
 
 /// Get reference to current game config
 pub fn get_game_config() -> Option<&'static GameConfig> {
-    unsafe { GAME_CONFIG.as_ref() }
+    GAME_CONFIG.get()
 }
