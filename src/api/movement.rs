@@ -10,9 +10,10 @@ pub struct MovementResult {
 }
 
 #[wasm_bindgen]
+#[allow(static_mut_refs)]
 pub fn set_entity_target(entity_id: u32, target_x: f32, target_y: f32) -> Result<String, JsValue> {
     unsafe {
-        if let Some(world) = &mut GAME_WORLD {
+        if let Some(world) = unsafe { &mut GAME_WORLD } {
             // Find the entity by ID
             let mut found_entity_id = None;
             for (entity, _) in world.world.query::<&Movement>().iter() {

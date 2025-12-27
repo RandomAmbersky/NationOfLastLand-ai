@@ -12,9 +12,10 @@ pub struct AlertCreationResult {
 }
 
 #[wasm_bindgen]
+#[allow(static_mut_refs)]
 pub fn create_random_alert() -> Result<String, JsValue> {
     unsafe {
-        if let Some(world) = &mut GAME_WORLD {
+        if let Some(world) = unsafe { &mut GAME_WORLD } {
             // Generate a random alert
             let alert = generate_random_alert();
             let alert_type = alert.alert_type;
@@ -26,8 +27,10 @@ pub fn create_random_alert() -> Result<String, JsValue> {
             let result = AlertCreationResult {
                 id: entity.id(),
                 success: true,
-                message: format!("Created random alert of type {:?} at ({}, {})",
-                    alert_type, position.x, position.y),
+                message: format!(
+                    "Created random alert of type {:?} at ({}, {})",
+                    alert_type, position.x, position.y
+                ),
             };
 
             serde_json::to_string(&result)
@@ -46,9 +49,10 @@ pub fn create_random_alert() -> Result<String, JsValue> {
 }
 
 #[wasm_bindgen]
+#[allow(static_mut_refs)]
 pub fn create_alert_at(x: f32, y: f32, alert_type_str: &str) -> Result<String, JsValue> {
     unsafe {
-        if let Some(world) = &mut GAME_WORLD {
+        if let Some(world) = unsafe { &mut GAME_WORLD } {
             // Parse alert type from string
             let alert_type = match alert_type_str {
                 "trash" => AlertType::TrashAlert,
@@ -80,8 +84,7 @@ pub fn create_alert_at(x: f32, y: f32, alert_type_str: &str) -> Result<String, J
             let result = AlertCreationResult {
                 id: entity.id(),
                 success: true,
-                message: format!("Created {} alert at ({}, {})",
-                    alert_type_str, x, y),
+                message: format!("Created {} alert at ({}, {})", alert_type_str, x, y),
             };
 
             serde_json::to_string(&result)

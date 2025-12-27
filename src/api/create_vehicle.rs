@@ -15,9 +15,10 @@ pub struct VehicleCreationResult {
 }
 
 #[wasm_bindgen]
+#[allow(static_mut_refs)]
 pub fn create_vehicle(vehicle_type: &str, x: f32, y: f32) -> Result<String, JsValue> {
     unsafe {
-        if let Some(world) = &mut GAME_WORLD {
+        if let Some(world) = unsafe { &mut GAME_WORLD } {
             // Clear current selection before creating new vehicle
             let _ = clear_selection();
 

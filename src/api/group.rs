@@ -11,9 +11,10 @@ pub struct GroupOperationResult {
 }
 
 #[wasm_bindgen]
+#[allow(static_mut_refs)]
 pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue> {
     unsafe {
-        if let Some(world) = &mut GAME_WORLD {
+        if let Some(world) = unsafe { &mut GAME_WORLD } {
             // Use a single mutable query to handle all selection logic
             let mut target_entity = None;
             let mut cleared_count = 0;
@@ -104,7 +105,7 @@ pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue>
 #[wasm_bindgen]
 pub fn deselect_entity(entity_id: u32) -> Result<String, JsValue> {
     unsafe {
-        if let Some(world) = &mut GAME_WORLD {
+        if let Some(world) = unsafe { &mut GAME_WORLD } {
             // Find the entity by ID
             let mut found_entity_id = None;
             for (entity, _) in world.world.query::<&Selection>().iter() {
@@ -184,9 +185,10 @@ pub fn deselect_entity(entity_id: u32) -> Result<String, JsValue> {
 }
 
 #[wasm_bindgen]
+#[allow(static_mut_refs)]
 pub fn clear_selection() -> Result<String, JsValue> {
     unsafe {
-        if let Some(world) = &mut GAME_WORLD {
+        if let Some(world) = unsafe { &mut GAME_WORLD } {
             let mut count = 0;
             // Clear selection for all entities
             for (_, selection) in world.world.query::<&mut Selection>().iter() {
@@ -218,9 +220,10 @@ pub fn clear_selection() -> Result<String, JsValue> {
 }
 
 #[wasm_bindgen]
+#[allow(static_mut_refs)]
 pub fn set_group_target(target_x: f32, target_y: f32) -> Result<String, JsValue> {
     unsafe {
-        if let Some(world) = &mut GAME_WORLD {
+        if let Some(world) = unsafe { &mut GAME_WORLD } {
             let mut selected_entities = Vec::new();
 
             // Find all selected entities
@@ -297,9 +300,10 @@ pub fn set_group_target(target_x: f32, target_y: f32) -> Result<String, JsValue>
 }
 
 #[wasm_bindgen]
+#[allow(static_mut_refs)]
 pub fn get_selected_entities() -> Result<String, JsValue> {
     unsafe {
-        if let Some(world) = &mut GAME_WORLD {
+        if let Some(world) = unsafe { &mut GAME_WORLD } {
             let mut selected_ids = Vec::new();
 
             // Find all selected entities

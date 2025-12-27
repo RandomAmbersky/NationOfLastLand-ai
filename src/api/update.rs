@@ -3,9 +3,10 @@ use crate::game::Alert;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
+#[allow(static_mut_refs)]
 pub fn update(dt: f32) -> Result<String, JsValue> {
     unsafe {
-        if let Some(world) = &mut GAME_WORLD {
+        if let Some(world) = unsafe { GAME_WORLD.as_mut() } {
             let world: &mut crate::game::GameWorld = world;
             world.update(dt);
 

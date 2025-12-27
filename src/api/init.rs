@@ -31,6 +31,7 @@ pub static mut GAME_WORLD: Option<GameWorld> = None;
 pub static mut GAME_CONFIG: Option<GameConfig> = None;
 
 #[wasm_bindgen]
+#[allow(static_mut_refs)]
 pub fn init() -> Result<String, JsValue> {
     unsafe {
         GAME_WORLD = Some(GameWorld::new());
@@ -39,7 +40,7 @@ pub fn init() -> Result<String, JsValue> {
         load_default_config();
 
         // Add initial alerts for testing
-        if let Some(world) = &mut GAME_WORLD {
+        if let Some(world) = unsafe { &mut GAME_WORLD } {
             use crate::game::systems::alert::spawn_random_alert;
             // Spawn a few initial alerts
             for _ in 0..2 {
@@ -50,7 +51,7 @@ pub fn init() -> Result<String, JsValue> {
                 .push("Added 2 initial alerts for testing".to_string());
         }
 
-        if let Some(world) = &GAME_WORLD {
+        if let Some(world) = unsafe { GAME_WORLD.as_ref() } {
             let entities = get_entities_data(&world.world);
             let alerts_count = world.world.query::<&Alert>().iter().count();
             let debug_messages = world.debug_messages.clone();
