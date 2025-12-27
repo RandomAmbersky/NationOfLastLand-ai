@@ -5,7 +5,7 @@ use crate::game::{
 };
 use hecs::World;
 use serde::{Deserialize, Serialize};
-use std::sync::OnceLock;
+use std::sync::{OnceLock, RwLock};
 use wasm_bindgen::prelude::*;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -28,47 +28,50 @@ pub struct GameState {
     pub debug_messages: Vec<String>,
 }
 
-pub static mut GAME_WORLD: Option<GameWorld> = None;
+pub static GAME_WORLD: OnceLock<RwLock<GameWorld>> = OnceLock::new();
 pub static GAME_CONFIG: OnceLock<GameConfig> = OnceLock::new();
 
 #[wasm_bindgen]
-#[allow(static_mut_refs)]
 pub fn init() -> Result<String, JsValue> {
-    unsafe {
-        GAME_WORLD = Some(GameWorld::new());
+    GAME_WORLD.get_or_init(|| RwLock::new(GameWorld::new()));
 
-        // Load default configuration
-        load_default_config();
+    // Load default configuration
+    load_default_config();
 
-        // Add initial alerts for testing
-        if let Some(world) = unsafe { &mut GAME_WORLD } {
-            use crate::game::systems::alert::spawn_random_alert;
-            // Spawn a few initial alerts
-            for _ in 0..2 {
-                spawn_random_alert(&mut world.world);
-            }
-            world
-                .debug_messages
-                .push("Added 2 initial alerts for testing".to_string());
+    // Add initial alerts for testing
+    if let Some(world) = GAME_WORLD.get() {
+        use crate::game::systems::alert::spawn_random_alert;
+        let mut world = world
+            .write()
+            .map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
+        // Spawn a few initial alerts
+        for _ in 0..2 {
+            spawn_random_alert(&mut world.world);
         }
+        world
+            .debug_messages
+            .push("Added 2 initial alerts for testing".to_string());
+    }
 
-        if let Some(world) = unsafe { GAME_WORLD.as_ref() } {
-            let entities = get_entities_data(&world.world);
-            let alerts_count = world.world.query::<&Alert>().iter().count();
-            let debug_messages = world.debug_messages.clone();
-            let state = GameState {
-                time: world.time,
-                entities_count: world.world.len() as usize,
-                entities,
-                alerts_count,
-                debug_messages,
-            };
+    if let Some(world) = GAME_WORLD.get() {
+        let world = world
+            .read()
+            .map_err(|_| JsValue::from_str("Failed to acquire read lock"))?;
+        let entities = get_entities_data(&world.world);
+        let alerts_count = world.world.query::<&Alert>().iter().count();
+        let debug_messages = world.debug_messages.clone();
+        let state = GameState {
+            time: world.time,
+            entities_count: world.world.len() as usize,
+            entities,
+            alerts_count,
+            debug_messages,
+        };
 
-            serde_json::to_string(&state)
-                .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
-        } else {
-            Err(JsValue::from_str("Failed to initialize game world"))
-        }
+        serde_json::to_string(&state)
+            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+    } else {
+        Err(JsValue::from_str("Failed to initialize game world"))
     }
 }
 

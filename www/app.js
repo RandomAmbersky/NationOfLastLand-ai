@@ -1,4 +1,4 @@
-import init, { init as gameInit, create_vehicle, update, set_entity_target, select_entity, deselect_entity, clear_selection, set_group_target, get_selected_entities } from '../pkg/nation_of_last_land.js';
+import init, { init as gameInit, create_vehicle, update, set_entity_target, select_entity, deselect_entity, set_group_target, get_selected_entities } from '../pkg/nation_of_last_land.js';
 
 class GameDemo {
     constructor() {
@@ -619,25 +619,16 @@ class GameDemo {
         if (!bypassCheck && this.isSelecting) return;
         this.selectionOperationInProgress = true;
 
-        // Clear selection via API
-        try {
-            const result = clear_selection();
-            const selectionResult = JSON.parse(result);
-            if (selectionResult.success) {
-                // Clear all visual indicators
-                for (const entityId of this.selectedEntityIds) {
-                    const entity = this.entities.get(entityId);
-                    if (entity && entity.selectionIndicator) {
-                        entity.container.removeChild(entity.selectionIndicator);
-                        entity.selectionIndicator = null;
-                    }
-                }
-                this.selectedEntityIds.clear();
-                this.updateStatus('Selection cleared.');
+        // Clear all visual indicators locally
+        for (const entityId of this.selectedEntityIds) {
+            const entity = this.entities.get(entityId);
+            if (entity && entity.selectionIndicator) {
+                entity.container.removeChild(entity.selectionIndicator);
+                entity.selectionIndicator = null;
             }
-        } catch (error) {
-            console.error('Clear selection error:', error);
         }
+        this.selectedEntityIds.clear();
+        this.updateStatus('Selection cleared.');
 
         // Reset flag after a short delay to allow server sync to complete
         setTimeout(() => {

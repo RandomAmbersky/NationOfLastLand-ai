@@ -10,57 +10,45 @@ pub struct MovementResult {
 }
 
 #[wasm_bindgen]
-#[allow(static_mut_refs)]
 pub fn set_entity_target(entity_id: u32, target_x: f32, target_y: f32) -> Result<String, JsValue> {
-    unsafe {
-        if let Some(world) = unsafe { &mut GAME_WORLD } {
-            // Find the entity by ID
-            let mut found_entity_id = None;
-            for (entity, _) in world.world.query::<&Movement>().iter() {
-                if entity.id() == entity_id {
-                    found_entity_id = Some(entity);
-                    break;
-                }
+    if let Some(world) = GAME_WORLD.get() {
+        let mut world = world.write().map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
+        // Find the entity by ID
+        let mut found_entity_id = None;
+        for (entity, _) in world.world.query::<&Movement>().iter() {
+            if entity.id() == entity_id {
+                found_entity_id = Some(entity);
+                break;
             }
+        }
 
-            match found_entity_id {
-                Some(entity) => {
-                    // Now get mutable access to the movement component
-                    match world.world.query_one::<&mut Movement>(entity) {
-                        Ok(mut query) => {
-                            if let Some(movement) = query.get() {
-                                // Set the target
-                                movement.set_target(target_x, target_y);
+        match found_entity_id {
+            Some(entity) => {
+                // Now get mutable access to the movement component
+                match world.world.query_one::<&mut Movement>(entity) {
+                    Ok(mut query) => {
+                        if let Some(movement) = query.get() {
+                            // Set the target
+                            movement.set_target(target_x, target_y);
 
-                                let result = MovementResult {
-                                    success: true,
-                                    message: format!(
-                                        "Target set for entity {}: ({}, {})",
-                                        entity_id, target_x, target_y
-                                    ),
-                                };
+                            let result = MovementResult {
+                                success: true,
+                                message: format!(
+                                    "Target set for entity {}: ({}, {})",
+                                    entity_id, target_x, target_y
+                                ),
+                            };
 
-                                serde_json::to_string(&result).map_err(|e| {
-                                    JsValue::from_str(&format!("Serialization error: {}", e))
-                                })
-                            } else {
-                                let result = MovementResult {
-                                    success: false,
-                                    message: format!(
-                                        "Entity {} does not have movement component",
-                                        entity_id
-                                    ),
-                                };
-
-                                serde_json::to_string(&result).map_err(|e| {
-                                    JsValue::from_str(&format!("Serialization error: {}", e))
-                                })
-                            }
-                        }
-                        Err(_) => {
+                            serde_json::to_string(&result).map_err(|e| {
+                                JsValue::from_str(&format!("Serialization error: {}", e))
+                            })
+                        } else {
                             let result = MovementResult {
                                 success: false,
-                                message: format!("Entity {} not found", entity_id),
+                                message: format!(
+                                    "Entity {} does not have movement component",
+                                    entity_id
+                                ),
                             };
 
                             serde_json::to_string(&result).map_err(|e| {
@@ -68,25 +56,35 @@ pub fn set_entity_target(entity_id: u32, target_x: f32, target_y: f32) -> Result
                             })
                         }
                     }
-                }
-                None => {
-                    let result = MovementResult {
-                        success: false,
-                        message: format!("Entity {} not found", entity_id),
-                    };
+                    Err(_) => {
+                        let result = MovementResult {
+                            success: false,
+                            message: format!("Entity {} not found", entity_id),
+                        };
 
-                    serde_json::to_string(&result)
-                        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+                        serde_json::to_string(&result).map_err(|e| {
+                            JsValue::from_str(&format!("Serialization error: {}", e))
+                        })
+                    }
                 }
             }
-        } else {
-            let result = MovementResult {
-                success: false,
-                message: "Game world not initialized".to_string(),
-            };
+            None => {
+                let result = MovementResult {
+                    success: false,
+                    message: format!("Entity {} not found", entity_id),
+                };
 
-            serde_json::to_string(&result)
-                .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+                serde_json::to_string(&result)
+                    .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+            }
         }
+    } else {
+        let result = MovementResult {
+            success: false,
+            message: "Game world not initialized".to_string(),
+        };
+
+        serde_json::to_string(&result)
+            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
     }
 }

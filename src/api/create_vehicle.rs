@@ -1,9 +1,9 @@
-use crate::api::group::clear_selection;
 use crate::api::init::{get_game_config, GAME_WORLD};
 use crate::game::components::{
     Faction, Health, Movement, Position, Selection, Vehicle, VehicleType,
 };
 use crate::game::systems::combat;
+use crate::game::GameWorld;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -14,12 +14,24 @@ pub struct VehicleCreationResult {
     pub message: String,
 }
 
+/// Clear selection for all entities in the given world
+fn clear_current_selection(world: &mut GameWorld) {
+    // Clear selection for all entities
+    for (_, selection) in world.world.query::<&mut Selection>().iter() {
+        if selection.is_selected {
+            selection.deselect();
+        }
+    }
+}
+
 #[wasm_bindgen]
-#[allow(static_mut_refs)]
 pub fn create_vehicle(vehicle_type: &str, x: f32, y: f32) -> Result<String, JsValue> {
-    if let Some(world) = unsafe { &mut GAME_WORLD } {
+    if let Some(world) = GAME_WORLD.get() {
+        let mut world = world
+            .write()
+            .map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
         // Clear current selection before creating new vehicle
-        let _ = clear_selection();
+        clear_current_selection(&mut world);
 
         // Parse vehicle type from string
         let vehicle_config_key = match vehicle_type {
