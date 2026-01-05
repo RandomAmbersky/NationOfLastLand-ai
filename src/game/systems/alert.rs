@@ -1,6 +1,6 @@
 //! Alert system for random event generation and management
 
-use crate::game::components::{Alert, AlertState, AlertType, Position, Health, Faction};
+use crate::game::components::{Alert, AlertState, AlertType, Position, Health, Faction, Selection};
 use crate::game::systems::combat;
 use rand::Rng;
 
@@ -218,7 +218,9 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
 /// Spawn a random alert in the game world
 pub fn spawn_random_alert(world: &mut hecs::World) {
     let alert = generate_random_alert();
-    world.spawn((alert,));
+    let position = Position { x: alert.position.x, y: alert.position.y };
+    let selection = Selection::new();
+    world.spawn((alert, position, selection));
 }
 
 /// Generate a random alert at a random position

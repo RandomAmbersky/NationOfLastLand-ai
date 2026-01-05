@@ -1,5 +1,5 @@
 use crate::api::init::GAME_WORLD;
-use crate::game::components::{Alert, AlertType};
+use crate::game::components::{Alert, AlertType, Selection};
 use crate::game::systems::alert::generate_random_alert;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
@@ -22,8 +22,8 @@ pub fn create_random_alert() -> Result<String, JsValue> {
         let alert_type = alert.alert_type;
         let position = alert.position;
 
-        // Spawn alert entity
-        let entity = world.world.spawn((alert,));
+        // Spawn alert entity with selection component
+        let entity = world.world.spawn((alert, Selection::new()));
 
         let result = AlertCreationResult {
             id: entity.id(),
@@ -79,8 +79,8 @@ pub fn create_alert_at(x: f32, y: f32, alert_type_str: &str) -> Result<String, J
 
         let alert = Alert::new(alert_type, x, y, reveal_distance, reputation_reward);
 
-        // Spawn alert entity
-        let entity = world.world.spawn((alert,));
+        // Spawn alert entity with selection component
+        let entity = world.world.spawn((alert, Selection::new()));
 
         let result = AlertCreationResult {
             id: entity.id(),

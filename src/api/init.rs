@@ -1,6 +1,6 @@
 use crate::config::GameConfig;
 use crate::game::{
-    components::{FactionComponent, Position, Selection, Vehicle},
+    components::{Base, FactionComponent, Position, Selection, Vehicle},
     Alert, GameWorld,
 };
 use hecs::World;
@@ -62,7 +62,7 @@ pub fn init() -> Result<String, JsValue> {
         let debug_messages = world.debug_messages.clone();
         let state = GameState {
             time: world.time,
-            entities_count: world.world.len() as usize,
+            entities_count: entities.len(),
             entities,
             alerts_count,
             debug_messages,
@@ -78,8 +78,8 @@ pub fn init() -> Result<String, JsValue> {
 pub fn get_entities_data(world: &World) -> Vec<EntityData> {
     let mut entities = Vec::new();
 
-    // Add entities with Position components (vehicles, etc.)
-    for (entity, position) in world.query::<&Position>().iter() {
+    // Add entities with Position components (vehicles, etc.) but exclude bases and alerts
+    for (entity, position) in world.query::<&Position>().without::<&Base>().without::<&Alert>().iter() {
         // Try to get vehicle type if entity has Vehicle component
         let vehicle_type = if let Ok(mut query) = world.query_one::<&Vehicle>(entity) {
             if let Some(vehicle) = query.get() {
@@ -137,6 +137,18 @@ pub fn get_entities_data(world: &World) -> Vec<EntityData> {
         });
     }
 
+    // Add Base entities
+    for (entity, (base, position)) in world.query::<(&Base, &Position)>().iter() {
+        entities.push(EntityData {
+            id: entity.id(),
+            x: position.x,
+            y: position.y,
+            entity_type: "base".to_string(),
+            subtype: Some(format!("floors_{}", base.floors.len())),
+            faction: Some("Player".to_string()), // Bases belong to player
+            is_selected: false,                  // Bases cannot be selected for now
+        });
+    }
     entities
 }
 

@@ -141,6 +141,7 @@
 4. ✅ Create basic game state serialization
 5. ✅ Add automatic alert generation and reveal system
 6. ✅ Enable combat system activation between hostile units
+7. ✅ Implement alert-as-movement-target functionality for selected vehicle groups
 
 ### Short-term (Next 2 Weeks)
 1. Implement combat system with damage calculation

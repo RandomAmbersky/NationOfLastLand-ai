@@ -111,7 +111,17 @@
         }
 
         #status {
-            flex: 1;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            min-height: 40px;
+        }
+
+        #entity-info {
             padding: 10px;
             background-color: #333;
             border-radius: 4px;
@@ -120,43 +130,9 @@
             white-space: pre-wrap;
             overflow-y: auto;
             min-height: 60px;
-        }
-
-        .info {
-            background-color: #1a4a1a;
-            padding: 8px;
-            border-radius: 8px;
             border: 1px solid #4CAF50;
-            font-size: 0.75rem;
-            flex-shrink: 0;
-            max-height: 150px;
-            overflow-y: auto;
         }
 
-        .info h3 {
-            margin: 0 0 6px 0;
-            color: #4CAF50;
-            font-size: 0.9rem;
-        }
-
-        .info ul {
-            margin: 0 0 8px 0;
-            padding-left: 16px;
-        }
-
-        .info li {
-            margin-bottom: 2px;
-            line-height: 1.3;
-        }
-
-        .info ol {
-            margin: 0;
-            padding-left: 16px;
-        }
-
-        .info ol li {
-            margin-bottom: 2px;
-        }
 
         /* Медиа-запросы для мобильных устройств */
         @media (max-width: 768px) {
@@ -194,15 +170,11 @@
                 min-height: 40px;
             }
 
-            .info {
-                padding: 6px;
-                font-size: 0.7rem;
-                max-height: 120px;
+            #entity-info {
+                font-size: 0.75rem;
+                min-height: 40px;
             }
 
-            .info h3 {
-                font-size: 0.8rem;
-            }
         }
 
         @media (max-width: 480px) {
@@ -222,15 +194,6 @@
                 padding: 6px;
             }
 
-            .info {
-                padding: 4px;
-                font-size: 0.65rem;
-                max-height: 100px;
-            }
-
-            .info h3 {
-                font-size: 0.75rem;
-            }
         }
     </style>
 </head>
@@ -264,31 +227,45 @@
                     <input type="number" id="spawn-y" value="150" min="0" max="600">
                 </div>
 
+                <div class="control-group">
+                    <label for="base-x">Base X:</label>
+                    <input type="number" id="base-x" value="100" min="0" max="800">
+                </div>
+
+                <div class="control-group">
+                    <label for="base-y">Base Y:</label>
+                    <input type="number" id="base-y" value="100" min="0" max="600">
+                </div>
+
+                <div class="control-group">
+                    <label for="floor-type">Floor Type:</label>
+                    <select id="floor-type">
+                        <option value="storage">Storage</option>
+                        <option value="laboratory">Laboratory</option>
+                        <option value="repair">Repair</option>
+                        <option value="rest">Rest</option>
+                    </select>
+                </div>
+
                 <button id="spawn-btn">Spawn Vehicle</button>
+                <button id="create-base-btn">Create Base</button>
+                <button id="build-floor-btn">Build Floor</button>
+                <button id="create-alert-btn">Create Random Alert</button>
                 <button id="init-btn">Initialize Game</button>
                 <button id="update-btn">Update Game</button>
                 <button id="clear-selection-btn">Clear Selection</button>
 
-                <div id="status">Ready to initialize...</div>
-            </div>
-        </div>
+                <div style="margin: 8px 0; display: flex; gap: 5px; flex-wrap: wrap;">
+                    <button id="start-auto-update-btn">Start Auto Update</button>
+                    <button id="stop-auto-update-btn">Stop Auto Update</button>
+                    <button id="update-once-btn">Update Once</button>
+                </div>
 
-        <div class="info">
-            <h3>Controls</h3>
-            <ol>
-                <li>Click "Initialize Game" to start</li>
-                <li>Click "Spawn Vehicle" to create units</li>
-                <li><strong>Selection:</strong> Click unit (yellow ring) or drag rectangle to select group</li>
-                <li><strong>Exclusive:</strong> Click any unit to select only that one</li>
-                <li><strong>Smart Groups:</strong> Drag selection keeps overlapping units, removes others</li>
-                <li><strong>Move Group:</strong> With selected units, click map position</li>
-                <li><strong>Attack:</strong> Click enemy units to attack as group</li>
-                <li><strong>Alerts:</strong> Click yellow (?) markers to investigate</li>
-                <li><strong>Combat:</strong> Watch red attack lines and damage effects</li>
-            </ol>
-            <p style="margin: 4px 0 0 0; font-size: 0.7rem; color: #aaa;">
-                Rust/WebAssembly • ECS Architecture • Real-time Strategy
-            </p>
+                <div class="info-section">
+                    <div id="status">Ready to initialize...</div>
+                    <div id="entity-info" style="margin-top: 10px; padding: 8px; background-color: #2a2a2a; border-radius: 4px; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; overflow-y: auto; min-height: 60px; display: none;">No entity selected</div>
+                </div>
+            </div>
         </div>
     </div>
 

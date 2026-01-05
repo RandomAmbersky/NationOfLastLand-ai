@@ -1,5 +1,5 @@
 use hecs::World;
-use crate::game::systems::{alert, combat, movement};
+use crate::game::systems::{alert, base, combat, movement};
 
 /// Game world containing all ECS entities and components
 pub struct GameWorld {
@@ -37,6 +37,10 @@ impl GameWorld {
 
         // Run combat systems
         combat::update_combat_system(self, dt);
+
+        // Run base systems
+        base::update_base_construction_system(&mut self.world, dt);
+        base::update_floor_operations_system(&mut self.world, dt);
     }
 }
 

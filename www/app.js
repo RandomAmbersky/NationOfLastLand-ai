@@ -1,4 +1,4 @@
-import init, { init as gameInit, create_vehicle, update, set_entity_target, select_entity, deselect_entity, set_group_target, get_selected_entities } from '../pkg/nation_of_last_land.js';
+import init, { init as gameInit, create_vehicle, update, set_entity_target, select_entity, deselect_entity, set_group_target, get_selected_entities, create_base, build_floor, get_entity_info, create_random_alert, clear_selection } from '../pkg/nation_of_last_land.js';
 
 class GameDemo {
     constructor() {
@@ -10,6 +10,7 @@ class GameDemo {
         this.combatEffects = new Map(); // Store active combat visualizations
         this.isSelecting = false; // Prevent concurrent selection operations
         this.selectionOperationInProgress = false; // Prevent server sync from overriding local selection changes
+        this.autoUpdateEnabled = false; // Auto update disabled by default
         this.dragSelection = {
             isDragging: false,
             startX: 0,
@@ -23,6 +24,7 @@ class GameDemo {
         };
 
         this.initPixi();
+        this.bases = new Map(); // Store base information
         this.setupEventListeners();
         this.updateStatus('WebAssembly module loading...');
     }
@@ -31,7 +33,10 @@ class GameDemo {
         try {
             // Initialize WebAssembly module
             await init();
-            this.updateStatus('WebAssembly loaded successfully!\nClick "Initialize Game" to start.');
+            this.updateStatus('WebAssembly loaded successfully!\nInitializing game automatically...');
+
+            // Automatically initialize the game
+            await this.initializeGame();
         } catch (error) {
             this.updateStatus(`Error loading WebAssembly: ${error.message}`);
             console.error('WASM init error:', error);
@@ -71,6 +76,10 @@ class GameDemo {
         this.app.view.addEventListener('mouseleave', (event) => this.handleMouseLeave(event));
         this.app.view.addEventListener('mouseenter', (event) => this.handleMouseEnter(event));
         this.app.view.addEventListener('click', (event) => this.handleCanvasClick(event));
+        this.app.view.addEventListener('dblclick', (event) => this.handleDoubleClick(event));
+        this.app.view.addEventListener('contextmenu', (event) => {
+            event.preventDefault(); // Prevent browser context menu
+        });
 
         // Add resize handler
         window.addEventListener('resize', () => this.handleResize());
@@ -133,8 +142,17 @@ class GameDemo {
     setupEventListeners() {
         document.getElementById('init-btn').addEventListener('click', () => this.initializeGame());
         document.getElementById('spawn-btn').addEventListener('click', () => this.spawnVehicle());
+        document.getElementById('create-base-btn').addEventListener('click', () => this.createBase());
+        document.getElementById('build-floor-btn').addEventListener('click', () => this.buildFloor());
+        document.getElementById('create-alert-btn').addEventListener('click', () => this.createRandomAlert());
         document.getElementById('update-btn').addEventListener('click', () => this.manualUpdate());
         document.getElementById('clear-selection-btn').addEventListener('click', () => this.clearAllSelections());
+        document.getElementById('start-auto-update-btn').addEventListener('click', () => this.startAutoUpdate());
+        document.getElementById('stop-auto-update-btn').addEventListener('click', () => this.stopAutoUpdate());
+        document.getElementById('update-once-btn').addEventListener('click', () => this.updateOnce());
+
+        // Keyboard event listeners
+        document.addEventListener('keydown', (event) => this.handleKeyDown(event));
     }
 
 
@@ -165,10 +183,20 @@ class GameDemo {
         const entityAtPosition = this.findEntityAtPosition(screenX, screenY);
 
         if (entityAtPosition !== null) {
-            // Handle entity click - always exclusive selection since user has only mouse
-            this.handleEntityClick(entityAtPosition, false);
+            const entity = this.entities.get(entityAtPosition);
+            // Check if clicked entity is an alert
+            if (entity && entity.entityType === 'alert' && this.selectedEntityIds.size > 0) {
+                // Clicked directly on an alert with selected vehicles - set it as target
+                this.setGroupTarget(entity.gameX, entity.gameY);
+                this.updateStatus(`Moving group to alert at (${entity.gameX.toFixed(1)}, ${entity.gameY.toFixed(1)})`);
+                // Add visual feedback - highlight the target alert
+                this.highlightTargetAlert({ x: entity.gameX, y: entity.gameY, id: entityAtPosition });
+            } else {
+                // Handle entity click - always exclusive selection since user has only mouse
+                this.handleEntityClick(entityAtPosition, false);
+            }
         } else if (this.selectedEntityIds.size > 0) {
-            // Check if clicked on an alert
+            // Check if clicked on an alert (using more precise radius)
             const alertAtPosition = this.findAlertAtPosition(gameX, gameY);
 
             if (alertAtPosition !== null) {
@@ -214,6 +242,13 @@ class GameDemo {
     handleMouseDown(event) {
         if (!this.isInitialized) return;
 
+        // Check mouse button type
+        if (event.button === 2) { // Right mouse button
+            this.handleRightMouseDown(event);
+            return; // Prevent further processing for right click
+        }
+
+        // Left mouse button - handle selection/drag
         // Clean up any orphaned graphics before starting new drag
         this.cleanupOrphanedGraphics();
 
@@ -253,6 +288,41 @@ class GameDemo {
         this.app.stage.addChild(this.dragSelection.graphics);
         console.log('Created selection graphics:', this.dragSelection.graphics);
 
+    }
+
+    handleRightMouseDown(event) {
+        const rect = this.app.view.getBoundingClientRect();
+        const screenX = event.clientX - rect.left;
+        const screenY = event.clientY - rect.top;
+
+        // Check if right-click is on an entity to show info
+        const entityAtPosition = this.findEntityAtPosition(screenX, screenY);
+
+        if (entityAtPosition !== null) {
+            // Right-clicked on an entity - show its information
+            const entity = this.entities.get(entityAtPosition);
+            if (entity) {
+                let entityType = entity.entityType === 'vehicle' ? entity.vehicleType : entity.entityType;
+                const faction = entity.faction || 'Unknown';
+
+                // Fallback for unknown types based on faction
+                if (!entityType || entityType === 'unknown') {
+                    if (faction === 'Wild') {
+                        entityType = 'wild_creature';
+                    } else if (faction === 'Neutral') {
+                        entityType = 'neutral_entity';
+                    } else {
+                        entityType = 'unit';
+                    }
+                }
+
+                this.updateStatus(`Entity #${entityAtPosition}: ${entityType} (${faction}) - Info displayed in panel`);
+            }
+            this.displayEntityInfo(entityAtPosition);
+        } else {
+            // Right-clicked on empty space - clear selection
+            this.clearAllSelections();
+        }
     }
 
     handleMouseMove(event) {
@@ -364,39 +434,59 @@ class GameDemo {
                     this.dragSelection.justFinishedDrag = true;
 
 
-                    // Find all entities within the selection rectangle
-                    const selectedEntities = [];
+                    // Find all entities within the selection rectangle and try to select them
+                    const entitiesInRectangle = [];
                     for (const [id, entity] of this.entities) {
-                        // Skip alerts - they should not be selectable
-                        if (entity.entityType === 'alert') continue;
-
                         // Check if entity is within selection bounds
                         if (entity.container.x >= x && entity.container.x <= x + width &&
                             entity.container.y >= y && entity.container.y <= y + height) {
-                            selectedEntities.push(id);
+                            entitiesInRectangle.push(id);
                         }
                     }
 
-
-                    if (selectedEntities.length > 0) {
-                        // Update selection: keep intersection, add new ones, remove old ones not in new selection
-                        const selectedEntitiesSet = new Set(selectedEntities);
+                    if (entitiesInRectangle.length > 0) {
+                        // Update selection: keep intersection, add new ones that can be selected, remove old ones not in new selection
+                        const successfullySelectedEntities = new Set();
 
                         // Remove units that are currently selected but not in the new selection
                         for (const entityId of this.selectedEntityIds) {
-                            if (!selectedEntitiesSet.has(entityId)) {
+                            if (!entitiesInRectangle.includes(entityId)) {
                                 this.deselectEntity(entityId, true);
+                            } else {
+                                // Keep units that are still in selection
+                                successfullySelectedEntities.add(entityId);
                             }
                         }
 
-                        // Add units from new selection that aren't already selected
-                        for (const entityId of selectedEntities) {
+                        // Try to add units from new selection that aren't already selected (respecting 12 unit limit)
+                        let addedCount = 0;
+                        for (const entityId of entitiesInRectangle) {
                             if (!this.selectedEntityIds.has(entityId)) {
-                                this.selectEntity(entityId, true, false); // exclusive = false for drag selection
+                                // Check if we would exceed the 12 unit limit
+                                if (successfullySelectedEntities.size >= 12) {
+                                    break; // Stop adding more units
+                                }
+                                const selectionSuccess = this.selectEntity(entityId, true, false); // exclusive = false for drag selection
+                                if (selectionSuccess) {
+                                    successfullySelectedEntities.add(entityId);
+                                    addedCount++;
+                                }
+                            } else {
+                                successfullySelectedEntities.add(entityId);
                             }
                         }
 
-                        this.updateStatus(`Selected ${selectedEntities.length} units (updated group)`);
+                        const selectedCount = successfullySelectedEntities.size;
+                        const totalFound = entitiesInRectangle.length;
+                        if (selectedCount > 0) {
+                            if (totalFound > 12) {
+                                this.updateStatus(`Selected ${selectedCount} units (found ${totalFound}, limited to 12)`);
+                            } else {
+                                this.updateStatus(`Selected ${selectedCount} units (updated group)`);
+                            }
+                        } else {
+                            this.updateStatus('No selectable units in selection area');
+                        }
                     }
                 } else {
                     // Rectangle too small, treat as click - don't prevent click event
@@ -441,6 +531,204 @@ class GameDemo {
         // mouseLeftCanvas flag is reset in handleMouseDown for new drags
     }
 
+    handleDoubleClick(event) {
+        if (!this.isInitialized) return;
+
+        // Get coordinates of double click
+        const rect = this.app.view.getBoundingClientRect();
+        const screenX = event.clientX - rect.left;
+        const screenY = event.clientY - rect.top;
+
+        // Find entity at double-click position
+        const entityId = this.findEntityAtPosition(screenX, screenY);
+
+        if (entityId !== null) {
+            // Double-clicked on an entity - select all units of same type in visibility range
+            this.selectSameTypeUnits(entityId);
+        } else {
+            // Double-clicked on empty space - select all player units
+            this.selectAllPlayerUnits();
+            this.updateStatus(`Double click on empty space - Selected all player units`);
+        }
+    }
+
+    selectAllPlayerUnits() {
+        // Prevent concurrent selection operations
+        if (this.isSelecting) return;
+        this.isSelecting = true;
+        this.selectionOperationInProgress = true;
+
+        try {
+            // Clear current selection first
+            this.clearAllSelections(true);
+
+            // Find all player units (faction 'Player' and entity type 'vehicle')
+            const playerUnits = [];
+            for (const [id, entity] of this.entities) {
+                if (entity.faction === 'Player' && entity.entityType === 'vehicle') {
+                    playerUnits.push(id);
+                }
+            }
+
+            if (playerUnits.length > 0) {
+                // Select all player units
+                for (const unitId of playerUnits) {
+                    this.selectEntity(unitId, true, false); // exclusive = false for multi-select
+                }
+
+                this.updateStatus(`Selected all ${playerUnits.length} player units`);
+            } else {
+                this.updateStatus('No player units found to select');
+            }
+        } finally {
+            this.isSelecting = false;
+            // Reset flag after a delay to allow server sync to complete
+            setTimeout(() => {
+                this.selectionOperationInProgress = false;
+            }, 1000);
+        }
+    }
+
+    selectSameTypeUnits(entityId) {
+        // Prevent concurrent selection operations
+        if (this.isSelecting) return;
+        this.isSelecting = true;
+        this.selectionOperationInProgress = true;
+
+        try {
+            const targetEntity = this.entities.get(entityId);
+            if (!targetEntity) {
+                this.updateStatus('Target entity not found');
+                return;
+            }
+
+            // Clear current selection first
+            this.clearAllSelections(true);
+
+            // Get target entity type information
+            const targetVehicleType = targetEntity.vehicleType;
+            const targetEntityType = targetEntity.entityType;
+            const targetFaction = targetEntity.faction;
+
+            // Find all units of the same type within visibility range (200 game units)
+            const visibilityRange = 200;
+            const sameTypeUnits = [];
+
+            for (const [id, entity] of this.entities) {
+                // Check if entity is the same type and faction
+                if (entity.entityType === targetEntityType &&
+                    entity.vehicleType === targetVehicleType &&
+                    entity.faction === targetFaction) {
+
+                    // Check if entity is within visibility range
+                    const distance = Math.sqrt(
+                        (entity.gameX - targetEntity.gameX) ** 2 +
+                        (entity.gameY - targetEntity.gameY) ** 2
+                    );
+
+                    if (distance <= visibilityRange) {
+                        sameTypeUnits.push(id);
+                    }
+                }
+            }
+
+            if (sameTypeUnits.length > 0) {
+                // Limit to 12 units maximum
+                const unitsToSelect = sameTypeUnits.slice(0, 12);
+
+                // Select units - first one with exclusive=true, others with exclusive=false
+                let selectedCount = 0;
+                for (let i = 0; i < unitsToSelect.length; i++) {
+                    const unitId = unitsToSelect[i];
+                    const isFirst = i === 0;
+                    const selectionSuccess = this.selectEntity(unitId, true, !isFirst); // exclusive = true for first, false for others
+                    if (selectionSuccess) {
+                        selectedCount++;
+                    }
+                }
+
+                const totalFound = sameTypeUnits.length;
+                const actuallySelected = selectedCount;
+                if (totalFound > 12) {
+                    this.updateStatus(`Selected ${actuallySelected} ${targetVehicleType} units of same type (found ${totalFound}, limited to 12)`);
+                } else {
+                    this.updateStatus(`Selected ${actuallySelected} ${targetVehicleType} units of same type`);
+                }
+            } else {
+                this.updateStatus(`No other ${targetVehicleType} units found in visibility range`);
+            }
+        } finally {
+            this.isSelecting = false;
+            // Reset flag after a short delay to allow server sync to complete
+            setTimeout(() => {
+                this.selectionOperationInProgress = false;
+            }, 100);
+        }
+    }
+
+    selectAllPlayerUnitsAtBase() {
+        // Prevent concurrent selection operations
+        if (this.isSelecting) return;
+        this.isSelecting = true;
+        this.selectionOperationInProgress = true;
+
+        try {
+            // Clear current selection first
+            this.clearAllSelections(true);
+
+            // Find the first base (assuming player has one main base)
+            if (this.bases.size === 0) {
+                this.updateStatus('No base found to select units from');
+                return;
+            }
+
+            const baseId = Array.from(this.bases.keys())[0];
+            const base = this.bases.get(baseId);
+
+            // Find all player units within base radius (50 game units)
+            const baseRadius = 50;
+            const unitsAtBase = [];
+
+            for (const [id, entity] of this.entities) {
+                // Check if entity is a player vehicle
+                if (entity.faction === 'Player' && entity.entityType === 'vehicle') {
+                    // Check if entity is within base radius
+                    const distance = Math.sqrt(
+                        (entity.gameX - base.x) ** 2 +
+                        (entity.gameY - base.y) ** 2
+                    );
+
+                    if (distance <= baseRadius) {
+                        unitsAtBase.push(id);
+                    }
+                }
+            }
+
+            if (unitsAtBase.length > 0) {
+                // Select units (respecting the 12 unit limit)
+                let selectedCount = 0;
+                for (let i = 0; i < unitsAtBase.length && selectedCount < 12; i++) {
+                    const unitId = unitsAtBase[i];
+                    const isFirst = i === 0;
+                    const selectionSuccess = this.selectEntity(unitId, true, !isFirst); // exclusive = true for first, false for others
+                    if (selectionSuccess) {
+                        selectedCount++;
+                    }
+                }
+
+                this.updateStatus(`Selected ${selectedCount} player units at base`);
+            } else {
+                this.updateStatus('No player units found at base');
+            }
+        } finally {
+            this.isSelecting = false;
+            // Reset flag after a short delay to allow server sync to complete
+            setTimeout(() => {
+                this.selectionOperationInProgress = false;
+            }, 100);
+        }
+    }
+
     handleEntityClick(entityId, isMultiSelect) {
         const entity = this.entities.get(entityId);
         if (!entity) return;
@@ -451,8 +739,12 @@ class GameDemo {
         this.selectionOperationInProgress = true;
 
         try {
+            // Check modifier keys for selection behavior
+            const ctrlPressed = event && (event.ctrlKey || event.metaKey); // Ctrl or Cmd
+            const shiftPressed = event && event.shiftKey;
+
             // Check if this is an attack scenario (different faction and hostile)
-            if (this.selectedEntityIds.size > 0 && !isMultiSelect) {
+            if (this.selectedEntityIds.size > 0 && !isMultiSelect && !ctrlPressed && !shiftPressed) {
                 const targetEntity = entity;
                 let shouldAttack = false;
 
@@ -478,19 +770,46 @@ class GameDemo {
                 }
             }
 
-            // Handle selection
-            if (isMultiSelect) {
-                // Multi-select mode: toggle selection
+            // Handle selection based on modifiers
+            let selectionSuccessful = false;
+
+            if (ctrlPressed) {
+                // Ctrl + click: toggle selection (add/remove from group)
                 if (this.selectedEntityIds.has(entityId)) {
                     this.deselectEntity(entityId, true);
+                    this.updateStatus(`Removed unit ${entityId} from selection`);
                 } else {
-                    this.selectEntity(entityId, true, false); // exclusive = false for multi-select
+                    // Check group size limit (12 units)
+                    if (this.selectedEntityIds.size >= 12) {
+                        this.updateStatus(`Cannot select more than 12 units in a group (current: ${this.selectedEntityIds.size})`);
+                        return;
+                    }
+                    selectionSuccessful = this.selectEntity(entityId, true, false); // exclusive = false
+                    if (selectionSuccessful) {
+                        this.updateStatus(`Added unit ${entityId} to selection (${this.selectedEntityIds.size} total)`);
+                    }
+                }
+            } else if (shiftPressed) {
+                // Shift + click: extend selection (add to group without clearing)
+                if (!this.selectedEntityIds.has(entityId)) {
+                    // Check group size limit (12 units)
+                    if (this.selectedEntityIds.size >= 12) {
+                        this.updateStatus(`Cannot select more than 12 units in a group (current: ${this.selectedEntityIds.size})`);
+                        return;
+                    }
+                    selectionSuccessful = this.selectEntity(entityId, true, false); // exclusive = false
+                    if (selectionSuccessful) {
+                        this.updateStatus(`Extended selection to ${this.selectedEntityIds.size} units`);
+                    }
                 }
             } else {
-                // Single select mode: clear previous selection and select this entity
+                // Regular click: single selection
                 this.clearAllSelections(true);
-                this.selectEntity(entityId, true, true); // exclusive = true for single-select
+                selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
             }
+
+            // Display entity information always when clicking on an entity
+            this.displayEntityInfo(entityId);
         } finally {
             this.isSelecting = false;
             // Reset flag after a short delay to allow server sync to complete
@@ -502,15 +821,11 @@ class GameDemo {
 
     findEntityAtPosition(x, y) {
         // Find entity closest to click position (within 20 pixels)
-        // Only consider vehicles, not alerts
+        // Consider all entities including alerts
         let closestEntity = null;
         let closestDistance = 20;
 
         for (const [id, entity] of this.entities) {
-            // Skip alerts - they should not be selectable
-            if (entity.entityType === 'alert') {
-                continue;
-            }
             // Use current container position for accurate hit detection
             const distance = Math.sqrt((entity.container.x - x) ** 2 + (entity.container.y - y) ** 2);
             if (distance < closestDistance) {
@@ -522,10 +837,11 @@ class GameDemo {
     }
 
     findAlertAtPosition(gameX, gameY) {
-        // Find alert closest to click position (within 50 game units)
+        // Find alert closest to click position (within 15 game units - matches visual size)
+        // Alerts are drawn with radius 8-12, so 15 is a reasonable click radius
         // Use already rendered entities instead of calling update()
         let closestAlert = null;
-        let closestDistance = 50;
+        let closestDistance = 15; // Reduced from 50 to match visual size
 
         for (const [id, entity] of this.entities) {
             if (entity.entityType === 'alert') {
@@ -551,10 +867,16 @@ class GameDemo {
 
     selectEntity(entityId, bypassCheck = false, exclusive = true) {
         // Prevent concurrent operations unless bypassed (for internal calls)
-        if (!bypassCheck && this.isSelecting) return;
+        if (!bypassCheck && this.isSelecting) return false;
 
         // Don't re-select if already selected
-        if (this.selectedEntityIds.has(entityId)) return;
+        if (this.selectedEntityIds.has(entityId)) return true;
+
+        // Check group size limit (12 units) - enforce on client side
+        if (this.selectedEntityIds.size >= 12) {
+            console.log('Selection limit reached (12 units), cannot select more');
+            return false;
+        }
 
         // Select entity via API
         try {
@@ -564,9 +886,11 @@ class GameDemo {
                 this.selectedEntityIds.add(entityId);
                 const entity = this.entities.get(entityId);
                 if (entity) {
-                    // Add selection indicator (yellow border)
+                    // Add selection indicator (blue border for player units, red for enemies)
                     const selectionGraphics = new PIXI.Graphics();
-                    selectionGraphics.lineStyle(3, 0xFFFF00, 1);
+                    const isEnemy = entity.faction === 'Enemy' || entity.faction === 'Wild';
+                    const color = isEnemy ? 0xFF0000 : 0x0080FF; // Red for enemies, blue for player
+                    selectionGraphics.lineStyle(3, color, 1);
                     selectionGraphics.drawCircle(0, 0, 12);
                     entity.container.addChild(selectionGraphics);
                     entity.selectionIndicator = selectionGraphics;
@@ -574,13 +898,23 @@ class GameDemo {
 
                 const count = this.selectedEntityIds.size;
                 if (count === 1) {
-                    this.updateStatus(`Entity ${entityId} selected. Hold Ctrl/Cmd and click to select multiple units, or drag to select area.`);
+                    this.updateStatus(`Entity ${entityId} selected.`);
                 } else {
                     this.updateStatus(`${count} entities selected. Click on map to set group movement target.`);
                 }
+                return true;
+            } else {
+                // Don't log error for expected cases (non-player units, non-movable units)
+                // Only log unexpected errors
+                if (!selectionResult.message.includes('is not a player unit') &&
+                    !selectionResult.message.includes('cannot move')) {
+                    console.error('Selection failed:', selectionResult.message);
+                }
+                return false;
             }
         } catch (error) {
             console.error('Selection error:', error);
+            return false;
         }
     }
 
@@ -619,6 +953,17 @@ class GameDemo {
         if (!bypassCheck && this.isSelecting) return;
         this.selectionOperationInProgress = true;
 
+        // Clear selection on server
+        try {
+            const result = clear_selection();
+            const clearResult = JSON.parse(result);
+            if (!clearResult.success) {
+                console.error('Failed to clear selection on server:', clearResult.message);
+            }
+        } catch (error) {
+            console.error('Error clearing selection on server:', error);
+        }
+
         // Clear all visual indicators locally
         for (const entityId of this.selectedEntityIds) {
             const entity = this.entities.get(entityId);
@@ -629,6 +974,7 @@ class GameDemo {
         }
         this.selectedEntityIds.clear();
         this.updateStatus('Selection cleared.');
+        this.updateEntityInfo(null); // Hide entity info when selection is cleared
 
         // Reset flag after a short delay to allow server sync to complete
         setTimeout(() => {
@@ -776,7 +1122,8 @@ class GameDemo {
             const result = gameInit();
             const gameState = JSON.parse(result);
             this.isInitialized = true;
-            let status = `Game initialized!\nTime: ${gameState.time}\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`;
+            this.autoUpdateEnabled = false; // Auto update disabled on initialization
+            let status = `Game initialized!\nTime: ${gameState.time}\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}\nAuto update: disabled\nUse "Start Auto Update" or "Update Once" to continue`;
             if (gameState.debug_messages && gameState.debug_messages.length > 0) {
                 status += '\n\nDebug:\n' + gameState.debug_messages.join('\n');
             }
@@ -824,6 +1171,108 @@ class GameDemo {
         }
     }
 
+    async createBase() {
+        if (!this.isInitialized) {
+            this.updateStatus('Please initialize the game first!');
+            return;
+        }
+
+        const x = parseFloat(document.getElementById('base-x').value);
+        const y = parseFloat(document.getElementById('base-y').value);
+
+        try {
+            const result = create_base(x, y);
+            const baseInfo = JSON.parse(result);
+
+            // Store base information
+            this.bases.set(baseInfo.id, baseInfo);
+
+            // Trigger immediate update to sync state
+            try {
+                const updateResult = update(0.016);
+                const gameState = JSON.parse(updateResult);
+
+                this.syncEntitiesWithGameState(gameState.entities);
+            } catch (error) {
+                console.error('Update after base creation error:', error);
+            }
+
+            this.updateStatus(`Base created!\nID: ${baseInfo.id}\nPosition: (${x}, ${y})\nFloors: ${baseInfo.floors.length}\nStorage: ${baseInfo.current_storage_usage}/${baseInfo.total_storage_capacity}`);
+        } catch (error) {
+            this.updateStatus(`Base creation failed: ${error.message}`);
+            console.error('Base creation error:', error);
+        }
+    }
+
+    async buildFloor() {
+        if (!this.isInitialized) {
+            this.updateStatus('Please initialize the game first!');
+            return;
+        }
+
+        const floorType = document.getElementById('floor-type').value;
+
+        // For now, build on the first base (we'll improve this later)
+        if (this.bases.size === 0) {
+            this.updateStatus('No bases available. Create a base first!');
+            return;
+        }
+
+        const baseId = Array.from(this.bases.keys())[0]; // Get first base
+
+        try {
+            const result = build_floor(baseId, floorType);
+            const updatedBase = JSON.parse(result);
+
+            // Update stored base information
+            this.bases.set(updatedBase.id, updatedBase);
+
+            // Trigger immediate update to sync state
+            try {
+                const updateResult = update(0.016);
+                const gameState = JSON.parse(updateResult);
+                this.syncEntitiesWithGameState(gameState.entities);
+            } catch (error) {
+                console.error('Update after floor building error:', error);
+            }
+
+            this.updateStatus(`Floor construction started!\nBase ID: ${baseId}\nFloor Type: ${floorType}\nTotal Floors: ${updatedBase.floors.length}`);
+        } catch (error) {
+            this.updateStatus(`Floor building failed: ${error.message}`);
+            console.error('Floor building error:', error);
+        }
+    }
+
+    async createRandomAlert() {
+        if (!this.isInitialized) {
+            this.updateStatus('Please initialize the game first!');
+            return;
+        }
+
+        try {
+            const result = create_random_alert();
+            const alertResult = JSON.parse(result);
+
+            if (alertResult.success) {
+                // Trigger immediate update to get the new alert in game state
+                try {
+                    const updateResult = update(0.016); // Small dt to trigger update
+                    const gameState = JSON.parse(updateResult);
+                    this.syncEntitiesWithGameState(gameState.entities);
+                } catch (error) {
+                    console.error('Update after alert creation error:', error);
+                }
+
+                this.updateStatus(`Random alert created!\nID: ${alertResult.id}\n${alertResult.message}`);
+            } else {
+                this.updateStatus(`Failed to create alert: ${alertResult.message}`);
+            }
+        } catch (error) {
+            this.updateStatus(`Alert creation failed: ${error.message}`);
+            console.error('Alert creation error:', error);
+        }
+    }
+
     createEntitySprite(id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
         // Convert game coordinates to screen coordinates
         const scaleX = this.app.screen.width / this.gameWidth;
@@ -839,92 +1288,117 @@ class GameDemo {
         let color;
         let alpha = 1.0; // Default opacity
 
-        switch (vehicleType) {
-            case 'scout':
-                if (faction === 'Neutral') {
-                    color = 0x00BCD4; // Cyan for neutral
-                } else if (faction === 'Wild') {
-                    color = 0x8D6E63; // Brown for wild creatures
-                } else if (faction === 'Enemy') {
-                    color = 0x2E7D32; // Dark green for enemy
-                } else {
-                    color = 0x4CAF50; // Bright green for player
+        // Check entity type first for special cases
+        console.log('Creating entity sprite:', { id, x, y, vehicleType, faction, entityType });
+        if (entityType === 'base') {
+            // Base entities - blue square
+            color = 0x2196F3; // Blue for bases
+            graphics.beginFill(color);
+            graphics.drawRect(-15, -15, 30, 30);
+            // Add floor indicators as small circles around the base
+            if (vehicleType && vehicleType.startsWith('floors_')) {
+                const floorCount = parseInt(vehicleType.split('_')[1]) || 1;
+                for (let i = 0; i < floorCount; i++) {
+                    const angle = (i / floorCount) * Math.PI * 2;
+                    const radius = 20;
+                    const fx = Math.cos(angle) * radius;
+                    const fy = Math.sin(angle) * radius;
+                    graphics.drawCircle(fx, fy, 3);
                 }
-                graphics.beginFill(color);
-                graphics.drawCircle(0, 0, 8);
-                break;
-            case 'tank':
-                if (faction === 'Neutral') {
-                    color = 0x00BCD4; // Cyan for neutral
-                } else if (faction === 'Wild') {
-                    color = 0x8D6E63; // Brown for wild creatures
-                } else if (faction === 'Enemy') {
-                    color = 0xB71C1C; // Dark red for enemy
-                } else {
-                    color = 0xFF5722; // Bright red for player
-                }
-                graphics.beginFill(color);
-                graphics.drawRect(-10, -8, 20, 16);
-                break;
-            case 'transport':
-                if (faction === 'Neutral') {
-                    color = 0x00BCD4; // Cyan for neutral
-                } else if (faction === 'Wild') {
-                    color = 0x8D6E63; // Brown for wild creatures
-                } else if (faction === 'Enemy') {
-                    color = 0x0D47A1; // Dark blue for enemy
-                } else {
-                    color = 0x2196F3; // Bright blue for player
-                }
-                graphics.beginFill(color);
-                graphics.drawRect(-12, -10, 24, 20);
-                break;
-            default:
-                // Handle alert types with state information
-                if (entityType === 'alert' || (vehicleType && vehicleType.includes('_'))) {
-                    let alertType, alertState;
-                    if (vehicleType && vehicleType.includes('_')) {
-                        [alertType, alertState] = vehicleType.split('_');
+            }
+        } else {
+            // Handle other entity types by vehicle type
+            console.log('Switch case for vehicleType:', vehicleType);
+            switch (vehicleType) {
+                case 'scout':
+                    if (faction === 'Neutral') {
+                        color = 0x00BCD4; // Cyan for neutral
+                    } else if (faction === 'Wild') {
+                        color = 0x8D6E63; // Brown for wild creatures
+                    } else if (faction === 'Enemy') {
+                        color = 0x2E7D32; // Dark green for enemy
                     } else {
-                        alertType = 'alert';
-                        alertState = 'Hidden'; // fallback
+                        color = 0x4CAF50; // Bright green for player
                     }
-
-                    if (alertState === 'Hidden') {
-                        // Hidden alerts - dimmed yellow with question mark style
-                        color = 0xFFEB3B;
-                        alpha = 0.5;
-                        graphics.lineStyle(1, color, alpha);
-                        graphics.drawCircle(0, 0, 8);
-                        // Question mark shape
-                        graphics.moveTo(-3, -6);
-                        graphics.lineTo(3, -6);
-                        graphics.lineTo(3, -2);
-                        graphics.lineTo(0, 0);
-                        graphics.lineTo(0, 4);
-                        graphics.moveTo(0, 6);
-                        graphics.lineTo(0, 7);
-                    } else {
-                        // Revealed alerts - bright yellow cross
-                        color = 0xFFEB3B;
-                        graphics.lineStyle(3, color, 1);
-                        graphics.drawCircle(0, 0, 12);
-                        graphics.moveTo(-10, 0);
-                        graphics.lineTo(10, 0);
-                        graphics.moveTo(0, -10);
-                        graphics.lineTo(0, 10);
-                    }
+                    graphics.beginFill(color);
+                    graphics.drawCircle(0, 0, 8);
                     break;
-                }
-                // Fallback for unknown types
-                color = 0xFFEB3B; // Yellow for alerts
-                graphics.lineStyle(2, color, 1);
-                graphics.drawCircle(0, 0, 12);
-                graphics.moveTo(-8, 0);
-                graphics.lineTo(8, 0);
-                graphics.moveTo(0, -8);
-                graphics.lineTo(0, 8);
-                break;
+                case 'tank':
+                    if (faction === 'Neutral') {
+                        color = 0x00BCD4; // Cyan for neutral
+                    } else if (faction === 'Wild') {
+                        color = 0x8D6E63; // Brown for wild creatures
+                    } else if (faction === 'Enemy') {
+                        color = 0xB71C1C; // Dark red for enemy
+                    } else {
+                        color = 0xFF5722; // Bright red for player
+                    }
+                    graphics.beginFill(color);
+                    graphics.drawRect(-10, -8, 20, 16);
+                    break;
+                case 'transport':
+                    if (faction === 'Neutral') {
+                        color = 0x00BCD4; // Cyan for neutral
+                    } else if (faction === 'Wild') {
+                        color = 0x8D6E63; // Brown for wild creatures
+                    } else if (faction === 'Enemy') {
+                        color = 0x0D47A1; // Dark blue for enemy
+                    } else {
+                        color = 0x2196F3; // Bright blue for player
+                    }
+                    graphics.beginFill(color);
+                    graphics.drawRect(-12, -10, 24, 20);
+                    break;
+                default:
+                    // Check if this is an alert (any vehicleType with '_' in it)
+                    if (vehicleType && vehicleType.includes('_')) {
+                        let alertType, alertState;
+                        [alertType, alertState] = vehicleType.split('_');
+
+                        if (alertState === 'Hidden') {
+                            // Hidden alerts - dark yellow with question mark style
+                            color = 0xB8860B; // Dark yellow
+                            alpha = 0.7;
+                            graphics.lineStyle(2, color, alpha);
+                            graphics.drawCircle(0, 0, 8);
+                            // Question mark shape
+                            graphics.moveTo(-3, -6);
+                            graphics.lineTo(3, -6);
+                            graphics.lineTo(3, -2);
+                            graphics.lineTo(0, 0);
+                            graphics.lineTo(0, 4);
+                            graphics.moveTo(0, 6);
+                            graphics.lineTo(0, 7);
+                        } else {
+                            // Revealed alerts - dark yellow question mark in circle
+                            color = 0xB8860B; // Dark yellow
+                            graphics.lineStyle(3, color, 1);
+                            graphics.drawCircle(0, 0, 12);
+                            // Question mark shape (larger for revealed alerts)
+                            graphics.moveTo(-4, -8);
+                            graphics.lineTo(4, -8);
+                            graphics.lineTo(4, -3);
+                            graphics.lineTo(0, -1);
+                            graphics.lineTo(0, 5);
+                            graphics.moveTo(0, 7);
+                            graphics.lineTo(0, 8);
+                        }
+                        break;
+                    }
+                    // Fallback for unknown vehicle types - green circle
+                    if (faction === 'Neutral') {
+                        color = 0x00BCD4; // Cyan for neutral
+                    } else if (faction === 'Wild') {
+                        color = 0x8D6E63; // Brown for wild creatures
+                    } else if (faction === 'Enemy') {
+                        color = 0xB71C1C; // Dark red for enemy
+                    } else {
+                        color = 0x4CAF50; // Bright green for player (default)
+                    }
+                    graphics.beginFill(color);
+                    graphics.drawCircle(0, 0, 8);
+                    break;
+            }
         }
 
         graphics.alpha = alpha;
@@ -979,9 +1453,40 @@ class GameDemo {
         }
     }
 
+    startAutoUpdate() {
+        this.autoUpdateEnabled = true;
+        this.updateStatus('Auto update started - game will update automatically');
+    }
+
+    stopAutoUpdate() {
+        this.autoUpdateEnabled = false;
+        this.updateStatus('Auto update stopped - use "Update Once" or "Start Auto Update" to continue');
+    }
+
+    updateOnce() {
+        if (!this.isInitialized) {
+            this.updateStatus('Please initialize the game first!');
+            return;
+        }
+
+        const now = Date.now();
+        const dt = (now - this.lastUpdate) / 1000;
+        this.lastUpdate = now;
+
+        try {
+            const result = update(dt);
+            const gameState = JSON.parse(result);
+            this.syncEntitiesWithGameState(gameState.entities);
+            this.updateStatus(`Single update completed!\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`);
+        } catch (error) {
+            this.updateStatus(`Single update failed: ${error.message}`);
+            console.error('Single update error:', error);
+        }
+    }
+
     gameLoop() {
-        // Auto-update every frame for smooth animation
-        if (this.isInitialized) {
+        // Auto-update every frame for smooth animation (if enabled)
+        if (this.isInitialized && this.autoUpdateEnabled) {
             const now = Date.now();
             const dt = (now - this.lastUpdate) / 1000;
             this.lastUpdate = now;
@@ -992,7 +1497,7 @@ class GameDemo {
 
                 // Update status occasionally (not every frame to avoid spam)
                 if (Math.random() < 0.01) { // ~1% chance per frame
-                    this.updateStatus(`Running...\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`);
+                    this.updateStatus(`Running (Auto)...\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`);
                 }
 
                 // Sync visual entities with game state
@@ -1022,6 +1527,7 @@ class GameDemo {
     }
 
     syncEntitiesWithGameState(gameEntities) {
+
         // Remove entities that no longer exist in game state
         const gameEntityIds = new Set(gameEntities.map(e => e.id));
         const alertIds = new Set(gameEntities.filter(e => e.entity_type === 'alert').map(e => e.id));
@@ -1079,7 +1585,7 @@ class GameDemo {
                     if (gameEntity.is_selected && !entity.selectionIndicator) {
                         // Add selection indicator if server says selected but we don't have one
                         const selectionGraphics = new PIXI.Graphics();
-                        selectionGraphics.lineStyle(3, 0xFFFF00, 1);
+                        selectionGraphics.lineStyle(3, 0x0080FF, 1); // Blue border
                         selectionGraphics.drawCircle(0, 0, 12);
                         entity.container.addChild(selectionGraphics);
                         entity.selectionIndicator = selectionGraphics;
@@ -1104,9 +1610,16 @@ class GameDemo {
         let entityType = gameEntity.entity_type || 'vehicle';
         let faction = gameEntity.faction || null;
 
+
+
         if (gameEntity.subtype) {
-            if (entityType === 'vehicle') {
-                // Convert from Rust enum names to JS names
+            // Check if this is an alert first (any subtype with '_' is an alert)
+            if (gameEntity.subtype.includes('_')) {
+                // This is an alert - use subtype directly
+                vehicleType = gameEntity.subtype;
+                entityType = 'alert'; // Override entityType for alerts
+            } else if (entityType === 'vehicle') {
+                // Convert from Rust enum names to JS names for vehicles
                 switch (gameEntity.subtype) {
                     case 'Scout Car':
                         vehicleType = 'scout';
@@ -1120,13 +1633,14 @@ class GameDemo {
                     default:
                         vehicleType = 'scout';
                 }
-            } else if (entityType === 'alert') {
-                // For alerts, use the subtype directly (includes alert type and state)
-                vehicleType = gameEntity.subtype;
+            } else if (entityType === 'base') {
+                // For bases, always use 'base' as vehicleType for consistent rendering
+                vehicleType = 'base';
             }
         }
 
         // Create entity with game coordinates (createEntitySprite will convert to screen coordinates)
+        console.log('Creating entity sprite:', gameEntity.id, gameEntity.x, gameEntity.y, 'vehicleType:', vehicleType, 'entityType:', entityType, 'faction:', faction);
         this.createEntitySprite(gameEntity.id, gameEntity.x, gameEntity.y, vehicleType, faction, entityType);
     }
 
@@ -1171,7 +1685,22 @@ class GameDemo {
     }
 
     updateStatus(message) {
-        document.getElementById('status').textContent = message;
+        // Add selection counter to status if there are selected units
+        let fullMessage = message;
+        if (this.selectedEntityIds.size > 0) {
+            fullMessage += `\n\n[Выбрано юнитов: ${this.selectedEntityIds.size}/12]`;
+        }
+        document.getElementById('status').textContent = fullMessage;
+    }
+
+    updateEntityInfo(message) {
+        const entityInfoDiv = document.getElementById('entity-info');
+        if (message) {
+            entityInfoDiv.textContent = message;
+            entityInfoDiv.style.display = 'block';
+        } else {
+            entityInfoDiv.style.display = 'none';
+        }
     }
 
     // Parse combat messages from debug_messages and create visual effects
@@ -1384,6 +1913,158 @@ class GameDemo {
 
         // Yellow rings removed - they were behaving incorrectly during attacks
         // Previous code created pulsing yellow circles around colliding entities
+    }
+
+    // Display detailed information about an entity
+    async displayEntityInfo(entityId) {
+        try {
+            // Check if entity still exists in visual representation
+            if (!this.entities.has(entityId)) {
+                this.updateEntityInfo('Entity no longer exists');
+                return;
+            }
+
+            const result = get_entity_info(entityId);
+            const entityInfo = JSON.parse(result);
+
+            let infoText = `🏷️ Entity #${entityInfo.id}\n`;
+            infoText += `📍 Position: (${entityInfo.position[0].toFixed(1)}, ${entityInfo.position[1].toFixed(1)})\n`;
+            infoText += `🏛️ Type: ${entityInfo.entity_type}`;
+
+            if (entityInfo.subtype) {
+                infoText += ` (${entityInfo.subtype})`;
+            }
+            infoText += '\n';
+
+            if (entityInfo.faction) {
+                infoText += `🎯 Faction: ${entityInfo.faction}\n`;
+            }
+
+            if (entityInfo.health) {
+                const [current, max] = entityInfo.health;
+                const percentage = (current / max * 100).toFixed(1);
+                const healthBar = this.createHealthBar(current, max);
+                infoText += `❤️ Health: ${healthBar} ${percentage}%\n`;
+            }
+
+            if (entityInfo.speed !== null && entityInfo.speed !== undefined) {
+                infoText += `💨 Speed: ${entityInfo.speed.toFixed(1)} units/s\n`;
+            }
+
+            if (entityInfo.damage && entityInfo.damage_type) {
+                infoText += `⚔️ Damage: ${entityInfo.damage.toFixed(1)} (${entityInfo.damage_type})\n`;
+            }
+
+            if (entityInfo.combat_cooldown) {
+                const [current, max] = entityInfo.combat_cooldown;
+                const progress = (current / max * 100).toFixed(1);
+                infoText += `⏰ Cooldown: ${current.toFixed(1)}s/${max.toFixed(1)}s (${progress}%)\n`;
+            }
+
+            if (entityInfo.devices && entityInfo.devices.length > 0) {
+                infoText += `\n🔧 Crew/Devices (${entityInfo.devices.length}):\n`;
+                for (const device of entityInfo.devices) {
+                    infoText += `  • ${device.name} (${device.device_type})\n`;
+                    if (device.description) {
+                        infoText += `    ${device.description}\n`;
+                    }
+                }
+            }
+
+            // Commands available for selected units
+            if (entityInfo.is_selected && entityInfo.faction === 'Player') {
+                infoText += `\n🎮 Available Commands:\n`;
+                infoText += `  • [Двигаться] - Right-click map\n`;
+                infoText += `  • [Атаковать] - Right-click enemy\n`;
+                infoText += `  • [Остановить] - Space key\n`;
+                infoText += `  • [Отменить] - Delete key\n`;
+                infoText += `  • [Ремонт] - Return to base\n`;
+                infoText += `  • [Экипировка] - For crew cats\n`;
+            }
+
+            if (entityInfo.is_selected) {
+                infoText += '\n✅ SELECTED';
+            }
+
+            this.updateEntityInfo(infoText);
+        } catch (error) {
+            console.error('Error getting entity info:', error);
+            this.updateEntityInfo(`❌ Error loading entity info: ${error.message}`);
+        }
+    }
+
+    // Create a visual health bar
+    createHealthBar(current, max) {
+        const percentage = current / max;
+        const barLength = 10;
+        const filled = Math.round(percentage * barLength);
+        const empty = barLength - filled;
+
+        let bar = '[';
+        for (let i = 0; i < filled; i++) {
+            bar += '█';
+        }
+        for (let i = 0; i < empty; i++) {
+            bar += '░';
+        }
+        bar += ']';
+
+        return bar;
+    }
+
+
+
+    // Handle keyboard input
+    handleKeyDown(event) {
+        if (!this.isInitialized) return;
+
+        // Check for Ctrl+A (select all player units at base)
+        if (event.ctrlKey && event.key === 'a') {
+            event.preventDefault(); // Prevent browser select all
+            this.selectAllPlayerUnitsAtBase();
+            return;
+        }
+
+        switch (event.key) {
+            case 'Escape':
+                // Clear all selections
+                this.clearAllSelections();
+                this.updateStatus('Selection cleared (Escape key)');
+                break;
+
+            case ' ': // Spacebar
+                // Stop current actions for selected units
+                if (this.selectedEntityIds.size > 0) {
+                    // For now, just clear movement targets by setting them to current position
+                    // This effectively stops movement
+                    for (const entityId of this.selectedEntityIds) {
+                        const entity = this.entities.get(entityId);
+                        if (entity) {
+                            this.setEntityTarget(entityId, entity.gameX, entity.gameY);
+                        }
+                    }
+                    this.updateStatus(`Stopped ${this.selectedEntityIds.size} unit(s) (Spacebar)`);
+                }
+                event.preventDefault(); // Prevent page scroll
+                break;
+
+            case 'Delete':
+                // Cancel current commands (same as stopping for now)
+                if (this.selectedEntityIds.size > 0) {
+                    for (const entityId of this.selectedEntityIds) {
+                        const entity = this.entities.get(entityId);
+                        if (entity) {
+                            this.setEntityTarget(entityId, entity.gameX, entity.gameY);
+                        }
+                    }
+                    this.updateStatus(`Cancelled commands for ${this.selectedEntityIds.size} unit(s) (Delete key)`);
+                }
+                break;
+
+            default:
+                // Ignore other keys
+                break;
+        }
     }
 }
 

@@ -11,9 +11,10 @@ The project is in early development with core architecture established but minim
 1. **Core System Implementation**: Movement, combat, and alert systems ✅ (Combat system fixed for entities without Vehicle components)
 2. **Unit Targeting System**: ✅ Added click-to-attack functionality for hostile units
 3. **Selection Management**: ✅ Implemented exclusive unit selection - selecting new units automatically clears previous selections
-4. **API Completion**: Full WebAssembly API with game loop integration
-5. **Configuration System**: YAML-based unit and balance configuration
-6. **Basic Gameplay Loop**: Functional game with unit creation and updates
+4. **Alert Target Assignment**: ✅ Vehicles now receive movement targets when clicking on alerts
+5. **API Completion**: Full WebAssembly API with game loop integration
+6. **Configuration System**: YAML-based unit and balance configuration
+7. **Basic Gameplay Loop**: Functional game with unit creation and updates
 
 ### Active Development Areas
 - **ECS Component Design**: Refining component structure for game systems

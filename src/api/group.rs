@@ -13,55 +13,100 @@ pub struct GroupOperationResult {
 #[wasm_bindgen]
 pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue> {
     if let Some(world) = GAME_WORLD.get() {
-        let world = world
+        let mut world = world
             .write()
             .map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
-        // Use a single mutable query to handle all selection logic
+        // First find the target entity by ID among all entities
         let mut target_entity = None;
-        let mut cleared_count = 0;
-
-        // Iterate through all selection components and handle selection logic
-        for (entity, selection) in world.world.query::<&mut Selection>().iter() {
+        for (entity, ()) in world.world.query::<()>().iter() {
             if entity.id() == entity_id {
-                // Found the target entity
                 target_entity = Some(entity);
-                // Select this entity (will be done after clearing others if exclusive)
-            } else if exclusive && selection.is_selected {
-                // Clear other selections only if exclusive mode
-                selection.deselect();
-                cleared_count += 1;
+                break;
+            }
+        }
+
+        // If exclusive mode, clear all selections first
+        let mut cleared_count = 0;
+        if exclusive {
+            for (_, selection) in world.world.query::<&mut Selection>().iter() {
+                if selection.is_selected {
+                    selection.deselect();
+                    cleared_count += 1;
+                }
             }
         }
 
         match target_entity {
             Some(entity) => {
-                // Now select the target entity (we already know it has a Selection component)
-                if let Ok(mut query) = world.world.query_one::<&mut Selection>(entity) {
-                    if let Some(selection) = query.get() {
-                        selection.select();
-                        println!(
-                            "Selected entity {} (cleared {} others)",
-                            entity_id, cleared_count
-                        );
+                // Check if entity belongs to Player faction and has Movement component
+                let is_player_faction = world.world.get::<&crate::game::components::FactionComponent>(entity)
+                    .map(|faction| faction.faction == crate::game::components::Faction::Player)
+                    .unwrap_or(false);
 
-                        let result = GroupOperationResult {
-                            success: true,
-                            message: format!(
-                                "Entity {} selected (cleared {} other selections)",
+                let has_movement = world.world.get::<&crate::game::components::Movement>(entity).is_ok();
+
+                if !is_player_faction {
+                    let result = GroupOperationResult {
+                        success: false,
+                        message: format!("Entity {} is not a player unit", entity_id),
+                        selected_count: None,
+                    };
+                    return serde_json::to_string(&result)
+                        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)));
+                }
+
+                if !has_movement {
+                    let result = GroupOperationResult {
+                        success: false,
+                        message: format!("Entity {} cannot move", entity_id),
+                        selected_count: None,
+                    };
+                    return serde_json::to_string(&result)
+                        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)));
+                }
+
+                // Check if entity has Selection component
+                let has_selection = world.world.get::<&Selection>(entity).is_ok();
+
+                if has_selection {
+                    // Entity has Selection component - select it
+                    if let Ok(mut query) = world.world.query_one::<&mut Selection>(entity) {
+                        if let Some(selection) = query.get() {
+                            selection.select();
+                            println!(
+                                "Selected entity {} (cleared {} others)",
                                 entity_id, cleared_count
-                            ),
-                            selected_count: Some(1),
-                        };
+                            );
 
-                        serde_json::to_string(&result)
-                            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+                            let result = GroupOperationResult {
+                                success: true,
+                                message: format!(
+                                    "Entity {} selected (cleared {} other selections)",
+                                    entity_id, cleared_count
+                                ),
+                                selected_count: Some(1),
+                            };
+
+                            serde_json::to_string(&result)
+                                .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+                        } else {
+                            // Selection component exists but is None - this shouldn't happen
+                            let result = GroupOperationResult {
+                                success: false,
+                                message: format!(
+                                    "Entity {} has invalid selection component",
+                                    entity_id
+                                ),
+                                selected_count: None,
+                            };
+
+                            serde_json::to_string(&result)
+                                .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+                        }
                     } else {
                         let result = GroupOperationResult {
                             success: false,
-                            message: format!(
-                                "Entity {} does not have selection component",
-                                entity_id
-                            ),
+                            message: format!("Entity {} not found", entity_id),
                             selected_count: None,
                         };
 
@@ -69,14 +114,45 @@ pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue>
                             .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
                     }
                 } else {
-                    let result = GroupOperationResult {
-                        success: false,
-                        message: format!("Entity {} not found", entity_id),
-                        selected_count: None,
-                    };
+                    // Entity doesn't have Selection component - add it
+                    println!("Entity {} doesn't have Selection component, adding it", entity_id);
+                    let selection = Selection::new();
+                    let _ = world.world.insert_one(entity, selection);
 
-                    serde_json::to_string(&result)
-                        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+                    // Now select it
+                    if let Ok(mut query) = world.world.query_one::<&mut Selection>(entity) {
+                        if let Some(selection) = query.get() {
+                            selection.select();
+                            println!("Added Selection component and selected entity {}", entity_id);
+
+                            let result = GroupOperationResult {
+                                success: true,
+                                message: format!("Entity {} selected (added Selection component)", entity_id),
+                                selected_count: Some(1),
+                            };
+
+                            serde_json::to_string(&result)
+                                .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+                        } else {
+                            let result = GroupOperationResult {
+                                success: false,
+                                message: format!("Failed to add Selection component to entity {}", entity_id),
+                                selected_count: None,
+                            };
+
+                            serde_json::to_string(&result)
+                                .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+                        }
+                    } else {
+                        let result = GroupOperationResult {
+                            success: false,
+                            message: format!("Failed to add Selection component to entity {}", entity_id),
+                            selected_count: None,
+                        };
+
+                        serde_json::to_string(&result)
+                            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+                    }
                 }
             }
             None => {
@@ -108,9 +184,9 @@ pub fn deselect_entity(entity_id: u32) -> Result<String, JsValue> {
         let world = world
             .write()
             .map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
-        // Find the entity by ID
+        // Find the entity by ID among all entities
         let mut found_entity_id = None;
-        for (entity, _) in world.world.query::<&Selection>().iter() {
+        for (entity, ()) in world.world.query::<()>().iter() {
             if entity.id() == entity_id {
                 found_entity_id = Some(entity);
                 break;
@@ -262,16 +338,19 @@ pub fn set_group_target(target_x: f32, target_y: f32) -> Result<String, JsValue>
             assigned_positions.push((entity, final_x, final_y));
         }
 
-        // Set targets for all selected entities
+        // Set targets for all selected entities that are vehicles (have Vehicle component)
         let mut success_count = 0;
         for (entity, x, y) in assigned_positions {
-            if let Ok(mut query) = world
-                .world
-                .query_one::<&mut crate::game::components::Movement>(entity)
-            {
-                if let Some(movement) = query.get() {
-                    movement.set_target(x, y);
-                    success_count += 1;
+            // Check if this entity is a vehicle (has Vehicle component) before setting movement target
+            if world.world.get::<&crate::game::components::Vehicle>(entity).is_ok() {
+                if let Ok(mut query) = world
+                    .world
+                    .query_one::<&mut crate::game::components::Movement>(entity)
+                {
+                    if let Some(movement) = query.get() {
+                        movement.set_target(x, y);
+                        success_count += 1;
+                    }
                 }
             }
         }

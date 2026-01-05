@@ -1,6 +1,7 @@
 //! ECS Components for the Nation of Last Land game
 
 pub mod alert;
+pub mod base;
 pub mod combat;
 pub mod crew;
 pub mod damage;
@@ -12,6 +13,7 @@ pub mod selection;
 pub mod vehicle;
 
 pub use alert::*;
+pub use base::*;
 pub use combat::*;
 pub use crew::*;
 pub use damage::*;
