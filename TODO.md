@@ -1,20 +1,20 @@
 # Nation of Last Land - TODO List
 
 ## Проектные основы
-- [ ] **setup_project_structure**: Set up Rust project with hecs, serde, and YAML support
-- [ ] **create_ecs_components**: Design and implement ECS components (Position, Health, Movement, etc.)
-- [ ] **define_unit_configs**: Create YAML configuration files for units, alerts, and upgrades
-- [ ] **create_wasm_api**: Implement WebAssembly API functions (init, create_vehicle, update)
-- [ ] **integrate_game_loop**: Connect ECS systems to game loop and API responses
+- [x] **setup_project_structure**: Set up Rust project with hecs, serde, and YAML support
+- [x] **create_ecs_components**: Design and implement ECS components (Position, Health, Movement, etc.)
+- [x] **define_unit_configs**: Create YAML configuration files for units, alerts, and upgrades
+- [x] **create_wasm_api**: Implement WebAssembly API functions (init, create_vehicle, update)
+- [x] **integrate_game_loop**: Connect ECS systems to game loop and API responses
 
 ## Базовые игровые системы
 - [ ] **implement_map_system**: Implement map system with tile-based positioning
-- [ ] **create_alert_system**: Create alert generation and reveal mechanics
-- [ ] **implement_movement_system**: Implement unit movement towards targets
+- [x] **create_alert_system**: Create alert generation and reveal mechanics
+- [x] **implement_movement_system**: Implement unit movement towards targets
 - [ ] **implement_pathfinding**: Add pathfinding and navigation system for unit movement
 - [ ] **add_fog_of_war**: Implement fog of war and area discovery mechanics
-- [ ] **create_combat_system**: Add combat mechanics with damage types and resistances
-- [ ] **add_damage_types**: Implement damage types (physical, acid, radiation, fire) and resistance system
+- [x] **create_combat_system**: Add combat mechanics with damage types and resistances
+- [x] **add_damage_types**: Implement damage types (physical, acid, radiation, fire) and resistance system
 - [ ] **implement_vehicle_devices**: Implement modular device system for vehicles (turrets, accelerators, armor, stealth)
 - [ ] **add_device_conflicts**: Implement device compatibility and conflict system for vehicles
 
@@ -28,7 +28,7 @@
 ## Система улучшений
 - [ ] **implement_upgrade_system**: Create unit purchasing and upgrade mechanics
 - [ ] **add_unit_limits**: Add unit limit management and base expansion
-- [ ] **implement_floor_system**: Implement base expansion with floors (regular FLOORS and FLOOR_REPAIR)
+- [x] **implement_floor_system**: Implement base expansion with floors (regular FLOORS and FLOOR_REPAIR)
 - [ ] **add_repair_mechanics**: Add unit repair mechanics when returning to FLOOR_REPAIR
 - [ ] **add_repair_upgrades**: Add FLOOR_REPAIR upgrade system for faster repair speeds
 
