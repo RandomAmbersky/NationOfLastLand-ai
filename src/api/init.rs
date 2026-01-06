@@ -155,6 +155,7 @@ pub fn get_entities_data(world: &World) -> Vec<EntityData> {
             is_selected: false,                  // Bases cannot be selected for now
         });
     }
+
     entities
 }
 

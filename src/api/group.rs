@@ -44,6 +44,7 @@ pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue>
                     .unwrap_or(false);
 
                 let has_movement = world.world.get::<&crate::game::components::Movement>(entity).is_ok();
+                let is_base = world.world.get::<&crate::game::components::Base>(entity).is_ok();
 
                 if !is_player_faction {
                     let result = GroupOperationResult {
@@ -55,10 +56,11 @@ pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue>
                         .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)));
                 }
 
-                if !has_movement {
+                // Allow selection if entity can move OR is a base
+                if !has_movement && !is_base {
                     let result = GroupOperationResult {
                         success: false,
-                        message: format!("Entity {} cannot move", entity_id),
+                        message: format!("Entity {} cannot move and is not a base", entity_id),
                         selected_count: None,
                     };
                     return serde_json::to_string(&result)

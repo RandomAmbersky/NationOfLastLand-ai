@@ -193,7 +193,7 @@ class GameDemo {
                 this.highlightTargetAlert({ x: entity.gameX, y: entity.gameY, id: entityAtPosition });
             } else {
                 // Handle entity click - always exclusive selection since user has only mouse
-                this.handleEntityClick(entityAtPosition, false);
+                this.handleEntityClick(entityAtPosition, false, event);
             }
         } else if (this.selectedEntityIds.size > 0) {
             // Check if clicked on an alert (using more precise radius)
@@ -733,6 +733,8 @@ class GameDemo {
         const entity = this.entities.get(entityId);
         if (!entity) return;
 
+        console.log('handleEntityClick called for entity:', entityId, 'type:', entity.entityType, 'faction:', entity.faction);
+
         // Prevent concurrent selection operations
         if (this.isSelecting) return;
         this.isSelecting = true;
@@ -821,18 +823,50 @@ class GameDemo {
 
     findEntityAtPosition(x, y) {
         // Find entity closest to click position (within 20 pixels)
-        // Consider all entities including alerts
+        // Priority order: bases > vehicles > alerts (bases have highest priority)
+        console.log('findEntityAtPosition called with click at:', x, y);
+        console.log('Total entities in game:', this.entities.size);
+        for (const [id, entity] of this.entities) {
+            console.log(`Entity ${id}: type=${entity.entityType}, faction=${entity.faction}, pos=(${entity.container.x.toFixed(1)}, ${entity.container.y.toFixed(1)})`);
+        }
+
         let closestEntity = null;
         let closestDistance = 20;
+        let foundEntities = [];
+        let priorityEntities = { base: null, vehicle: null, alert: null };
 
         for (const [id, entity] of this.entities) {
             // Use current container position for accurate hit detection
             const distance = Math.sqrt((entity.container.x - x) ** 2 + (entity.container.y - y) ** 2);
             if (distance < closestDistance) {
-                closestDistance = distance;
-                closestEntity = id;
+                foundEntities.push({ id, entityType: entity.entityType, distance: distance.toFixed(2) });
+
+                // Track entities by priority
+                if (entity.entityType === 'base' && (!priorityEntities.base || distance < priorityEntities.base.distance)) {
+                    priorityEntities.base = { id, distance };
+                } else if (entity.entityType === 'vehicle' && (!priorityEntities.vehicle || distance < priorityEntities.vehicle.distance)) {
+                    priorityEntities.vehicle = { id, distance };
+                } else if (entity.entityType === 'alert' && (!priorityEntities.alert || distance < priorityEntities.alert.distance)) {
+                    priorityEntities.alert = { id, distance };
+                }
             }
         }
+
+        // Select entity with highest priority (bases first, then vehicles, then alerts)
+        if (priorityEntities.base) {
+            closestEntity = priorityEntities.base.id;
+        } else if (priorityEntities.vehicle) {
+            closestEntity = priorityEntities.vehicle.id;
+        } else if (priorityEntities.alert) {
+            closestEntity = priorityEntities.alert.id;
+        }
+
+        if (foundEntities.length > 0) {
+            console.log('findEntityAtPosition found entities near click:', foundEntities);
+            console.log('Priority selection - base:', priorityEntities.base?.id, 'vehicle:', priorityEntities.vehicle?.id, 'alert:', priorityEntities.alert?.id);
+            console.log('Selected entity:', closestEntity, 'type:', this.entities.get(closestEntity)?.entityType);
+        }
+
         return closestEntity;
     }
 
@@ -1614,14 +1648,22 @@ class GameDemo {
         let entityType = gameEntity.entity_type || 'vehicle';
         let faction = gameEntity.faction || null;
 
-
+        console.log('createEntityFromGameState called with:', {
+            id: gameEntity.id,
+            entity_type: gameEntity.entity_type,
+            subtype: gameEntity.subtype,
+            faction: gameEntity.faction,
+            is_selected: gameEntity.is_selected
+        });
 
         if (gameEntity.subtype) {
-            // Check if this is an alert first (any subtype with '_' is an alert)
-            if (gameEntity.subtype.includes('_')) {
+            // Check entity type first to determine how to handle subtype
+            if (entityType === 'alert') {
                 // This is an alert - use subtype directly
                 vehicleType = gameEntity.subtype;
-                entityType = 'alert'; // Override entityType for alerts
+            } else if (entityType === 'base') {
+                // For bases, always use 'base' as vehicleType for consistent rendering
+                vehicleType = 'base';
             } else if (entityType === 'vehicle') {
                 // Convert from Rust enum names to JS names for vehicles
                 switch (gameEntity.subtype) {
@@ -1977,13 +2019,21 @@ class GameDemo {
 
             // Commands available for selected units
             if (entityInfo.is_selected && entityInfo.faction === 'Player') {
-                infoText += `\n🎮 Available Commands:\n`;
-                infoText += `  • [Двигаться] - Right-click map\n`;
-                infoText += `  • [Атаковать] - Right-click enemy\n`;
-                infoText += `  • [Остановить] - Space key\n`;
-                infoText += `  • [Отменить] - Delete key\n`;
-                infoText += `  • [Ремонт] - Return to base\n`;
-                infoText += `  • [Экипировка] - For crew cats\n`;
+                if (entityInfo.entity_type === 'base') {
+                    infoText += `\n🏗️ Available Base Commands:\n`;
+                    infoText += `  • [Строить этаж] - Build new floor\n`;
+                    infoText += `  • [Улучшить этаж] - Upgrade existing floor\n`;
+                    infoText += `  • [Назначить юнитов] - Assign units to floors\n`;
+                    infoText += `  • [Информация] - View base details\n`;
+                } else {
+                    infoText += `\n🎮 Available Commands:\n`;
+                    infoText += `  • [Двигаться] - Right-click map\n`;
+                    infoText += `  • [Атаковать] - Right-click enemy\n`;
+                    infoText += `  • [Остановить] - Space key\n`;
+                    infoText += `  • [Отменить] - Delete key\n`;
+                    infoText += `  • [Ремонт] - Return to base\n`;
+                    infoText += `  • [Экипировка] - For crew cats\n`;
+                }
             }
 
             if (entityInfo.is_selected) {
