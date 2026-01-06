@@ -970,6 +970,10 @@ class GameDemo {
                 } else {
                     this.updateStatus(`${count} entities selected. Click on map to set group movement target.`);
                 }
+
+                // Update spawn button state after selection change
+                this.updateSpawnButtonState();
+
                 return true;
             } else {
                 // Don't log error for expected cases (non-player units, non-movable units)
@@ -1018,6 +1022,9 @@ class GameDemo {
         } else {
             this.updateStatus(`${count} entities selected.`);
         }
+
+        // Update spawn button state after deselection change
+        this.updateSpawnButtonState();
     }
 
     clearAllSelections(bypassCheck = false) {
@@ -1047,6 +1054,9 @@ class GameDemo {
         this.selectedEntityIds.clear();
         this.updateStatus('Selection cleared.');
         this.updateEntityInfo(null); // Hide entity info when selection is cleared
+
+        // Update spawn button state after clearing selection
+        this.updateSpawnButtonState();
 
         // Reset flag after a short delay to allow server sync to complete
         setTimeout(() => {
@@ -1200,15 +1210,51 @@ class GameDemo {
                 status += '\n\nDebug:\n' + gameState.debug_messages.join('\n');
             }
             this.updateStatus(status);
+
+            // Initialize spawn button state
+            this.updateSpawnButtonState();
         } catch (error) {
             this.updateStatus(`Game initialization failed: ${error.message}`);
             console.error('Game init error:', error);
         }
     }
 
+    isPlayerBaseSelected() {
+        // Check if any selected entity is a player base
+        for (const entityId of this.selectedEntityIds) {
+            const entity = this.entities.get(entityId);
+            if (entity && entity.entityType === 'base' && entity.faction === 'Player') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    updateSpawnButtonState() {
+        const spawnBtn = document.getElementById('spawn-btn');
+        const isBaseSelected = this.isPlayerBaseSelected();
+
+        if (isBaseSelected) {
+            spawnBtn.style.display = 'inline-block';
+            spawnBtn.disabled = false;
+            spawnBtn.style.opacity = '1.0';
+            spawnBtn.style.cursor = 'pointer';
+            spawnBtn.title = 'Spawn a new vehicle at the selected base';
+        } else {
+            spawnBtn.style.display = 'none';
+            spawnBtn.disabled = true;
+        }
+    }
+
     async spawnVehicle() {
         if (!this.isInitialized) {
             this.updateStatus('Please initialize the game first!');
+            return;
+        }
+
+        // Check if a player base is selected
+        if (!this.isPlayerBaseSelected()) {
+            this.updateStatus('Cannot spawn vehicle: Please select a player base first!');
             return;
         }
 
@@ -1787,7 +1833,7 @@ class GameDemo {
     updateEntityInfo(message) {
         const entityInfoDiv = document.getElementById('entity-info');
         if (message) {
-            entityInfoDiv.textContent = message;
+            entityInfoDiv.innerHTML = message;
             entityInfoDiv.style.display = 'block';
         } else {
             entityInfoDiv.style.display = 'none';
@@ -2066,6 +2112,7 @@ class GameDemo {
             if (entityInfo.faction === 'Player') {
                 if (entityInfo.entity_type === 'base') {
                     infoText += `\n🏗️ Available Base Commands:\n`;
+                    infoText += `  • <button onclick="window.demo && window.demo.spawnVehicle()" style="background: #4CAF50; color: white; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 0.8rem;">Спавн транспорта</button> - Spawn new vehicle\n`;
                     infoText += `  • [Строить этаж] - Build new floor\n`;
                     infoText += `  • [Улучшить этаж] - Upgrade existing floor\n`;
                     infoText += `  • [Назначить юнитов] - Assign units to floors\n`;
@@ -2167,8 +2214,12 @@ class GameDemo {
     }
 }
 
+// Global demo instance for onclick handlers
+let demo;
+
 // Initialize the demo when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    const demo = new GameDemo();
+    demo = new GameDemo();
+    window.demo = demo; // Make demo globally accessible
     demo.init();
 });
