@@ -16,6 +16,7 @@ The project is in early development with core architecture established but minim
 6. **API Completion**: Full WebAssembly API with game loop integration
 7. **Configuration System**: YAML-based unit and balance configuration
 8. **Basic Gameplay Loop**: Functional game with unit creation and updates
+9. **Group Selection Rules**: ✅ Verified implementation of units_moving_rules.md - both rules working correctly
 
 ### Active Development Areas
 - **ECS Component Design**: Refining component structure for game systems
