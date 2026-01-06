@@ -40,7 +40,7 @@ pub fn init() -> Result<String, JsValue> {
 
     // Add initial alerts for testing
     if let Some(world) = GAME_WORLD.get() {
-        use crate::game::systems::alert::spawn_random_alert;
+        use crate::game::systems::{alert::spawn_random_alert, base::create_base};
         let mut world = world
             .write()
             .map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
@@ -51,6 +51,12 @@ pub fn init() -> Result<String, JsValue> {
         world
             .debug_messages
             .push("Added 2 initial alerts for testing".to_string());
+
+        // Create initial player base
+        create_base(&mut world.world, (400.0, 300.0));
+        world
+            .debug_messages
+            .push("Created initial player base at (400, 300)".to_string());
     }
 
     if let Some(world) = GAME_WORLD.get() {

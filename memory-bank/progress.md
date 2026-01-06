@@ -38,8 +38,8 @@
 - **Alert System**: ✅ Random event generation, reveal mechanics, entity spawning, and periodic spawning
 - **Pathfinding**: Navigation system for unit movement around obstacles
 
-### Core Game Mechanics 📋
-- **Base Building**: Vertical base expansion with specialized floors
+### Core Game Mechanics ✅
+- **Base Building**: ✅ Vertical base expansion with specialized floors (Storage, Laboratory, Repair, Rest)
 - **Vehicle Devices**: Modular equipment system for vehicle customization
 - **Crew Management**: Anthropomorphic cat crew with health, fatigue, and equipment
 - **Research System**: Science collection, laboratory mechanics, and technology progression
@@ -65,10 +65,11 @@
 - Configuration loading: Complete
 - Game loop integration: Needs system connections
 
-### Game Systems: 🔴 Not Started
-- Movement execution: Framework exists, logic needed
-- Combat resolution: Components exist, systems needed
-- Alert processing: Configuration exists, mechanics needed
+### Game Systems: 🟡 Partially Implemented
+- Movement execution: ✅ Complete with smooth interpolation
+- Combat resolution: ✅ Complete with damage calculation and entity destruction
+- Alert processing: ✅ Complete with random generation and reveal mechanics
+- Base management: ✅ Complete with floor construction and unit assignment
 - Resource management: No implementation
 
 ### Advanced Features: 🔴 Not Started
@@ -144,10 +145,11 @@
 7. ✅ Implement alert-as-movement-target functionality for selected vehicle groups
 
 ### Short-term (Next 2 Weeks)
-1. Implement combat system with damage calculation
-2. Add alert generation and reveal mechanics
-3. Create pathfinding for unit navigation
-4. Add collision detection and resolution
+1. Implement resource management system (reputation, metals)
+2. Add crew management with anthropomorphic cats
+3. Create research system with science collection
+4. Implement equipment system for cats
+5. Add initial base spawning in game initialization
 
 ### Testing & Validation
 1. Set up unit testing framework for core systems

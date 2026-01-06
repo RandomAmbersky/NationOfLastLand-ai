@@ -7,14 +7,15 @@ The project is in early development with core architecture established but minim
 
 ## Current Work Focus
 
-### Immediate Priorities
-1. **Core System Implementation**: Movement, combat, and alert systems ✅ (Combat system fixed for entities without Vehicle components)
-2. **Unit Targeting System**: ✅ Added click-to-attack functionality for hostile units
-3. **Selection Management**: ✅ Implemented exclusive unit selection - selecting new units automatically clears previous selections
-4. **Alert Target Assignment**: ✅ Vehicles now receive movement targets when clicking on alerts
-5. **API Completion**: Full WebAssembly API with game loop integration
-6. **Configuration System**: YAML-based unit and balance configuration
-7. **Basic Gameplay Loop**: Functional game with unit creation and updates
+### Immediate Priorities ✅
+1. **Core System Implementation**: ✅ Movement, combat, and alert systems complete
+2. **Unit Targeting System**: ✅ Click-to-attack functionality implemented
+3. **Selection Management**: ✅ Exclusive unit selection working
+4. **Alert Target Assignment**: ✅ Vehicles receive movement targets from alerts
+5. **Base Building System**: ✅ Complete vertical expansion with specialized floors
+6. **API Completion**: Full WebAssembly API with game loop integration
+7. **Configuration System**: YAML-based unit and balance configuration
+8. **Basic Gameplay Loop**: Functional game with unit creation and updates
 
 ### Active Development Areas
 - **ECS Component Design**: Refining component structure for game systems
@@ -40,16 +41,17 @@ The project is in early development with core architecture established but minim
 ## Next Steps & Roadmap
 
 ### Short-term Goals (Next 2-4 weeks)
-1. **Movement System**: Implement unit movement toward targets
-2. **Basic Combat**: Add damage calculation and health management
-3. **Alert System**: Create random event generation and processing
-4. **Game Loop Integration**: Connect ECS systems to API update function
+1. **Resource Management**: Implement reputation and metal resource systems
+2. **Crew Management**: Add anthropomorphic cat crew with health and fatigue
+3. **Research System**: Create science collection and laboratory mechanics
+4. **Equipment System**: Implement cat equipment with slot conflicts
+5. **Initial Base**: Add starting base to game initialization
 
 ### Medium-term Goals (1-3 months)
-1. **Base Building**: Implement vertical base expansion with floors
-2. **Vehicle Customization**: Add modular device system
-3. **Crew Management**: Implement anthropomorphic cat crew system
-4. **Research Mechanics**: Add science collection and laboratory system
+1. **Vehicle Devices**: Add modular equipment system for vehicles
+2. **Time Rewind**: Implement core mechanic with selective progress preservation
+3. **Multiple Bases**: Base construction and management system
+4. **UI Integration**: Complete web interface for all game systems
 
 ### Long-term Vision (3-6 months)
 1. **Time Rewind**: Core mechanic implementation with skill preservation
