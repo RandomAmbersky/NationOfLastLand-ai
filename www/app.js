@@ -810,8 +810,7 @@ class GameDemo {
                 this.updateStatus(`Moving group to alert at (${entity.gameX.toFixed(1)}, ${entity.gameY.toFixed(1)})`);
                 // Add visual feedback - highlight the target alert
                 this.highlightTargetAlert({ x: entity.gameX, y: entity.gameY, id: entityId });
-                // Clear selections after setting alert target
-                this.clearAllSelections(true);
+                // Keep selections after setting alert target (don't clear)
                 return;
             }
 
