@@ -924,27 +924,31 @@ class GameDemo {
 
         if (!this.selectedEntityIds.has(entityId)) return;
 
-        // Deselect entity via API
+        // Always remove from local selection first
+        this.selectedEntityIds.delete(entityId);
+        const entity = this.entities.get(entityId);
+        if (entity && entity.selectionIndicator) {
+            entity.container.removeChild(entity.selectionIndicator);
+            entity.selectionIndicator = null;
+        }
+
+        // Deselect entity via API (may fail if entity is already destroyed)
         try {
             const result = deselect_entity(entityId);
             const selectionResult = JSON.parse(result);
-            if (selectionResult.success) {
-                this.selectedEntityIds.delete(entityId);
-                const entity = this.entities.get(entityId);
-                if (entity && entity.selectionIndicator) {
-                    entity.container.removeChild(entity.selectionIndicator);
-                    entity.selectionIndicator = null;
-                }
-
-                const count = this.selectedEntityIds.size;
-                if (count === 0) {
-                    this.updateStatus('Selection cleared.');
-                } else {
-                    this.updateStatus(`${count} entities selected.`);
-                }
+            if (!selectionResult.success) {
+                // Entity may have been destroyed - this is expected
+                console.log(`Entity ${entityId} deselection failed (may be destroyed):`, selectionResult.message);
             }
         } catch (error) {
-            console.error('Deselection error:', error);
+            console.error('Deselection API error:', error);
+        }
+
+        const count = this.selectedEntityIds.size;
+        if (count === 0) {
+            this.updateStatus('Selection cleared.');
+        } else {
+            this.updateStatus(`${count} entities selected.`);
         }
     }
 
