@@ -2017,15 +2017,15 @@ class GameDemo {
                 }
             }
 
-            // Commands available for selected units
-            if (entityInfo.is_selected && entityInfo.faction === 'Player') {
+            // Commands available for selected units or player bases
+            if (entityInfo.faction === 'Player') {
                 if (entityInfo.entity_type === 'base') {
                     infoText += `\n🏗️ Available Base Commands:\n`;
                     infoText += `  • [Строить этаж] - Build new floor\n`;
                     infoText += `  • [Улучшить этаж] - Upgrade existing floor\n`;
                     infoText += `  • [Назначить юнитов] - Assign units to floors\n`;
                     infoText += `  • [Информация] - View base details\n`;
-                } else {
+                } else if (entityInfo.is_selected) {
                     infoText += `\n🎮 Available Commands:\n`;
                     infoText += `  • [Двигаться] - Right-click map\n`;
                     infoText += `  • [Атаковать] - Right-click enemy\n`;

@@ -73,7 +73,8 @@ pub fn update_floor_operations_system(world: &mut World, _dt: f32) {
 pub fn create_base(world: &mut World, position: (f32, f32)) -> hecs::Entity {
     let base = Base::new(get_next_base_id(world), position);
     let selection = Selection::new();
-    world.spawn((base, Position { x: position.0, y: position.1 }, selection))
+    let faction = crate::game::components::FactionComponent::new(crate::game::components::Faction::Player);
+    world.spawn((base, Position { x: position.0, y: position.1 }, selection, faction))
 }
 
 /// Assign a unit to a specific floor in a base
