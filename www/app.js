@@ -805,9 +805,35 @@ class GameDemo {
                     }
                 }
             } else {
-                // Regular click: single selection
-                this.clearAllSelections(true);
-                selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
+                // Check if we have any immobile units (bases) selected
+                let hasImmobileSelected = false;
+                for (const selectedId of this.selectedEntityIds) {
+                    const selectedEntity = this.entities.get(selectedId);
+                    if (selectedEntity && selectedEntity.entityType === 'base') {
+                        hasImmobileSelected = true;
+                        break;
+                    }
+                }
+
+                if (hasImmobileSelected) {
+                    // If we have immobile units selected, add the new unit to selection instead of replacing
+                    // Check group size limit (12 units) - enforce on client side
+                    if (this.selectedEntityIds.size >= 12) {
+                        this.updateStatus(`Cannot select more than 12 units in a group (current: ${this.selectedEntityIds.size})`);
+                        return;
+                    }
+                    selectionSuccessful = this.selectEntity(entityId, true, false); // exclusive = false
+                } else {
+                    // Regular click: single selection
+                    this.clearAllSelections(true);
+                    selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
+                }
+
+                // If selection failed (e.g., clicking on non-selectable entity like alert),
+                // clear all selections to provide feedback that the click was registered
+                if (!selectionSuccessful) {
+                    this.clearAllSelections(true);
+                }
             }
 
             // Display entity information always when clicking on an entity
