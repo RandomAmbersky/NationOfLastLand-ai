@@ -132,6 +132,17 @@ pub fn get_entities_data(world: &World) -> Vec<EntityData> {
 
     // Add Alert entities (show all alerts, but mark their state)
     for (entity, alert) in world.query::<&Alert>().iter() {
+        // Check selection state for alerts (though they shouldn't be selectable)
+        let is_selected = if let Ok(mut query) = world.query_one::<&Selection>(entity) {
+            if let Some(selection) = query.get() {
+                selection.is_selected
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
         entities.push(EntityData {
             id: entity.id(),
             x: alert.position.x,
@@ -139,12 +150,23 @@ pub fn get_entities_data(world: &World) -> Vec<EntityData> {
             entity_type: "alert".to_string(),
             subtype: Some(format!("{:?}_{:?}", alert.alert_type, alert.state)),
             faction: None,      // Alerts don't have factions
-            is_selected: false, // Alerts cannot be selected
+            is_selected,        // Check actual selection state
         });
     }
 
     // Add Base entities
     for (entity, (base, position)) in world.query::<(&Base, &Position)>().iter() {
+        // Check selection state for bases
+        let is_selected = if let Ok(mut query) = world.query_one::<&Selection>(entity) {
+            if let Some(selection) = query.get() {
+                selection.is_selected
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
         entities.push(EntityData {
             id: entity.id(),
             x: position.x,
@@ -152,7 +174,7 @@ pub fn get_entities_data(world: &World) -> Vec<EntityData> {
             entity_type: "base".to_string(),
             subtype: Some(format!("floors_{}", base.floors.len())),
             faction: Some("Player".to_string()), // Bases belong to player
-            is_selected: false,                  // Bases cannot be selected for now
+            is_selected,
         });
     }
 

@@ -183,18 +183,8 @@ class GameDemo {
         const entityAtPosition = this.findEntityAtPosition(screenX, screenY);
 
         if (entityAtPosition !== null) {
-            const entity = this.entities.get(entityAtPosition);
-            // Check if clicked entity is an alert
-            if (entity && entity.entityType === 'alert' && this.selectedEntityIds.size > 0) {
-                // Clicked directly on an alert with selected vehicles - set it as target
-                this.setGroupTarget(entity.gameX, entity.gameY);
-                this.updateStatus(`Moving group to alert at (${entity.gameX.toFixed(1)}, ${entity.gameY.toFixed(1)})`);
-                // Add visual feedback - highlight the target alert
-                this.highlightTargetAlert({ x: entity.gameX, y: entity.gameY, id: entityAtPosition });
-            } else {
-                // Handle entity click - always exclusive selection since user has only mouse
-                this.handleEntityClick(entityAtPosition, false, event);
-            }
+            // Handle entity click - always exclusive selection since user has only mouse
+            this.handleEntityClick(entityAtPosition, false, event);
         } else if (this.selectedEntityIds.size > 0) {
             // Check if clicked on an alert (using more precise radius)
             const alertAtPosition = this.findAlertAtPosition(gameX, gameY);
@@ -449,16 +439,21 @@ class GameDemo {
                         const successfullySelectedEntities = new Set();
 
                         // Remove units that are currently selected but not in the new selection
+                        // OR are not player movable units (to clear alerts, bases, and enemy units)
                         for (const entityId of this.selectedEntityIds) {
-                            if (!entitiesInRectangle.includes(entityId)) {
+                            const entity = this.entities.get(entityId);
+                            const isPlayerMovableUnit = entity && entity.faction === 'Player' && entity.entityType === 'vehicle';
+
+                            if (!entitiesInRectangle.includes(entityId) || !isPlayerMovableUnit) {
                                 this.deselectEntity(entityId, true);
                             } else {
-                                // Keep units that are still in selection
+                                // Keep units that are still in selection and are player movable units
                                 successfullySelectedEntities.add(entityId);
                             }
                         }
 
                         // Try to add units from new selection that aren't already selected (respecting 12 unit limit)
+                        // Only select player units that can move (vehicles)
                         let addedCount = 0;
                         for (const entityId of entitiesInRectangle) {
                             if (!this.selectedEntityIds.has(entityId)) {
@@ -466,10 +461,15 @@ class GameDemo {
                                 if (successfullySelectedEntities.size >= 12) {
                                     break; // Stop adding more units
                                 }
-                                const selectionSuccess = this.selectEntity(entityId, true, false); // exclusive = false for drag selection
-                                if (selectionSuccess) {
-                                    successfullySelectedEntities.add(entityId);
-                                    addedCount++;
+
+                                // Only select player units that can move (exclude bases, alerts, and non-player units)
+                                const entity = this.entities.get(entityId);
+                                if (entity && entity.faction === 'Player' && entity.entityType === 'vehicle') {
+                                    const selectionSuccess = this.selectEntity(entityId, true, false); // exclusive = false for drag selection
+                                    if (selectionSuccess) {
+                                        successfullySelectedEntities.add(entityId);
+                                        addedCount++;
+                                    }
                                 }
                             } else {
                                 successfullySelectedEntities.add(entityId);
@@ -759,7 +759,7 @@ class GameDemo {
                     }
                 }
 
-                if (shouldAttack) {
+                if (shouldAttack && this.hasPlayerUnitsSelected()) {
                     // Clear any alert highlights before attacking
                     if (this.alertHighlight) {
                         this.app.stage.removeChild(this.alertHighlight);
@@ -805,7 +805,17 @@ class GameDemo {
                     }
                 }
             } else {
-                // Check if we have any immobile units (bases) selected
+            // Check if the clicked entity is immobile (base)
+            const clickedEntity = this.entities.get(entityId);
+            const clickedEntityIsImmobile = clickedEntity && clickedEntity.entityType === 'base';
+
+            if (clickedEntityIsImmobile) {
+                // If clicking on an immobile unit, always use exclusive selection
+                // (only one immobile unit can be selected at a time)
+                this.clearAllSelections(true);
+                selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
+            } else {
+                // For movable units, check if we have immobile units selected
                 let hasImmobileSelected = false;
                 for (const selectedId of this.selectedEntityIds) {
                     const selectedEntity = this.entities.get(selectedId);
@@ -816,18 +826,16 @@ class GameDemo {
                 }
 
                 if (hasImmobileSelected) {
-                    // If we have immobile units selected, add the new unit to selection instead of replacing
-                    // Check group size limit (12 units) - enforce on client side
-                    if (this.selectedEntityIds.size >= 12) {
-                        this.updateStatus(`Cannot select more than 12 units in a group (current: ${this.selectedEntityIds.size})`);
-                        return;
-                    }
-                    selectionSuccessful = this.selectEntity(entityId, true, false); // exclusive = false
+                    // If we have immobile units selected and clicked on a movable unit,
+                    // clear all selections and select the new movable unit exclusively
+                    this.clearAllSelections(true);
+                    selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
                 } else {
-                    // Regular click: single selection
+                    // Regular click on movable unit: single selection
                     this.clearAllSelections(true);
                     selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
                 }
+            }
 
                 // If selection failed (e.g., clicking on non-selectable entity like alert),
                 // clear all selections to provide feedback that the click was registered
@@ -1753,6 +1761,17 @@ class GameDemo {
         }
 
         // Default: not hostile
+        return false;
+    }
+
+    hasPlayerUnitsSelected() {
+        // Check if any of the selected units belong to the player
+        for (const entityId of this.selectedEntityIds) {
+            const entity = this.entities.get(entityId);
+            if (entity && entity.faction === 'Player') {
+                return true;
+            }
+        }
         return false;
     }
 

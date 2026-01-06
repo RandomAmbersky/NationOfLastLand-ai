@@ -38,15 +38,17 @@ pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue>
 
         match target_entity {
             Some(entity) => {
-                // Check if entity belongs to Player faction and has Movement component
+                // Check if entity belongs to Player faction (or is an alert, which can be selected regardless of faction)
                 let is_player_faction = world.world.get::<&crate::game::components::FactionComponent>(entity)
                     .map(|faction| faction.faction == crate::game::components::Faction::Player)
                     .unwrap_or(false);
 
                 let has_movement = world.world.get::<&crate::game::components::Movement>(entity).is_ok();
                 let is_base = world.world.get::<&crate::game::components::Base>(entity).is_ok();
+                let is_alert = world.world.get::<&crate::game::components::Alert>(entity).is_ok();
 
-                if !is_player_faction {
+                // Alerts can be selected regardless of faction, but other entities must be player faction
+                if !is_alert && !is_player_faction {
                     let result = GroupOperationResult {
                         success: false,
                         message: format!("Entity {} is not a player unit", entity_id),
@@ -56,11 +58,12 @@ pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue>
                         .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)));
                 }
 
-                // Allow selection if entity can move OR is a base
-                if !has_movement && !is_base {
+                // Allow selection if entity can move OR is a base OR is an alert
+                let is_alert = world.world.get::<&crate::game::components::Alert>(entity).is_ok();
+                if !has_movement && !is_base && !is_alert {
                     let result = GroupOperationResult {
                         success: false,
-                        message: format!("Entity {} cannot move and is not a base", entity_id),
+                        message: format!("Entity {} cannot move, is not a base, and is not an alert", entity_id),
                         selected_count: None,
                     };
                     return serde_json::to_string(&result)
@@ -357,13 +360,24 @@ pub fn set_group_target(target_x: f32, target_y: f32) -> Result<String, JsValue>
             }
         }
 
-        let result = GroupOperationResult {
-            success: true,
-            message: format!(
-                "Set group target for {} entities at ({:.1}, {:.1})",
-                success_count, target_x, target_y
-            ),
-            selected_count: Some(selected_entities.len() as u32),
+        let result = if success_count > 0 {
+            GroupOperationResult {
+                success: true,
+                message: format!(
+                    "Set group target for {} entities at ({:.1}, {:.1})",
+                    success_count, target_x, target_y
+                ),
+                selected_count: Some(selected_entities.len() as u32),
+            }
+        } else {
+            GroupOperationResult {
+                success: false,
+                message: format!(
+                    "No valid targets found among {} selected entities",
+                    selected_entities.len()
+                ),
+                selected_count: Some(selected_entities.len() as u32),
+            }
         };
 
         serde_json::to_string(&result)
