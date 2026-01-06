@@ -119,6 +119,48 @@ pub fn get_entity_info(entity_id: u32) -> Result<String, JsValue> {
             }
         }
 
+        // Check if it's a wild entity (spawned from alerts) - has Position, Health, but no Vehicle/Base/Alert components
+        if entity_info.entity_type == "unknown" {
+            let has_movement = world.world.get::<&Movement>(entity).is_ok();
+            let has_vehicle = world.world.get::<&Vehicle>(entity).is_ok();
+            let has_alert = world.world.get::<&Alert>(entity).is_ok();
+            let has_base = world.world.get::<&Base>(entity).is_ok();
+
+            if !has_vehicle && !has_alert && !has_base {
+                // Determine type based on faction and movement
+                if let Some(faction_name) = &entity_info.faction {
+                    match faction_name.as_str() {
+                        "Wild" => {
+                            if has_movement {
+                                entity_info.entity_type = "creature".to_string();
+                                entity_info.subtype = Some("hostile".to_string());
+                            } else {
+                                entity_info.entity_type = "neutral".to_string();
+                                entity_info.subtype = Some("static".to_string());
+                            }
+                        }
+                        "Enemy" => {
+                            entity_info.entity_type = "enemy".to_string();
+                            entity_info.subtype = Some("raider".to_string());
+                        }
+                        "Neutral" => {
+                            entity_info.entity_type = "neutral".to_string();
+                            if has_movement {
+                                entity_info.subtype = Some("mobile".to_string());
+                            } else {
+                                entity_info.subtype = Some("static".to_string());
+                            }
+                        }
+                        _ => {
+                            entity_info.entity_type = "unit".to_string();
+                        }
+                    }
+                } else {
+                    entity_info.entity_type = "unit".to_string();
+                }
+            }
+        }
+
         // Get health
         if let Ok(mut query) = world.world.query_one::<&Health>(entity) {
             if let Some(health) = query.get() {

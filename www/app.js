@@ -1831,6 +1831,14 @@ class GameDemo {
     }
 
     updateEntityInfo(message) {
+        // Clear any existing info indicators before showing new info
+        for (const [id, entity] of this.entities) {
+            if (entity.infoIndicator) {
+                entity.container.removeChild(entity.infoIndicator);
+                entity.infoIndicator = null;
+            }
+        }
+
         const entityInfoDiv = document.getElementById('entity-info');
         if (message) {
             entityInfoDiv.innerHTML = message;
@@ -2118,7 +2126,7 @@ class GameDemo {
                     infoText += `  • [Назначить юнитов] - Assign units to floors\n`;
                     infoText += `  • [Информация] - View base details\n`;
                 } else if (entityInfo.is_selected) {
-                    infoText += `\n🎮 Available Commands:\n`;
+                    infoText += `\n� Available Commands:\n`;
                     infoText += `  • [Двигаться] - Right-click map\n`;
                     infoText += `  • [Атаковать] - Right-click enemy\n`;
                     infoText += `  • [Остановить] - Space key\n`;
@@ -2132,7 +2140,19 @@ class GameDemo {
                 infoText += '\n✅ SELECTED';
             }
 
+            // Update entity info display first
             this.updateEntityInfo(infoText);
+
+            // Add info indicator for display (always, even if entity can't be selected)
+            const entity = this.entities.get(entityId);
+            if (entity && !entity.selectionIndicator) {
+                const infoGraphics = new PIXI.Graphics();
+                // Use blue color for info display (like alerts)
+                infoGraphics.lineStyle(3, 0x0080FF, 1);
+                infoGraphics.drawCircle(0, 0, 12);
+                entity.container.addChild(infoGraphics);
+                entity.infoIndicator = infoGraphics; // Store reference to remove later
+            }
         } catch (error) {
             console.error('Error getting entity info:', error);
             this.updateEntityInfo(`❌ Error loading entity info: ${error.message}`);
