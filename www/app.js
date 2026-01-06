@@ -435,8 +435,16 @@ class GameDemo {
                     }
 
                     if (entitiesInRectangle.length > 0) {
-                        // Update selection: keep intersection, add new ones that can be selected, remove old ones not in new selection
+                        // Правило 1: при групповом выделении должны выбираться только юниты игрока и только те которые могут двигаться
                         const successfullySelectedEntities = new Set();
+
+                        // Сначала сбросим выделение всех алертов (Правило 2)
+                        for (const entityId of this.selectedEntityIds) {
+                            const entity = this.entities.get(entityId);
+                            if (entity && entity.entityType === 'alert') {
+                                this.deselectEntity(entityId, true);
+                            }
+                        }
 
                         // Remove units that are currently selected but not in the new selection
                         // OR are not player movable units (to clear alerts, bases, and enemy units)
@@ -741,33 +749,89 @@ class GameDemo {
         this.selectionOperationInProgress = true;
 
         try {
+            // Правило 4: если выбран юнит игрока который не может двигаться и происходит клик на другом юните
+            // то выделение с первого юнита сбрасывается а другой юнит выбирается
+            let hasImmobilePlayerUnitSelected = false;
+            for (const selectedId of this.selectedEntityIds) {
+                const selectedEntity = this.entities.get(selectedId);
+                if (selectedEntity && selectedEntity.faction === 'Player' && selectedEntity.entityType === 'base') {
+                    hasImmobilePlayerUnitSelected = true;
+                    break;
+                }
+            }
+
+            if (hasImmobilePlayerUnitSelected) {
+                // Если выбран неподвижный юнит игрока, сбрасываем выделение и выбираем новый юнит
+                this.clearAllSelections(true);
+                const selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
+                if (selectionSuccessful) {
+                    this.updateStatus(`Switched selection from immobile unit to entity ${entityId}`);
+                }
+                // Display entity information always when clicking on an entity
+                this.displayEntityInfo(entityId);
+                return;
+            }
+
+            // Новое правило: если выбран юнит фракции не игрока и происходит клик по другому юниту
+            // то выделение на первом юните сбрасывается а второй юнит выделяется
+            let hasNonPlayerUnitSelected = false;
+            for (const selectedId of this.selectedEntityIds) {
+                const selectedEntity = this.entities.get(selectedId);
+                if (selectedEntity && selectedEntity.faction !== 'Player') {
+                    hasNonPlayerUnitSelected = true;
+                    break;
+                }
+            }
+
+            if (hasNonPlayerUnitSelected) {
+                // Если выбран юнит не игрока, сбрасываем выделение и выбираем новый юнит
+                this.clearAllSelections(true);
+                const selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
+                if (selectionSuccessful) {
+                    this.updateStatus(`Switched selection to entity ${entityId}`);
+                }
+                // Display entity information always when clicking on an entity
+                this.displayEntityInfo(entityId);
+                return;
+            }
             // Check modifier keys for selection behavior
             const ctrlPressed = event && (event.ctrlKey || event.metaKey); // Ctrl or Cmd
             const shiftPressed = event && event.shiftKey;
 
-            // Check if this is an attack scenario (different faction and hostile)
+            // Special case: if clicking on an alert with player units selected, set it as target
+            if (this.selectedEntityIds.size > 0 && !isMultiSelect && !ctrlPressed && !shiftPressed && entity.entityType === 'alert') {
+                // Clear any alert highlights before setting target
+                if (this.alertHighlight) {
+                    this.app.stage.removeChild(this.alertHighlight);
+                    this.alertHighlight = null;
+                }
+                // Set the alert as target for all selected units
+                this.setGroupTarget(entity.gameX, entity.gameY);
+                this.updateStatus(`Moving group to alert at (${entity.gameX.toFixed(1)}, ${entity.gameY.toFixed(1)})`);
+                // Add visual feedback - highlight the target alert
+                this.highlightTargetAlert({ x: entity.gameX, y: entity.gameY, id: entityId });
+                // Clear selections after setting alert target
+                this.clearAllSelections(true);
+                return;
+            }
+
+            // Check if this is a targeting scenario (clicking on non-player unit with player units selected)
             if (this.selectedEntityIds.size > 0 && !isMultiSelect && !ctrlPressed && !shiftPressed) {
                 const targetEntity = entity;
-                let shouldAttack = false;
 
-                // Check if any selected unit is hostile towards this target
-                for (const selectedId of this.selectedEntityIds) {
-                    const selectedEntity = this.entities.get(selectedId);
-                    if (selectedEntity && this.areFactionsHostile(selectedEntity.faction, targetEntity.faction)) {
-                        shouldAttack = true;
-                        break;
-                    }
-                }
+                // Check if target belongs to a faction other than the player's
+                const isNonPlayerFaction = targetEntity.faction && targetEntity.faction !== 'Player';
 
-                if (shouldAttack && this.hasPlayerUnitsSelected()) {
-                    // Clear any alert highlights before attacking
+                if (isNonPlayerFaction && this.hasPlayerUnitsSelected()) {
+                    // Clear any alert highlights before setting target
                     if (this.alertHighlight) {
                         this.app.stage.removeChild(this.alertHighlight);
                         this.alertHighlight = null;
                     }
                     // Set the clicked unit as target for all selected units
                     this.setGroupTarget(targetEntity.gameX, targetEntity.gameY);
-                    this.updateStatus(`Group attacking enemy unit!`);
+                    this.updateStatus(`Group targeting enemy unit!`);
+                    // Keep selections after targeting enemy units (don't clear)
                     return;
                 }
             }
@@ -805,37 +869,9 @@ class GameDemo {
                     }
                 }
             } else {
-            // Check if the clicked entity is immobile (base)
-            const clickedEntity = this.entities.get(entityId);
-            const clickedEntityIsImmobile = clickedEntity && clickedEntity.entityType === 'base';
-
-            if (clickedEntityIsImmobile) {
-                // If clicking on an immobile unit, always use exclusive selection
-                // (only one immobile unit can be selected at a time)
+                // Regular click on movable unit: single selection
                 this.clearAllSelections(true);
                 selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
-            } else {
-                // For movable units, check if we have immobile units selected
-                let hasImmobileSelected = false;
-                for (const selectedId of this.selectedEntityIds) {
-                    const selectedEntity = this.entities.get(selectedId);
-                    if (selectedEntity && selectedEntity.entityType === 'base') {
-                        hasImmobileSelected = true;
-                        break;
-                    }
-                }
-
-                if (hasImmobileSelected) {
-                    // If we have immobile units selected and clicked on a movable unit,
-                    // clear all selections and select the new movable unit exclusively
-                    this.clearAllSelections(true);
-                    selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
-                } else {
-                    // Regular click on movable unit: single selection
-                    this.clearAllSelections(true);
-                    selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
-                }
-            }
 
                 // If selection failed (e.g., clicking on non-selectable entity like alert),
                 // clear all selections to provide feedback that the click was registered
