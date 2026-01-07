@@ -44,9 +44,36 @@ pub fn get_entity_info(entity_id: u32) -> Result<String, JsValue> {
         }
 
         let entity = match found_entity {
-            Some(entity) => entity,
-            None => return Err(JsValue::from_str("Entity not found")),
+            Some(entity) => {
+                eprintln!("Entity {} found in world", entity_id);
+                entity
+            },
+            None => {
+                eprintln!("Entity {} not found in world", entity_id);
+                return Err(JsValue::from_str("Entity not found"));
+            }
         };
+
+        // Check if entity is alive (has Health component and is_alive())
+        let is_alive = if let Ok(mut query) = world.world.query_one::<&Health>(entity) {
+            if let Some(health) = query.get() {
+                let alive = health.is_alive();
+                eprintln!("Entity {} health check: current={:.1}, max={:.1}, is_alive={}", entity.id(), health.current, health.maximum, alive);
+                alive
+            } else {
+                eprintln!("Entity {} has Health component but query failed", entity.id());
+                true // No health component means entity is always "alive" (like bases, alerts, static objects)
+            }
+        } else {
+            eprintln!("Entity {} has no Health component", entity.id());
+            true // No health component means entity is always "alive" (like bases, alerts, static objects)
+        };
+
+        // Return error for dead entities
+        if !is_alive {
+            eprintln!("Entity {} is dead - returning error", entity.id());
+            return Err(JsValue::from_str("Entity is dead"));
+        }
 
         // Get basic entity data
         let mut entity_info = EntityInfo {

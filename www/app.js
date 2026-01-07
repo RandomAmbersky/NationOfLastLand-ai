@@ -1622,6 +1622,8 @@ class GameDemo {
             const result = update(dt);
             const gameState = JSON.parse(result);
             this.updateStatus(`Game updated!\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}\nDelta Time: ${dt.toFixed(3)}s`);
+            // Sync visual entities with game state after manual update
+            this.syncEntitiesWithGameState(gameState.entities);
         } catch (error) {
             this.updateStatus(`Game update failed: ${error.message}`);
             console.error('Game update error:', error);
@@ -1677,6 +1679,9 @@ class GameDemo {
 
                 // Sync visual entities with game state
                 this.syncEntitiesWithGameState(gameState.entities);
+
+                // Update selected entity info dynamically
+                this.updateSelectedEntityInfo();
 
                 // Process combat messages and create visual effects
                 if (gameState.debug_messages && gameState.debug_messages.length > 0) {
@@ -1902,6 +1907,131 @@ class GameDemo {
             entityInfoDiv.style.display = 'block';
         } else {
             entityInfoDiv.style.display = 'none';
+        }
+    }
+
+    // Update information for selected entities dynamically
+    async updateSelectedEntityInfo() {
+        // Only update if we have selected entities and the info panel is visible
+        if (this.selectedEntityIds.size === 0) {
+            return;
+        }
+
+        const entityInfoDiv = document.getElementById('entity-info');
+        if (entityInfoDiv.style.display === 'none') {
+            return;
+        }
+
+        // Get the first selected entity to display its info
+        const selectedEntityId = Array.from(this.selectedEntityIds)[0];
+
+        try {
+            // Check if entity still exists in visual representation
+            if (!this.entities.has(selectedEntityId)) {
+                this.updateEntityInfo('Entity no longer exists');
+                return;
+            }
+
+            const result = get_entity_info(selectedEntityId);
+            const entityInfo = JSON.parse(result);
+
+            let infoText = `🏷️ Entity #${entityInfo.id}\n`;
+            infoText += `📍 Position: (${entityInfo.position[0].toFixed(1)}, ${entityInfo.position[1].toFixed(1)})\n`;
+            infoText += `🏛️ Type: ${entityInfo.entity_type}`;
+
+            if (entityInfo.subtype) {
+                infoText += ` (${entityInfo.subtype})`;
+            }
+            infoText += '\n';
+
+            if (entityInfo.faction) {
+                infoText += `🎯 Faction: ${entityInfo.faction}\n`;
+            }
+
+            if (entityInfo.health) {
+                const [current, max] = entityInfo.health;
+                const percentage = (current / max * 100).toFixed(1);
+                const healthBar = this.createHealthBar(current, max);
+                infoText += `❤️ Health: ${healthBar} ${percentage}%\n`;
+            }
+
+            if (entityInfo.speed !== null && entityInfo.speed !== undefined) {
+                infoText += `💨 Speed: ${entityInfo.speed.toFixed(1)} units/s\n`;
+            }
+
+            if (entityInfo.damage && entityInfo.damage_type) {
+                infoText += `⚔️ Damage: ${entityInfo.damage.toFixed(1)} (${entityInfo.damage_type})\n`;
+            }
+
+            if (entityInfo.combat_cooldown) {
+                const [current, max] = entityInfo.combat_cooldown;
+                const progress = (current / max * 100).toFixed(1);
+                infoText += `⏰ Cooldown: ${current.toFixed(1)}s/${max.toFixed(1)}s (${progress}%)\n`;
+            }
+
+            if (entityInfo.devices && entityInfo.devices.length > 0) {
+                infoText += `\n🔧 Crew/Devices (${entityInfo.devices.length}):\n`;
+                for (const device of entityInfo.devices) {
+                    infoText += `  • ${device.name} (${device.device_type})\n`;
+                    if (device.description) {
+                        infoText += `    ${device.description}\n`;
+                    }
+                }
+            }
+
+            // Commands available for selected units or player bases
+            if (entityInfo.faction === 'Player') {
+                if (entityInfo.entity_type === 'base') {
+                    infoText += `\n🏗️ Available Base Commands:\n`;
+                    infoText += `  • <button id="spawn-vehicle-btn" style="background: #4CAF50; color: white; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 0.8rem;">Спавн транспорта</button> - Spawn new vehicle\n`;
+                    infoText += `  • [Строить этаж] - Build new floor\n`;
+                    infoText += `  • [Улучшить этаж] - Upgrade existing floor\n`;
+                    infoText += `  • [Назначить юнитов] - Assign units to floors\n`;
+                    infoText += `  • [Информация] - View base details\n`;
+                } else if (entityInfo.is_selected) {
+                    infoText += `\n Available Commands:\n`;
+                    infoText += `  • [Двигаться] - Right-click map\n`;
+                    infoText += `  • [Атаковать] - Right-click enemy\n`;
+                    infoText += `  • [Остановить] - Space key\n`;
+                    infoText += `  • [Отменить] - Delete key\n`;
+                    infoText += `  • [Ремонт] - Return to base\n`;
+                    infoText += `  • [Экипировка] - For crew cats\n`;
+                }
+            }
+
+            if (entityInfo.is_selected) {
+                infoText += '\n✅ SELECTED';
+            }
+
+            // Check if info has actually changed before updating
+            if (entityInfoDiv.innerHTML !== infoText) {
+                entityInfoDiv.innerHTML = infoText;
+
+                // Re-attach event listener for spawn button if it exists
+                const spawnBtn = document.getElementById('spawn-vehicle-btn');
+                if (spawnBtn && !spawnBtn.hasAttribute('data-listener-attached')) {
+                    spawnBtn.addEventListener('click', () => {
+                        if (window.demo) {
+                            window.demo.spawnVehicle();
+                        }
+                    });
+                    spawnBtn.setAttribute('data-listener-attached', 'true');
+                }
+            }
+
+            // Add info indicator for display (always, even if entity can't be selected)
+            const entity = this.entities.get(selectedEntityId);
+            if (entity && !entity.selectionIndicator && !entity.infoIndicator) {
+                const infoGraphics = new PIXI.Graphics();
+                // Use blue color for info display (like alerts)
+                infoGraphics.lineStyle(3, 0x0080FF, 1);
+                infoGraphics.drawCircle(0, 0, 12);
+                entity.container.addChild(infoGraphics);
+                entity.infoIndicator = infoGraphics; // Store reference to remove later
+            }
+        } catch (error) {
+            console.error('Error updating selected entity info:', error);
+            // Don't show error message for dynamic updates to avoid spam
         }
     }
 

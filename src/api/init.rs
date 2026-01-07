@@ -1,6 +1,6 @@
 use crate::config::GameConfig;
 use crate::game::{
-    components::{Base, FactionComponent, Position, Selection, Vehicle},
+    components::{Base, FactionComponent, Health, Position, Selection, Vehicle},
     Alert, GameWorld,
 };
 use hecs::World;
@@ -84,8 +84,24 @@ pub fn init() -> Result<String, JsValue> {
 pub fn get_entities_data(world: &World) -> Vec<EntityData> {
     let mut entities = Vec::new();
 
+    // Get all entities with Health component first, then filter by alive status
+    let mut alive_entity_ids = std::collections::HashSet::new();
+    for (entity, health) in world.query::<&Health>().iter() {
+        if health.is_alive() {
+            alive_entity_ids.insert(entity.id());
+        } else {
+            eprintln!("Entity {} is dead (health: {}/{})", entity.id(), health.current, health.maximum);
+        }
+    }
+
     // Add entities with Position components (vehicles, etc.) but exclude bases and alerts
     for (entity, position) in world.query::<&Position>().without::<&Base>().without::<&Alert>().iter() {
+        // Check if entity is alive (must have Health component and be alive)
+        if !alive_entity_ids.contains(&entity.id()) {
+            eprintln!("Skipping entity {} - not alive or no health component", entity.id());
+            continue;
+        }
+
         // Try to get vehicle type if entity has Vehicle component
         let vehicle_type = if let Ok(mut query) = world.query_one::<&Vehicle>(entity) {
             if let Some(vehicle) = query.get() {

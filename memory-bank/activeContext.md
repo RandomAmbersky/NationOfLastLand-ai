@@ -17,6 +17,7 @@ The project is in early development with core architecture established but minim
 7. **Configuration System**: YAML-based unit and balance configuration
 8. **Basic Gameplay Loop**: Functional game with unit creation and updates
 9. **Group Selection Rules**: ✅ Verified implementation of units_moving_rules.md - both rules working correctly
+10. **Dead Unit Filtering**: ✅ Fixed issue where dead units continued to display in UI - added health checks to get_entities_data() and get_entity_info()
 
 ### Active Development Areas
 - **ECS Component Design**: Refining component structure for game systems

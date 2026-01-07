@@ -85,6 +85,7 @@
 - **Entity Creation**: create_vehicle() returns success but doesn't create actual entities
 - **State Serialization**: Current JSON output is placeholder, not real game state
 - **Configuration Validation**: No runtime validation of YAML configuration files
+- **Dead Unit Display Bug**: ✅ FIXED - Dead units were showing in UI due to missing health checks in API functions
 
 ### Performance Considerations
 - **Memory Allocation**: No optimization for game loop performance

@@ -22,6 +22,9 @@ impl GameWorld {
     pub fn update(&mut self, dt: f32) {
         self.time += dt;
 
+        // Run combat systems FIRST to handle deaths immediately
+        combat::update_combat_system(self, dt);
+
         // Spawn new alerts periodically (every 15 seconds)
         if self.time - self.last_alert_spawn > 15.0 {
             alert::spawn_random_alert(&mut self.world);
@@ -34,9 +37,6 @@ impl GameWorld {
 
         // Run movement systems
         movement::update_movement_system(&mut self.world, dt);
-
-        // Run combat systems
-        combat::update_combat_system(self, dt);
 
         // Run selection cleanup system
         selection::update_selection_system(&mut self.world);

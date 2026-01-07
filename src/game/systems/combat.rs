@@ -143,7 +143,12 @@ fn apply_combat_damage(game_world: &mut GameWorld, entity_a: hecs::Entity, entit
     // Despawn dead entities
     for entity in entities_to_despawn {
         game_world.debug_messages.push(format!("Despawning entity {}", entity.id()));
-        let _ = world.despawn(entity);
+        let despawn_result = world.despawn(entity);
+        if despawn_result.is_err() {
+            game_world.debug_messages.push(format!("Failed to despawn entity {}: {:?}", entity.id(), despawn_result.err()));
+        } else {
+            game_world.debug_messages.push(format!("Successfully despawned entity {}", entity.id()));
+        }
     }
 }
 
