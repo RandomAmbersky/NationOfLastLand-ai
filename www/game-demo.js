@@ -381,16 +381,6 @@ export class GameDemo {
 
     // Update information for selected entities dynamically
     async updateSelectedEntityInfo() {
-        // Only update if we have selected entities and the info panel is visible
-        if (this.selectedEntityIds.size === 0) {
-            return;
-        }
-
-        const entityInfoDiv = document.getElementById('entity-info');
-        if (entityInfoDiv.style.display === 'none') {
-            return;
-        }
-
         // Clean up dead entities from selection first
         const entitiesToRemove = [];
         for (const entityId of this.selectedEntityIds) {
@@ -425,11 +415,14 @@ export class GameDemo {
             }
         }
 
-        // If no valid entities left after cleanup, clear info immediately
-        if (this.selectedEntityIds.size === 0) {
-            this.updateEntityInfo('Entity has been destroyed');
+        // Now check if we should show info: only for single selected entities, not for groups
+        if (this.selectedEntityIds.size !== 1) {
+            // If no entities or multiple entities selected, clear the info
+            this.updateEntityInfo(null);
             return;
         }
+
+        // For single selected entities, always show info regardless of panel visibility
 
         // Get the first selected entity to display its info
         const selectedEntityId = Array.from(this.selectedEntityIds)[0];
@@ -443,7 +436,7 @@ export class GameDemo {
             // Check if the selected entity still exists in the current game state
             const gameEntity = gameState.entities.find(entity => entity.id === selectedEntityId);
             if (!gameEntity) {
-                this.updateEntityInfo('Entity has been destroyed');
+                this.updateEntityInfo(null);
                 // Remove from selection
                 this.selectedEntityIds.delete(selectedEntityId);
                 const entity = this.entities.get(selectedEntityId);
@@ -458,7 +451,7 @@ export class GameDemo {
             const isDead = gameEntity.health && gameEntity.health[0] <= 0;
 
             if (isDead) {
-                this.updateEntityInfo('Entity has been destroyed');
+                this.updateEntityInfo(null);
                 // Remove from selection
                 this.selectedEntityIds.delete(selectedEntityId);
                 const entity = this.entities.get(selectedEntityId);
@@ -489,12 +482,15 @@ export class GameDemo {
 
             // Check if entity is alive (has health > 0)
             if (entityInfo.health && entityInfo.health[0] <= 0) {
-                this.updateEntityInfo('Entity has been destroyed');
+                this.updateEntityInfo(null);
                 return;
             }
 
             // Use the shared function to create info text with commands
             const infoText = this.createEntityInfoText(entityInfo, true);
+
+            // Get the entity info div element
+            const entityInfoDiv = document.getElementById('entity-info');
 
             // Check if info has actually changed before updating
             if (entityInfoDiv.innerHTML !== infoText) {
@@ -515,7 +511,7 @@ export class GameDemo {
             console.error('Error updating selected entity info:', error);
             // If entity is dead or doesn't exist, clear the info
             if (error.message && (error.message.includes('Entity is dead') || error.message.includes('Entity not found'))) {
-                this.updateEntityInfo('Entity has been destroyed');
+                this.updateEntityInfo(null);
                 // Also remove from selection if it's dead
                 this.selectedEntityIds.delete(selectedEntityId);
                 const entity = this.entities.get(selectedEntityId);

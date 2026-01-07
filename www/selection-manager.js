@@ -65,7 +65,13 @@ export class SelectionManager {
         if (selectionSuccessful) {
             this.gameDemo.updateStatus(`Switched selection from immobile unit to entity ${entityId}`);
         }
-        this.gameDemo.displayEntityInfo(entityId);
+        // Only show entity info for single selections, not for groups
+        if (this.gameDemo.selectedEntityIds.size === 1) {
+            this.gameDemo.displayEntityInfo(entityId);
+        } else {
+            // For groups, clear the info panel
+            this.gameDemo.updateEntityInfo(null);
+        }
     }
 
     handleNonPlayerUnitSelection(entityId) {
@@ -74,7 +80,13 @@ export class SelectionManager {
         if (selectionSuccessful) {
             this.gameDemo.updateStatus(`Switched selection to entity ${entityId}`);
         }
-        this.gameDemo.displayEntityInfo(entityId);
+        // Only show entity info for single selections, not for groups
+        if (this.gameDemo.selectedEntityIds.size === 1) {
+            this.gameDemo.displayEntityInfo(entityId);
+        } else {
+            // For groups, clear the info panel
+            this.gameDemo.updateEntityInfo(null);
+        }
     }
 
     handleStandardEntityClick(entityId, event, isMultiSelect) {
@@ -221,6 +233,8 @@ export class SelectionManager {
         const count = this.gameDemo.selectedEntityIds.size;
         if (count === 0) {
             this.gameDemo.updateStatus('Selection cleared.');
+            // Clear entity info when no entities are selected
+            this.gameDemo.updateEntityInfo(null);
         } else {
             this.gameDemo.updateStatus(`${count} entities selected.`);
         }
