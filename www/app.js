@@ -418,143 +418,165 @@ class GameDemo {
     }
 
     handleMouseUp(event) {
-        // Clean up any leftover graphics from interrupted drags
-        if (this.dragSelection.graphics && !this.dragSelection.isDragging) {
-            console.log('Removing selection graphics:', this.dragSelection.graphics);
-            this.app.stage.removeChild(this.dragSelection.graphics);
-            this.dragSelection.graphics = null;
-            return;
-        }
+        this.cleanupDragGraphics();
 
         if (!this.dragSelection.isDragging) return;
 
-        // If mouse left canvas during this drag, cancel selection entirely
         if (this.dragSelection.mouseLeftCanvas) {
-            this.dragSelection.isDragging = false;
-            this.dragSelection.mouseLeftCanvas = false;
-
-            // Remove selection rectangle
-            if (this.dragSelection.graphics) {
-                console.log('Removing selection graphics:', this.dragSelection.graphics);
-                this.app.stage.removeChild(this.dragSelection.graphics);
-                this.dragSelection.graphics = null;
-            }
+            this.cancelDragSelection();
             return;
         }
 
         const wasDragging = this.dragSelection.hasDragged;
         this.dragSelection.isDragging = false;
 
-        // Prevent concurrent selection operations
+        if (wasDragging) {
+            this.processDragSelection();
+        }
+    }
+
+    cleanupDragGraphics() {
+        if (this.dragSelection.graphics && !this.dragSelection.isDragging) {
+            this.app.stage.removeChild(this.dragSelection.graphics);
+            this.dragSelection.graphics = null;
+        }
+    }
+
+    cancelDragSelection() {
+        this.dragSelection.isDragging = false;
+        this.dragSelection.mouseLeftCanvas = false;
+
+        if (this.dragSelection.graphics) {
+            this.app.stage.removeChild(this.dragSelection.graphics);
+            this.dragSelection.graphics = null;
+        }
+    }
+
+    processDragSelection() {
+        const selectionBounds = this.calculateSelectionBounds();
+
+        if (this.isValidSelectionBounds(selectionBounds)) {
+            this.dragSelection.justFinishedDrag = true;
+            this.selectEntitiesInRectangle(selectionBounds);
+        } else {
+            this.dragSelection.justFinishedDrag = false;
+        }
+
+        this.finalizeSelection();
+    }
+
+    calculateSelectionBounds() {
+        return {
+            x: Math.min(this.dragSelection.startX, this.dragSelection.currentX),
+            y: Math.min(this.dragSelection.startY, this.dragSelection.currentY),
+            width: Math.abs(this.dragSelection.currentX - this.dragSelection.startX),
+            height: Math.abs(this.dragSelection.currentY - this.dragSelection.startY)
+        };
+    }
+
+    isValidSelectionBounds(bounds) {
+        return bounds.width > GameDemo.GAME_CONFIG.LIMITS.dragThreshold &&
+               bounds.height > GameDemo.GAME_CONFIG.LIMITS.dragThreshold;
+    }
+
+    selectEntitiesInRectangle(bounds) {
         if (this.isSelecting) return;
+
         this.isSelecting = true;
         this.selectionOperationInProgress = true;
 
         try {
-            // Only process selection if user actually dragged
-            if (wasDragging) {
-                // Calculate selection rectangle bounds
-                const x = Math.min(this.dragSelection.startX, this.dragSelection.currentX);
-                const y = Math.min(this.dragSelection.startY, this.dragSelection.currentY);
-                const width = Math.abs(this.dragSelection.currentX - this.dragSelection.startX);
-                const height = Math.abs(this.dragSelection.currentY - this.dragSelection.startY);
+            const entitiesInRectangle = this.findEntitiesInRectangle(bounds);
 
-                // Only process if rectangle has meaningful size (not just a click)
-                if (width > 5 && height > 5) {
-                    // Prevent the click event from firing
-                    this.dragSelection.justFinishedDrag = true;
-
-
-                    // Find all entities within the selection rectangle and try to select them
-                    const entitiesInRectangle = [];
-                    for (const [id, entity] of this.entities) {
-                        // Check if entity is within selection bounds
-                        if (entity.container.x >= x && entity.container.x <= x + width &&
-                            entity.container.y >= y && entity.container.y <= y + height) {
-                            entitiesInRectangle.push(id);
-                        }
-                    }
-
-                    if (entitiesInRectangle.length > 0) {
-                        // Правило 1: при групповом выделении должны выбираться только юниты игрока и только те которые могут двигаться
-                        const successfullySelectedEntities = new Set();
-
-                        // Сначала сбросим выделение всех алертов (Правило 2)
-                        for (const entityId of this.selectedEntityIds) {
-                            const entity = this.entities.get(entityId);
-                            if (entity && entity.entityType === 'alert') {
-                                this.deselectEntity(entityId, true);
-                            }
-                        }
-
-                        // Remove units that are currently selected but not in the new selection
-                        // OR are not player movable units (to clear alerts, bases, and enemy units)
-                        for (const entityId of this.selectedEntityIds) {
-                            const entity = this.entities.get(entityId);
-                            const isPlayerMovableUnit = entity && entity.faction === 'Player' && entity.entityType === 'vehicle';
-
-                            if (!entitiesInRectangle.includes(entityId) || !isPlayerMovableUnit) {
-                                this.deselectEntity(entityId, true);
-                            } else {
-                                // Keep units that are still in selection and are player movable units
-                                successfullySelectedEntities.add(entityId);
-                            }
-                        }
-
-                        // Try to add units from new selection that aren't already selected (respecting 12 unit limit)
-                        // Only select player units that can move (vehicles)
-                        let addedCount = 0;
-                        for (const entityId of entitiesInRectangle) {
-                            if (!this.selectedEntityIds.has(entityId)) {
-                                // Check if we would exceed the 12 unit limit
-                                if (successfullySelectedEntities.size >= 12) {
-                                    break; // Stop adding more units
-                                }
-
-                                // Only select player units that can move (exclude bases, alerts, and non-player units)
-                                const entity = this.entities.get(entityId);
-                                if (entity && entity.faction === 'Player' && entity.entityType === 'vehicle') {
-                                    const selectionSuccess = this.selectEntity(entityId, true, false); // exclusive = false for drag selection
-                                    if (selectionSuccess) {
-                                        successfullySelectedEntities.add(entityId);
-                                        addedCount++;
-                                    }
-                                }
-                            } else {
-                                successfullySelectedEntities.add(entityId);
-                            }
-                        }
-
-                        const selectedCount = successfullySelectedEntities.size;
-                        const totalFound = entitiesInRectangle.length;
-                        if (selectedCount > 0) {
-                            if (totalFound > 12) {
-                                this.updateStatus(`Selected ${selectedCount} units (found ${totalFound}, limited to 12)`);
-                            } else {
-                                this.updateStatus(`Selected ${selectedCount} units (updated group)`);
-                            }
-                        } else {
-                            this.updateStatus('No selectable units in selection area');
-                        }
-                    }
-                } else {
-                    // Rectangle too small, treat as click - don't prevent click event
-                    this.dragSelection.justFinishedDrag = false;
-                }
+            if (entitiesInRectangle.length > 0) {
+                this.processRectangleSelection(entitiesInRectangle);
             }
         } finally {
             this.isSelecting = false;
-            // Reset flag after a short delay to allow server sync to complete
             setTimeout(() => {
                 this.selectionOperationInProgress = false;
             }, 100);
+        }
+    }
 
-            // Remove selection rectangle
-            if (this.dragSelection.graphics) {
-                console.log('Removing selection graphics:', this.dragSelection.graphics);
-                this.app.stage.removeChild(this.dragSelection.graphics);
-                this.dragSelection.graphics = null;
+    findEntitiesInRectangle(bounds) {
+        const entities = [];
+        for (const [id, entity] of this.entities) {
+            if (this.isEntityInBounds(entity, bounds)) {
+                entities.push(id);
             }
+        }
+        return entities;
+    }
+
+    isEntityInBounds(entity, bounds) {
+        return entity.container.x >= bounds.x &&
+               entity.container.x <= bounds.x + bounds.width &&
+               entity.container.y >= bounds.y &&
+               entity.container.y <= bounds.y + bounds.height;
+    }
+
+    processRectangleSelection(entitiesInRectangle) {
+        this.clearAlertSelections();
+        this.updateExistingSelections(entitiesInRectangle);
+        this.addNewSelections(entitiesInRectangle);
+        this.updateSelectionStatus(entitiesInRectangle.length);
+    }
+
+    clearAlertSelections() {
+        for (const entityId of this.selectedEntityIds) {
+            const entity = this.entities.get(entityId);
+            if (entity && entity.entityType === 'alert') {
+                this.deselectEntity(entityId, true);
+            }
+        }
+    }
+
+    updateExistingSelections(entitiesInRectangle) {
+        for (const entityId of this.selectedEntityIds) {
+            const entity = this.entities.get(entityId);
+            const isPlayerMovableUnit = entity && entity.faction === 'Player' && entity.entityType === 'vehicle';
+
+            if (!entitiesInRectangle.includes(entityId) || !isPlayerMovableUnit) {
+                this.deselectEntity(entityId, true);
+            }
+        }
+    }
+
+    addNewSelections(entitiesInRectangle) {
+        let addedCount = 0;
+        for (const entityId of entitiesInRectangle) {
+            if (!this.selectedEntityIds.has(entityId)) {
+                if (this.selectedEntityIds.size >= GameDemo.GAME_CONFIG.LIMITS.maxGroupSize) {
+                    break;
+                }
+
+                const entity = this.entities.get(entityId);
+                if (entity && entity.faction === 'Player' && entity.entityType === 'vehicle') {
+                    if (this.selectEntity(entityId, true, false)) {
+                        addedCount++;
+                    }
+                }
+            }
+        }
+    }
+
+    updateSelectionStatus(totalFound) {
+        const selectedCount = this.selectedEntityIds.size;
+        if (selectedCount > 0) {
+            const status = totalFound > GameDemo.GAME_CONFIG.LIMITS.maxGroupSize
+                ? `Selected ${selectedCount} units (found ${totalFound}, limited to ${GameDemo.GAME_CONFIG.LIMITS.maxGroupSize})`
+                : `Selected ${selectedCount} units (updated group)`;
+            this.updateStatus(status);
+        } else {
+            this.updateStatus('No selectable units in selection area');
+        }
+    }
+
+    finalizeSelection() {
+        if (this.dragSelection.graphics) {
+            this.app.stage.removeChild(this.dragSelection.graphics);
+            this.dragSelection.graphics = null;
         }
     }
 
@@ -782,8 +804,6 @@ class GameDemo {
         const entity = this.entities.get(entityId);
         if (!entity) return;
 
-        console.log('handleEntityClick called for entity:', entityId, 'type:', entity.entityType, 'faction:', entity.faction);
-
         // Prevent concurrent selection operations
         if (this.isSelecting) return;
         this.isSelecting = true;
@@ -792,136 +812,19 @@ class GameDemo {
         try {
             // Правило 4: если выбран юнит игрока который не может двигаться и происходит клик на другом юните
             // то выделение с первого юнита сбрасывается а другой юнит выбирается
-            let hasImmobilePlayerUnitSelected = false;
-            for (const selectedId of this.selectedEntityIds) {
-                const selectedEntity = this.entities.get(selectedId);
-                if (selectedEntity && selectedEntity.faction === 'Player' && selectedEntity.entityType === 'base') {
-                    hasImmobilePlayerUnitSelected = true;
-                    break;
-                }
-            }
-
-            if (hasImmobilePlayerUnitSelected) {
-                // Если выбран неподвижный юнит игрока, сбрасываем выделение и выбираем новый юнит
-                this.clearAllSelections(true);
-                const selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
-                if (selectionSuccessful) {
-                    this.updateStatus(`Switched selection from immobile unit to entity ${entityId}`);
-                }
-                // Display entity information always when clicking on an entity
-                this.displayEntityInfo(entityId);
+            if (this.hasImmobilePlayerUnitSelected()) {
+                this.handleImmobileUnitSelection(entityId);
                 return;
             }
 
             // Новое правило: если выбран юнит фракции не игрока и происходит клик по другому юниту
             // то выделение на первом юните сбрасывается а второй юнит выделяется
-            let hasNonPlayerUnitSelected = false;
-            for (const selectedId of this.selectedEntityIds) {
-                const selectedEntity = this.entities.get(selectedId);
-                if (selectedEntity && selectedEntity.faction !== 'Player') {
-                    hasNonPlayerUnitSelected = true;
-                    break;
-                }
-            }
-
-            if (hasNonPlayerUnitSelected) {
-                // Если выбран юнит не игрока, сбрасываем выделение и выбираем новый юнит
-                this.clearAllSelections(true);
-                const selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
-                if (selectionSuccessful) {
-                    this.updateStatus(`Switched selection to entity ${entityId}`);
-                }
-                // Display entity information always when clicking on an entity
-                this.displayEntityInfo(entityId);
-                return;
-            }
-            // Check modifier keys for selection behavior
-            const ctrlPressed = event && (event.ctrlKey || event.metaKey); // Ctrl or Cmd
-            const shiftPressed = event && event.shiftKey;
-
-            // Special case: if clicking on an alert with player units selected, set it as target
-            if (this.selectedEntityIds.size > 0 && !isMultiSelect && !ctrlPressed && !shiftPressed && entity.entityType === 'alert') {
-                // Clear any alert highlights before setting target
-                if (this.alertHighlight) {
-                    this.app.stage.removeChild(this.alertHighlight);
-                    this.alertHighlight = null;
-                }
-                // Set the alert as target for all selected units
-                this.setGroupTarget(entity.gameX, entity.gameY);
-                this.updateStatus(`Moving group to alert at (${entity.gameX.toFixed(1)}, ${entity.gameY.toFixed(1)})`);
-                // Add visual feedback - highlight the target alert
-                this.highlightTargetAlert({ x: entity.gameX, y: entity.gameY, id: entityId });
-                // Keep selections after setting alert target (don't clear)
+            if (this.hasNonPlayerUnitSelected()) {
+                this.handleNonPlayerUnitSelection(entityId);
                 return;
             }
 
-            // Check if this is a targeting scenario (clicking on non-player unit with player units selected)
-            if (this.selectedEntityIds.size > 0 && !isMultiSelect && !ctrlPressed && !shiftPressed) {
-                const targetEntity = entity;
-
-                // Check if target belongs to a faction other than the player's
-                const isNonPlayerFaction = targetEntity.faction && targetEntity.faction !== 'Player';
-
-                if (isNonPlayerFaction && this.hasPlayerUnitsSelected()) {
-                    // Clear any alert highlights before setting target
-                    if (this.alertHighlight) {
-                        this.app.stage.removeChild(this.alertHighlight);
-                        this.alertHighlight = null;
-                    }
-                    // Set the clicked unit as target for all selected units
-                    this.setGroupTarget(targetEntity.gameX, targetEntity.gameY);
-                    this.updateStatus(`Group targeting enemy unit!`);
-                    // Keep selections after targeting enemy units (don't clear)
-                    return;
-                }
-            }
-
-            // Handle selection based on modifiers
-            let selectionSuccessful = false;
-
-            if (ctrlPressed) {
-                // Ctrl + click: toggle selection (add/remove from group)
-                if (this.selectedEntityIds.has(entityId)) {
-                    this.deselectEntity(entityId, true);
-                    this.updateStatus(`Removed unit ${entityId} from selection`);
-                } else {
-                    // Check group size limit (12 units)
-                    if (this.selectedEntityIds.size >= 12) {
-                        this.updateStatus(`Cannot select more than 12 units in a group (current: ${this.selectedEntityIds.size})`);
-                        return;
-                    }
-                    selectionSuccessful = this.selectEntity(entityId, true, false); // exclusive = false
-                    if (selectionSuccessful) {
-                        this.updateStatus(`Added unit ${entityId} to selection (${this.selectedEntityIds.size} total)`);
-                    }
-                }
-            } else if (shiftPressed) {
-                // Shift + click: extend selection (add to group without clearing)
-                if (!this.selectedEntityIds.has(entityId)) {
-                    // Check group size limit (12 units)
-                    if (this.selectedEntityIds.size >= 12) {
-                        this.updateStatus(`Cannot select more than 12 units in a group (current: ${this.selectedEntityIds.size})`);
-                        return;
-                    }
-                    selectionSuccessful = this.selectEntity(entityId, true, false); // exclusive = false
-                    if (selectionSuccessful) {
-                        this.updateStatus(`Extended selection to ${this.selectedEntityIds.size} units`);
-                    }
-                }
-            } else {
-                // Regular click on movable unit: single selection
-                this.clearAllSelections(true);
-                selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
-
-                // If selection failed (e.g., clicking on non-selectable entity like alert),
-                // clear all selections to provide feedback that the click was registered
-                if (!selectionSuccessful) {
-                    this.clearAllSelections(true);
-                }
-            }
-
-            // Display entity information always when clicking on an entity
-            this.displayEntityInfo(entityId);
+            this.handleStandardEntityClick(entityId, event, isMultiSelect);
         } finally {
             this.isSelecting = false;
             // Reset flag after a short delay to allow server sync to complete
@@ -929,6 +832,141 @@ class GameDemo {
                 this.selectionOperationInProgress = false;
             }, 100);
         }
+    }
+
+    hasImmobilePlayerUnitSelected() {
+        for (const selectedId of this.selectedEntityIds) {
+            const selectedEntity = this.entities.get(selectedId);
+            if (selectedEntity && selectedEntity.faction === 'Player' && selectedEntity.entityType === 'base') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    hasNonPlayerUnitSelected() {
+        for (const selectedId of this.selectedEntityIds) {
+            const selectedEntity = this.entities.get(selectedId);
+            if (selectedEntity && selectedEntity.faction !== 'Player') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    handleImmobileUnitSelection(entityId) {
+        // Если выбран неподвижный юнит игрока, сбрасываем выделение и выбираем новый юнит
+        this.clearAllSelections(true);
+        const selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
+        if (selectionSuccessful) {
+            this.updateStatus(`Switched selection from immobile unit to entity ${entityId}`);
+        }
+        // Display entity information always when clicking on an entity
+        this.displayEntityInfo(entityId);
+    }
+
+    handleNonPlayerUnitSelection(entityId) {
+        // Если выбран юнит не игрока, сбрасываем выделение и выбираем новый юнит
+        this.clearAllSelections(true);
+        const selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
+        if (selectionSuccessful) {
+            this.updateStatus(`Switched selection to entity ${entityId}`);
+        }
+        // Display entity information always when clicking on an entity
+        this.displayEntityInfo(entityId);
+    }
+
+    handleStandardEntityClick(entityId, event, isMultiSelect) {
+        const entity = this.entities.get(entityId);
+        if (!entity) return;
+
+        // Check modifier keys for selection behavior
+        const ctrlPressed = event && (event.ctrlKey || event.metaKey); // Ctrl or Cmd
+        const shiftPressed = event && event.shiftKey;
+
+        // Special case: if clicking on an alert with player units selected, set it as target
+        if (this.selectedEntityIds.size > 0 && !isMultiSelect && !ctrlPressed && !shiftPressed && entity.entityType === 'alert') {
+            // Clear any alert highlights before setting target
+            if (this.alertHighlight) {
+                this.app.stage.removeChild(this.alertHighlight);
+                this.alertHighlight = null;
+            }
+            // Set the alert as target for all selected units
+            this.setGroupTarget(entity.gameX, entity.gameY);
+            this.updateStatus(`Moving group to alert at (${entity.gameX.toFixed(1)}, ${entity.gameY.toFixed(1)})`);
+            // Add visual feedback - highlight the target alert
+            this.highlightTargetAlert({ x: entity.gameX, y: entity.gameY, id: entityId });
+            // Keep selections after setting alert target (don't clear)
+            return;
+        }
+
+        // Check if this is a targeting scenario (clicking on non-player unit with player units selected)
+        if (this.selectedEntityIds.size > 0 && !isMultiSelect && !ctrlPressed && !shiftPressed) {
+            const targetEntity = entity;
+
+            // Check if target belongs to a faction other than the player's
+            const isNonPlayerFaction = targetEntity.faction && targetEntity.faction !== 'Player';
+
+            if (isNonPlayerFaction && this.hasPlayerUnitsSelected()) {
+                // Clear any alert highlights before setting target
+                if (this.alertHighlight) {
+                    this.app.stage.removeChild(this.alertHighlight);
+                    this.alertHighlight = null;
+                }
+                // Set the clicked unit as target for all selected units
+                this.setGroupTarget(targetEntity.gameX, targetEntity.gameY);
+                this.updateStatus(`Group targeting enemy unit!`);
+                // Keep selections after targeting enemy units (don't clear)
+                return;
+            }
+        }
+
+        // Handle selection based on modifiers
+        let selectionSuccessful = false;
+
+        if (ctrlPressed) {
+            // Ctrl + click: toggle selection (add/remove from group)
+            if (this.selectedEntityIds.has(entityId)) {
+                this.deselectEntity(entityId, true);
+                this.updateStatus(`Removed unit ${entityId} from selection`);
+            } else {
+                // Check group size limit (12 units)
+                if (this.selectedEntityIds.size >= 12) {
+                    this.updateStatus(`Cannot select more than 12 units in a group (current: ${this.selectedEntityIds.size})`);
+                    return;
+                }
+                selectionSuccessful = this.selectEntity(entityId, true, false); // exclusive = false
+                if (selectionSuccessful) {
+                    this.updateStatus(`Added unit ${entityId} to selection (${this.selectedEntityIds.size} total)`);
+                }
+            }
+        } else if (shiftPressed) {
+            // Shift + click: extend selection (add to group without clearing)
+            if (!this.selectedEntityIds.has(entityId)) {
+                // Check group size limit (12 units)
+                if (this.selectedEntityIds.size >= 12) {
+                    this.updateStatus(`Cannot select more than 12 units in a group (current: ${this.selectedEntityIds.size})`);
+                    return;
+                }
+                selectionSuccessful = this.selectEntity(entityId, true, false); // exclusive = false
+                if (selectionSuccessful) {
+                    this.updateStatus(`Extended selection to ${this.selectedEntityIds.size} units`);
+                }
+            }
+        } else {
+            // Regular click on movable unit: single selection
+            this.clearAllSelections(true);
+            selectionSuccessful = this.selectEntity(entityId, true, true); // exclusive = true
+
+            // If selection failed (e.g., clicking on non-selectable entity like alert),
+            // clear all selections to provide feedback that the click was registered
+            if (!selectionSuccessful) {
+                this.clearAllSelections(true);
+            }
+        }
+
+        // Display entity information always when clicking on an entity
+        this.displayEntityInfo(entityId);
     }
 
     findEntityAtPosition(x, y) {
