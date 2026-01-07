@@ -1963,73 +1963,8 @@ class GameDemo {
             const result = get_entity_info(selectedEntityId);
             const entityInfo = JSON.parse(result);
 
-            let infoText = `🏷️ Entity #${entityInfo.id}\n`;
-            infoText += `📍 Position: (${entityInfo.position[0].toFixed(1)}, ${entityInfo.position[1].toFixed(1)})\n`;
-            infoText += `🏛️ Type: ${entityInfo.entity_type}`;
-
-            if (entityInfo.subtype) {
-                infoText += ` (${entityInfo.subtype})`;
-            }
-            infoText += '\n';
-
-            if (entityInfo.faction) {
-                infoText += `🎯 Faction: ${entityInfo.faction}\n`;
-            }
-
-            if (entityInfo.health) {
-                const [current, max] = entityInfo.health;
-                const percentage = (current / max * 100).toFixed(1);
-                const healthBar = this.createHealthBar(current, max);
-                infoText += `❤️ Health: ${healthBar} ${percentage}%\n`;
-            }
-
-            if (entityInfo.speed !== null && entityInfo.speed !== undefined) {
-                infoText += `💨 Speed: ${entityInfo.speed.toFixed(1)} units/s\n`;
-            }
-
-            if (entityInfo.damage && entityInfo.damage_type) {
-                infoText += `⚔️ Damage: ${entityInfo.damage.toFixed(1)} (${entityInfo.damage_type})\n`;
-            }
-
-            if (entityInfo.combat_cooldown) {
-                const [current, max] = entityInfo.combat_cooldown;
-                const progress = (current / max * 100).toFixed(1);
-                infoText += `⏰ Cooldown: ${current.toFixed(1)}s/${max.toFixed(1)}s (${progress}%)\n`;
-            }
-
-            if (entityInfo.devices && entityInfo.devices.length > 0) {
-                infoText += `\n🔧 Crew/Devices (${entityInfo.devices.length}):\n`;
-                for (const device of entityInfo.devices) {
-                    infoText += `  • ${device.name} (${device.device_type})\n`;
-                    if (device.description) {
-                        infoText += `    ${device.description}\n`;
-                    }
-                }
-            }
-
-            // Commands available for selected units or player bases
-            if (entityInfo.faction === 'Player') {
-                if (entityInfo.entity_type === 'base') {
-                    infoText += `\n🏗️ Available Base Commands:\n`;
-                    infoText += `  • <button class="spawn-vehicle-btn" style="background: #4CAF50; color: white; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 0.8rem;">Спавн транспорта</button> - Spawn new vehicle\n`;
-                    infoText += `  • [Строить этаж] - Build new floor\n`;
-                    infoText += `  • [Улучшить этаж] - Upgrade existing floor\n`;
-                    infoText += `  • [Назначить юнитов] - Assign units to floors\n`;
-                    infoText += `  • [Информация] - View base details\n`;
-                } else if (entityInfo.is_selected) {
-                    infoText += `\n Available Commands:\n`;
-                    infoText += `  • [Двигаться] - Right-click map\n`;
-                    infoText += `  • [Атаковать] - Right-click enemy\n`;
-                    infoText += `  • [Остановить] - Space key\n`;
-                    infoText += `  • [Отменить] - Delete key\n`;
-                    infoText += `  • [Ремонт] - Return to base\n`;
-                    infoText += `  • [Экипировка] - For crew cats\n`;
-                }
-            }
-
-            if (entityInfo.is_selected) {
-                infoText += '\n✅ SELECTED';
-            }
+            // Use the shared function to create info text with commands
+            const infoText = this.createEntityInfoText(entityInfo, true);
 
             // Check if info has actually changed before updating
             if (entityInfoDiv.innerHTML !== infoText) {
@@ -2455,3 +2390,4 @@ document.addEventListener('DOMContentLoaded', () => {
     window.demo = demo; // Make demo globally accessible
     demo.init();
 });
+
