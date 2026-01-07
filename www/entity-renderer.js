@@ -409,4 +409,61 @@ export class EntityRenderer {
         };
         animate();
     }
+
+    createCollisionEffect(entityAId, entityBId) {
+        const entityA = this.gameDemo.entities.get(entityAId);
+        const entityB = this.gameDemo.entities.get(entityBId);
+
+        if (!entityA || !entityB) return;
+
+        // Create collision spark effect between the two entities
+        const midX = (entityA.container.x + entityB.container.x) / 2;
+        const midY = (entityA.container.y + entityB.container.y) / 2;
+
+        const sparkGraphics = new PIXI.Graphics();
+        sparkGraphics.lineStyle(2, 0xFFFF00, 0.9);
+
+        // Draw star-like spark pattern
+        const sparkCount = 8;
+        const sparkLength = 12;
+        for (let i = 0; i < sparkCount; i++) {
+            const angle = (i / sparkCount) * Math.PI * 2;
+            const endX = midX + Math.cos(angle) * sparkLength;
+            const endY = midY + Math.sin(angle) * sparkLength;
+            sparkGraphics.moveTo(midX, midY);
+            sparkGraphics.lineTo(endX, endY);
+        }
+
+        this.gameDemo.app.stage.addChild(sparkGraphics);
+
+        // Add collision text
+        const collisionText = new PIXI.Text('COLLISION!', {
+            fontSize: 12,
+            fill: 0xFFFF00,
+            fontWeight: 'bold',
+            stroke: 0x000000,
+            strokeThickness: 2
+        });
+        collisionText.anchor.set(0.5);
+        collisionText.x = midX;
+        collisionText.y = midY - 20;
+
+        this.gameDemo.app.stage.addChild(collisionText);
+
+        // Animate the effect
+        let alpha = 1.0;
+        const animate = () => {
+            alpha -= 0.03;
+            sparkGraphics.alpha = alpha;
+            collisionText.alpha = alpha;
+
+            if (alpha > 0) {
+                requestAnimationFrame(animate);
+            } else {
+                this.gameDemo.app.stage.removeChild(sparkGraphics);
+                this.gameDemo.app.stage.removeChild(collisionText);
+            }
+        };
+        animate();
+    }
 }

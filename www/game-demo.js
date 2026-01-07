@@ -1,4 +1,5 @@
 import { init, update, get_entity_info } from './wasm-imports.js';
+import { GAME_CONFIG } from './game-config.js';
 
 import { InputHandler } from './input-handler.js';
 import { EntityRenderer } from './entity-renderer.js';
@@ -9,45 +10,6 @@ import { GameStateManager } from './game-state-manager.js';
  * Главный класс игры, координирующий работу всех подсистем
  */
 export class GameDemo {
-    // Constants for game configuration
-    static GAME_CONFIG = {
-        WORLD_SIZE: { width: 800, height: 600 },
-        ENTITY_SIZES: {
-            scout: 8,
-            tank: { width: 20, height: 16 },
-            transport: { width: 24, height: 20 },
-            base: { width: 30, height: 30 },
-            alert: { hidden: 8, revealed: 12 }
-        },
-        COLORS: {
-            player: { scout: 0x4CAF50, tank: 0xFF5722, transport: 0x2196F3 },
-            enemy: { scout: 0x2E7D32, tank: 0xB71C1C, transport: 0x0D47A1 },
-            wild: { scout: 0x8D6E63, tank: 0x8D6E63, transport: 0x8D6E63 },
-            neutral: { scout: 0x00BCD4, tank: 0x00BCD4, transport: 0x00BCD4 },
-            base: 0x2196F3,
-            alert: 0xB8860B,
-            selection: { player: 0x0080FF, enemy: 0xFF0000 },
-            info: 0x0080FF
-        },
-        DISTANCES: {
-            clickTolerance: 20,
-            alertClickRadius: 15,
-            baseUnitRadius: 50,
-            combatRange: 20,
-            alertRevealRange: 25
-        },
-        LIMITS: {
-            maxGroupSize: 12,
-            dragThreshold: 5
-        },
-        UI: {
-            fontSize: { label: 10, damage: 14 },
-            indicatorSize: 12,
-            targetIndicatorSize: 10,
-            explosionScale: 3.0,
-            healthBarLength: 10
-        }
-    };
 
     /**
      * Создает экземпляр игры
@@ -677,7 +639,7 @@ export class GameDemo {
     // Create a visual health bar
     createHealthBar(current, max) {
         const percentage = current / max;
-        const barLength = GameDemo.GAME_CONFIG.UI.healthBarLength;
+        const barLength = GAME_CONFIG.UI.healthBarLength;
         const filled = Math.round(percentage * barLength);
         const empty = barLength - filled;
 
@@ -713,20 +675,20 @@ export class GameDemo {
     // Utility methods for creating visual indicators
     createSelectionIndicator(entity, isEnemy = false) {
         const color = isEnemy ?
-            GameDemo.GAME_CONFIG.COLORS.selection.enemy :
-            GameDemo.GAME_CONFIG.COLORS.selection.player;
+            GAME_CONFIG.COLORS.selection.enemy :
+            GAME_CONFIG.COLORS.selection.player;
 
         const graphics = new PIXI.Graphics();
         graphics.lineStyle(3, color, 1);
-        graphics.drawCircle(0, 0, GameDemo.GAME_CONFIG.UI.indicatorSize);
+        graphics.drawCircle(0, 0, GAME_CONFIG.UI.indicatorSize);
         entity.container.addChild(graphics);
         return graphics;
     }
 
     createInfoIndicator(entity) {
         const graphics = new PIXI.Graphics();
-        graphics.lineStyle(3, GameDemo.GAME_CONFIG.COLORS.info, 1);
-        graphics.drawCircle(0, 0, GameDemo.GAME_CONFIG.UI.indicatorSize);
+        graphics.lineStyle(3, GAME_CONFIG.COLORS.info, 1);
+        graphics.drawCircle(0, 0, GAME_CONFIG.UI.indicatorSize);
         entity.container.addChild(graphics);
         return graphics;
     }

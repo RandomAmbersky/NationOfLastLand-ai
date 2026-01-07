@@ -1,3 +1,5 @@
+import { GAME_CONFIG } from './game-config.js';
+
 /**
  * Управляет обработкой ввода пользователя (мышь, клавиатура)
  */
@@ -278,7 +280,7 @@ export class InputHandler {
             (clampedY - this.dragSelection.startY) ** 2
         );
 
-        if (dragDistance > GameDemo.GAME_CONFIG.LIMITS.dragThreshold) {
+        if (dragDistance > GAME_CONFIG.LIMITS.dragThreshold) {
             if (!this.dragSelection.hasDragged) {
                 this.dragSelection.hasDragged = true;
             }
@@ -336,8 +338,8 @@ export class InputHandler {
     }
 
     isValidSelectionBounds(bounds) {
-        return bounds.width > GameDemo.GAME_CONFIG.LIMITS.dragThreshold &&
-               bounds.height > GameDemo.GAME_CONFIG.LIMITS.dragThreshold;
+        return bounds.width > GAME_CONFIG.LIMITS.dragThreshold &&
+               bounds.height > GAME_CONFIG.LIMITS.dragThreshold;
     }
 
     finalizeSelection() {

@@ -1,5 +1,5 @@
 import { select_entity, deselect_entity, clear_selection } from './wasm-imports.js';
-import { GameDemo } from './game-demo.js';
+import { GAME_CONFIG } from './game-config.js';
 
 /**
  * Управляет выделением сущностей
@@ -117,8 +117,8 @@ export class SelectionManager {
                 this.deselectEntity(entityId, true);
                 this.gameDemo.updateStatus(`Removed unit ${entityId} from selection`);
             } else {
-                if (this.gameDemo.selectedEntityIds.size >= GameDemo.GAME_CONFIG.LIMITS.maxGroupSize) {
-                    this.gameDemo.updateStatus(`Cannot select more than ${GameDemo.GAME_CONFIG.LIMITS.maxGroupSize} units in a group (current: ${this.gameDemo.selectedEntityIds.size})`);
+                if (this.gameDemo.selectedEntityIds.size >= GAME_CONFIG.LIMITS.maxGroupSize) {
+                    this.gameDemo.updateStatus(`Cannot select more than ${GAME_CONFIG.LIMITS.maxGroupSize} units in a group (current: ${this.gameDemo.selectedEntityIds.size})`);
                     return;
                 }
                 selectionSuccessful = this.selectEntity(entityId, true, false);
@@ -128,8 +128,8 @@ export class SelectionManager {
             }
         } else if (shiftPressed) {
             if (!this.gameDemo.selectedEntityIds.has(entityId)) {
-                if (this.gameDemo.selectedEntityIds.size >= GameDemo.GAME_CONFIG.LIMITS.maxGroupSize) {
-                    this.gameDemo.updateStatus(`Cannot select more than ${GameDemo.GAME_CONFIG.LIMITS.maxGroupSize} units in a group (current: ${this.gameDemo.selectedEntityIds.size})`);
+                if (this.gameDemo.selectedEntityIds.size >= GAME_CONFIG.LIMITS.maxGroupSize) {
+                    this.gameDemo.updateStatus(`Cannot select more than ${GAME_CONFIG.LIMITS.maxGroupSize} units in a group (current: ${this.gameDemo.selectedEntityIds.size})`);
                     return;
                 }
                 selectionSuccessful = this.selectEntity(entityId, true, false);
@@ -154,7 +154,7 @@ export class SelectionManager {
 
         if (this.gameDemo.selectedEntityIds.has(entityId)) return true;
 
-        if (this.gameDemo.selectedEntityIds.size >= GameDemo.GAME_CONFIG.LIMITS.maxGroupSize) {
+        if (this.gameDemo.selectedEntityIds.size >= GAME_CONFIG.LIMITS.maxGroupSize) {
             return false;
         }
 
@@ -327,7 +327,7 @@ export class SelectionManager {
         let addedCount = 0;
         for (const entityId of entitiesInRectangle) {
             if (!this.gameDemo.selectedEntityIds.has(entityId)) {
-                if (this.gameDemo.selectedEntityIds.size >= GameDemo.GAME_CONFIG.LIMITS.maxGroupSize) {
+                if (this.gameDemo.selectedEntityIds.size >= GAME_CONFIG.LIMITS.maxGroupSize) {
                     break;
                 }
 
@@ -344,8 +344,8 @@ export class SelectionManager {
     updateSelectionStatus(totalFound) {
         const selectedCount = this.gameDemo.selectedEntityIds.size;
         if (selectedCount > 0) {
-            const status = totalFound > GameDemo.GAME_CONFIG.LIMITS.maxGroupSize
-                ? `Selected ${selectedCount} units (found ${totalFound}, limited to ${GameDemo.GAME_CONFIG.LIMITS.maxGroupSize})`
+            const status = totalFound > GAME_CONFIG.LIMITS.maxGroupSize
+                ? `Selected ${selectedCount} units (found ${totalFound}, limited to ${GAME_CONFIG.LIMITS.maxGroupSize})`
                 : `Selected ${selectedCount} units (updated group)`;
             this.gameDemo.updateStatus(status);
         } else {
@@ -422,7 +422,7 @@ export class SelectionManager {
             }
 
             if (sameTypeUnits.length > 0) {
-                const unitsToSelect = sameTypeUnits.slice(0, GameDemo.GAME_CONFIG.LIMITS.maxGroupSize);
+                const unitsToSelect = sameTypeUnits.slice(0, GAME_CONFIG.LIMITS.maxGroupSize);
 
                 let selectedCount = 0;
                 for (let i = 0; i < unitsToSelect.length; i++) {
@@ -436,8 +436,8 @@ export class SelectionManager {
 
                 const totalFound = sameTypeUnits.length;
                 const actuallySelected = selectedCount;
-                if (totalFound > GameDemo.GAME_CONFIG.LIMITS.maxGroupSize) {
-                    this.gameDemo.updateStatus(`Selected ${actuallySelected} ${targetVehicleType} units of same type (found ${totalFound}, limited to ${GameDemo.GAME_CONFIG.LIMITS.maxGroupSize})`);
+                if (totalFound > GAME_CONFIG.LIMITS.maxGroupSize) {
+                    this.gameDemo.updateStatus(`Selected ${actuallySelected} ${targetVehicleType} units of same type (found ${totalFound}, limited to ${GAME_CONFIG.LIMITS.maxGroupSize})`);
                 } else {
                     this.gameDemo.updateStatus(`Selected ${actuallySelected} ${targetVehicleType} units of same type`);
                 }
@@ -477,7 +477,7 @@ export class SelectionManager {
                         (entity.gameY - base.y) ** 2
                     );
 
-                    if (distance <= GameDemo.GAME_CONFIG.DISTANCES.baseUnitRadius) {
+                    if (distance <= GAME_CONFIG.DISTANCES.baseUnitRadius) {
                         unitsAtBase.push(id);
                     }
                 }
@@ -485,7 +485,7 @@ export class SelectionManager {
 
             if (unitsAtBase.length > 0) {
                 let selectedCount = 0;
-                for (let i = 0; i < unitsAtBase.length && selectedCount < GameDemo.GAME_CONFIG.LIMITS.maxGroupSize; i++) {
+                for (let i = 0; i < unitsAtBase.length && selectedCount < GAME_CONFIG.LIMITS.maxGroupSize; i++) {
                     const unitId = unitsAtBase[i];
                     const isFirst = i === 0;
                     const selectionSuccess = this.selectEntity(unitId, true, !isFirst);
