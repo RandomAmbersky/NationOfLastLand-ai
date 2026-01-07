@@ -1991,6 +1991,48 @@ class GameDemo {
             return;
         }
 
+        // Clean up dead entities from selection first
+        const entitiesToRemove = [];
+        for (const entityId of this.selectedEntityIds) {
+            // Check if entity exists in visual representation
+            if (!this.entities.has(entityId)) {
+                entitiesToRemove.push(entityId);
+                continue;
+            }
+
+            // Check if entity is dead by checking game state
+            try {
+                const updateResult = update(0.001);
+                const gameState = JSON.parse(updateResult);
+                const gameEntity = gameState.entities.find(entity => entity.id === entityId);
+
+                if (!gameEntity || (gameEntity.health && gameEntity.health[0] <= 0)) {
+                    entitiesToRemove.push(entityId);
+                }
+            } catch (error) {
+                // If we can't check, assume entity is dead
+                entitiesToRemove.push(entityId);
+            }
+        }
+
+        // Remove dead entities from selection
+        for (const entityId of entitiesToRemove) {
+            console.log(`Removing dead entity ${entityId} from selection`);
+            this.selectedEntityIds.delete(entityId);
+            const entity = this.entities.get(entityId);
+            if (entity && entity.selectionIndicator) {
+                entity.container.removeChild(entity.selectionIndicator);
+                entity.selectionIndicator = null;
+            }
+        }
+
+        // If no valid entities left after cleanup, clear info immediately
+        if (this.selectedEntityIds.size === 0) {
+            console.log('No valid entities left in selection - clearing info');
+            this.updateEntityInfo('Entity has been destroyed');
+            return;
+        }
+
         // Get the first selected entity to display its info
         const selectedEntityId = Array.from(this.selectedEntityIds)[0];
 
