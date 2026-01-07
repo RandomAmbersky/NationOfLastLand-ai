@@ -1994,15 +1994,68 @@ class GameDemo {
         // Get the first selected entity to display its info
         const selectedEntityId = Array.from(this.selectedEntityIds)[0];
 
+        // First check if the selected entity is still alive by checking game state
+        // This prevents showing stale information for dead entities
+        try {
+            const updateResult = update(0.001); // Minimal update to get current state
+            const gameState = JSON.parse(updateResult);
+
+            // Check if the selected entity still exists in the current game state
+            const gameEntity = gameState.entities.find(entity => entity.id === selectedEntityId);
+            if (!gameEntity) {
+                console.log(`Entity ${selectedEntityId} no longer exists in game state - clearing info`);
+                this.updateEntityInfo('Entity has been destroyed');
+                // Remove from selection
+                this.selectedEntityIds.delete(selectedEntityId);
+                const entity = this.entities.get(selectedEntityId);
+                if (entity && entity.selectionIndicator) {
+                    entity.container.removeChild(entity.selectionIndicator);
+                    entity.selectionIndicator = null;
+                }
+                return;
+            }
+
+            // Check if entity is dead (health <= 0)
+            const isDead = gameEntity.health && gameEntity.health[0] <= 0;
+
+            if (isDead) {
+                console.log(`Entity ${selectedEntityId} is dead in game state (health: ${gameEntity.health ? gameEntity.health[0] : 'unknown'}) - clearing info`);
+                this.updateEntityInfo('Entity has been destroyed');
+                // Remove from selection
+                this.selectedEntityIds.delete(selectedEntityId);
+                const entity = this.entities.get(selectedEntityId);
+                if (entity && entity.selectionIndicator) {
+                    entity.container.removeChild(entity.selectionIndicator);
+                    entity.selectionIndicator = null;
+                }
+                // Clear any info indicators
+                if (entity && entity.infoIndicator) {
+                    entity.container.removeChild(entity.infoIndicator);
+                    entity.infoIndicator = null;
+                }
+                return;
+            }
+        } catch (error) {
+            console.error('Error checking entity existence:', error);
+        }
+
         try {
             // Check if entity still exists in visual representation
             if (!this.entities.has(selectedEntityId)) {
+                console.log(`Entity ${selectedEntityId} no longer exists in visual representation`);
                 this.updateEntityInfo('Entity no longer exists');
                 return;
             }
 
             const result = get_entity_info(selectedEntityId);
             const entityInfo = JSON.parse(result);
+
+            // Check if entity is alive (has health > 0)
+            if (entityInfo.health && entityInfo.health[0] <= 0) {
+                console.log(`Entity ${selectedEntityId} is dead (health: ${entityInfo.health[0]})`);
+                this.updateEntityInfo('Entity has been destroyed');
+                return;
+            }
 
             // Use the shared function to create info text with commands
             const infoText = this.createEntityInfoText(entityInfo, true);
@@ -2024,7 +2077,20 @@ class GameDemo {
             }
         } catch (error) {
             console.error('Error updating selected entity info:', error);
-            // Don't show error message for dynamic updates to avoid spam
+            // If entity is dead or doesn't exist, clear the info
+            if (error.message && (error.message.includes('Entity is dead') || error.message.includes('Entity not found'))) {
+                console.log(`Entity ${selectedEntityId} is dead or doesn't exist according to API`);
+                this.updateEntityInfo('Entity has been destroyed');
+                // Also remove from selection if it's dead
+                this.selectedEntityIds.delete(selectedEntityId);
+                const entity = this.entities.get(selectedEntityId);
+                if (entity && entity.selectionIndicator) {
+                    entity.container.removeChild(entity.selectionIndicator);
+                    entity.selectionIndicator = null;
+                }
+            } else {
+                // Don't show error message for dynamic updates to avoid spam
+            }
         }
     }
 
@@ -2479,4 +2545,3 @@ document.addEventListener('DOMContentLoaded', () => {
     window.demo = demo; // Make demo globally accessible
     demo.init();
 });
-
