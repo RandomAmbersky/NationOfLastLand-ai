@@ -1,16 +1,58 @@
 import init, { init as gameInit, create_vehicle, update, set_entity_target, select_entity, deselect_entity, set_group_target, get_selected_entities, create_base, build_floor, get_entity_info, create_random_alert, clear_selection } from '../pkg/nation_of_last_land.js';
 
 class GameDemo {
+    // Constants for game configuration
+    static GAME_CONFIG = {
+        WORLD_SIZE: { width: 800, height: 600 },
+        ENTITY_SIZES: {
+            scout: 8,
+            tank: { width: 20, height: 16 },
+            transport: { width: 24, height: 20 },
+            base: { width: 30, height: 30 },
+            alert: { hidden: 8, revealed: 12 }
+        },
+        COLORS: {
+            player: { scout: 0x4CAF50, tank: 0xFF5722, transport: 0x2196F3 },
+            enemy: { scout: 0x2E7D32, tank: 0xB71C1C, transport: 0x0D47A1 },
+            wild: { scout: 0x8D6E63, tank: 0x8D6E63, transport: 0x8D6E63 },
+            neutral: { scout: 0x00BCD4, tank: 0x00BCD4, transport: 0x00BCD4 },
+            base: 0x2196F3,
+            alert: 0xB8860B,
+            selection: { player: 0x0080FF, enemy: 0xFF0000 },
+            info: 0x0080FF
+        },
+        DISTANCES: {
+            clickTolerance: 20,
+            alertClickRadius: 15,
+            baseUnitRadius: 50,
+            combatRange: 20,
+            alertRevealRange: 25
+        },
+        LIMITS: {
+            maxGroupSize: 12,
+            dragThreshold: 5
+        },
+        UI: {
+            fontSize: { label: 10, damage: 14 },
+            indicatorSize: 12,
+            targetIndicatorSize: 10,
+            explosionScale: 3.0,
+            healthBarLength: 10
+        }
+    };
+
     constructor() {
         this.app = null;
         this.entities = new Map();
         this.isInitialized = false;
         this.lastUpdate = Date.now();
-        this.selectedEntityIds = new Set(); // Changed to support multiple selections
-        this.combatEffects = new Map(); // Store active combat visualizations
-        this.isSelecting = false; // Prevent concurrent selection operations
-        this.selectionOperationInProgress = false; // Prevent server sync from overriding local selection changes
-        this.autoUpdateEnabled = false; // Auto update disabled by default
+        this.selectedEntityIds = new Set();
+        this.combatEffects = new Map();
+        this.isSelecting = false;
+        this.selectionOperationInProgress = false;
+        this.autoUpdateEnabled = false;
+        this.bases = new Map();
+
         this.dragSelection = {
             isDragging: false,
             startX: 0,
@@ -24,7 +66,6 @@ class GameDemo {
         };
 
         this.initPixi();
-        this.bases = new Map(); // Store base information
         this.setupEventListeners();
         this.updateStatus('WebAssembly module loading...');
     }
@@ -2309,7 +2350,7 @@ class GameDemo {
     // Create a visual health bar
     createHealthBar(current, max) {
         const percentage = current / max;
-        const barLength = 10;
+        const barLength = GameDemo.GAME_CONFIG.UI.healthBarLength;
         const filled = Math.round(percentage * barLength);
         const empty = barLength - filled;
 
@@ -2323,6 +2364,54 @@ class GameDemo {
         bar += ']';
 
         return bar;
+    }
+
+    // Utility methods for coordinate conversion
+    screenToGame(x, y) {
+        return {
+            x: (x / this.app.screen.width) * this.gameWidth,
+            y: (y / this.app.screen.height) * this.gameHeight
+        };
+    }
+
+    gameToScreen(x, y) {
+        const scaleX = this.app.screen.width / this.gameWidth;
+        const scaleY = this.app.screen.height / this.gameHeight;
+        return {
+            x: x * scaleX,
+            y: y * scaleY
+        };
+    }
+
+    // Utility methods for creating visual indicators
+    createSelectionIndicator(entity, isEnemy = false) {
+        const color = isEnemy ?
+            GameDemo.GAME_CONFIG.COLORS.selection.enemy :
+            GameDemo.GAME_CONFIG.COLORS.selection.player;
+
+        const graphics = new PIXI.Graphics();
+        graphics.lineStyle(3, color, 1);
+        graphics.drawCircle(0, 0, GameDemo.GAME_CONFIG.UI.indicatorSize);
+        entity.container.addChild(graphics);
+        return graphics;
+    }
+
+    createInfoIndicator(entity) {
+        const graphics = new PIXI.Graphics();
+        graphics.lineStyle(3, GameDemo.GAME_CONFIG.COLORS.info, 1);
+        graphics.drawCircle(0, 0, GameDemo.GAME_CONFIG.UI.indicatorSize);
+        entity.container.addChild(graphics);
+        return graphics;
+    }
+
+    // Utility method for distance calculation
+    calculateDistance(x1, y1, x2, y2) {
+        return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+    }
+
+    // Utility method for checking entity existence
+    isEntityValid(entityId) {
+        return this.entities.has(entityId) && this.entities.get(entityId) !== null;
     }
 
 
