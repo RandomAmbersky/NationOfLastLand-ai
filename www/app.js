@@ -1,5 +1,1651 @@
 import init, { init as gameInit, create_vehicle, update, set_entity_target, select_entity, deselect_entity, set_group_target, get_selected_entities, create_base, build_floor, get_entity_info, create_random_alert, clear_selection } from '../pkg/nation_of_last_land.js';
 
+/**
+ * Управляет обработкой ввода пользователя (мышь, клавиатура)
+ */
+class InputHandler {
+    constructor(gameDemo) {
+        this.gameDemo = gameDemo;
+        this.dragSelection = {
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0,
+            graphics: null,
+            hasDragged: false,
+            justFinishedDrag: false,
+            mouseLeftCanvas: false
+        };
+    }
+
+    setupEventListeners() {
+        const canvas = this.gameDemo.app.view;
+        canvas.addEventListener('mousedown', (event) => this.handleMouseDown(event));
+        canvas.addEventListener('mousemove', (event) => this.handleMouseMove(event));
+        canvas.addEventListener('mouseup', (event) => this.handleMouseUp(event));
+        canvas.addEventListener('mouseleave', (event) => this.handleMouseLeave(event));
+        canvas.addEventListener('mouseenter', (event) => this.handleMouseEnter(event));
+        canvas.addEventListener('click', (event) => this.handleCanvasClick(event));
+        canvas.addEventListener('dblclick', (event) => this.handleDoubleClick(event));
+        canvas.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+        });
+
+        document.addEventListener('keydown', (event) => this.handleKeyDown(event));
+    }
+
+    handleMouseDown(event) {
+        if (!this.gameDemo.isInitialized) return;
+
+        if (event.button === 2) {
+            this.handleRightMouseDown(event);
+            return;
+        }
+
+        this.cleanupDragGraphics();
+        this.startDragSelection(event);
+    }
+
+    handleRightMouseDown(event) {
+        const rect = this.gameDemo.app.view.getBoundingClientRect();
+        const screenX = event.clientX - rect.left;
+        const screenY = event.clientY - rect.top;
+
+        const entityAtPosition = this.gameDemo.entityRenderer.findEntityAtPosition(screenX, screenY);
+
+        if (entityAtPosition !== null) {
+            const entity = this.gameDemo.entities.get(entityAtPosition);
+            if (entity) {
+                let entityType = entity.entityType === 'vehicle' ? entity.vehicleType : entity.entityType;
+                const faction = entity.faction || 'Unknown';
+
+                if (!entityType || entityType === 'unknown') {
+                    if (faction === 'Wild') {
+                        entityType = 'wild_creature';
+                    } else if (faction === 'Neutral') {
+                        entityType = 'neutral_entity';
+                    } else {
+                        entityType = 'unit';
+                    }
+                }
+
+                this.gameDemo.updateStatus(`Entity #${entityAtPosition}: ${entityType} (${faction}) - Info displayed in panel`);
+            }
+            this.gameDemo.displayEntityInfo(entityAtPosition);
+        } else {
+            this.gameDemo.selectionManager.clearAllSelections();
+        }
+    }
+
+    handleMouseMove(event) {
+        if (!this.dragSelection.isDragging) return;
+
+        if (this.dragSelection.mouseLeftCanvas) {
+            this.cancelDragSelection();
+            return;
+        }
+
+        this.updateDragSelection(event);
+    }
+
+    handleMouseUp(event) {
+        this.cleanupDragGraphics();
+
+        if (!this.dragSelection.isDragging) return;
+
+        if (this.dragSelection.mouseLeftCanvas) {
+            this.cancelDragSelection();
+            return;
+        }
+
+        const wasDragging = this.dragSelection.hasDragged;
+        this.dragSelection.isDragging = false;
+
+        if (wasDragging) {
+            this.processDragSelection();
+        }
+    }
+
+    handleMouseLeave(event) {
+        if (!this.dragSelection.isDragging) return;
+
+        this.dragSelection.mouseLeftCanvas = true;
+        this.dragSelection.isDragging = false;
+        this.dragSelection.hasDragged = false;
+
+        if (this.dragSelection.graphics) {
+            this.gameDemo.app.stage.removeChild(this.dragSelection.graphics);
+            this.dragSelection.graphics = null;
+        }
+    }
+
+    handleMouseEnter(event) {
+        // Mouse entered canvas - no action needed for drag selection
+        // mouseLeftCanvas flag is reset in handleMouseDown for new drags
+    }
+
+    handleCanvasClick(event) {
+        if (!this.gameDemo.isInitialized) return;
+
+        if (this.dragSelection.justFinishedDrag) {
+            this.dragSelection.justFinishedDrag = false;
+            return;
+        }
+
+        const rect = this.gameDemo.app.view.getBoundingClientRect();
+        const screenX = event.clientX - rect.left;
+        const screenY = event.clientY - rect.top;
+
+        if (screenX < 0 || screenX > this.gameDemo.app.screen.width || screenY < 0 || screenY > this.gameDemo.app.screen.height) {
+            return;
+        }
+
+        const gameX = (screenX / this.gameDemo.app.screen.width) * this.gameDemo.gameWidth;
+        const gameY = (screenY / this.gameDemo.app.screen.height) * this.gameDemo.gameHeight;
+
+        const entityAtPosition = this.gameDemo.entityRenderer.findEntityAtPosition(screenX, screenY);
+
+        if (entityAtPosition !== null) {
+            this.gameDemo.selectionManager.handleEntityClick(entityAtPosition, false, event);
+        } else if (this.gameDemo.selectedEntityIds.size > 0) {
+            const alertAtPosition = this.gameDemo.entityRenderer.findAlertAtPosition(gameX, gameY);
+
+            if (alertAtPosition !== null) {
+                this.gameDemo.setGroupTarget(alertAtPosition.x, alertAtPosition.y);
+                this.gameDemo.updateStatus(`Moving group to alert at (${alertAtPosition.x.toFixed(1)}, ${alertAtPosition.y.toFixed(1)})`);
+                this.gameDemo.entityRenderer.highlightTargetAlert(alertAtPosition);
+            } else {
+                this.gameDemo.setGroupTarget(gameX, gameY);
+            }
+        } else {
+            this.gameDemo.selectionManager.clearAllSelections();
+        }
+    }
+
+    handleDoubleClick(event) {
+        if (!this.gameDemo.isInitialized) return;
+
+        const rect = this.gameDemo.app.view.getBoundingClientRect();
+        const screenX = event.clientX - rect.left;
+        const screenY = event.clientY - rect.top;
+
+        const entityId = this.gameDemo.entityRenderer.findEntityAtPosition(screenX, screenY);
+
+        if (entityId !== null) {
+            this.gameDemo.selectionManager.selectSameTypeUnits(entityId);
+        } else {
+            this.gameDemo.selectionManager.selectAllPlayerUnits();
+            this.gameDemo.updateStatus(`Double click on empty space - Selected all player units`);
+        }
+    }
+
+    handleKeyDown(event) {
+        if (!this.gameDemo.isInitialized) return;
+
+        if (event.ctrlKey && event.key === 'a') {
+            event.preventDefault();
+            this.gameDemo.selectionManager.selectAllPlayerUnitsAtBase();
+            return;
+        }
+
+        switch (event.key) {
+            case 'Escape':
+                this.gameDemo.selectionManager.clearAllSelections();
+                this.gameDemo.updateStatus('Selection cleared (Escape key)');
+                break;
+
+            case ' ': // Spacebar
+                if (this.gameDemo.selectedEntityIds.size > 0) {
+                    for (const entityId of this.gameDemo.selectedEntityIds) {
+                        const entity = this.gameDemo.entities.get(entityId);
+                        if (entity) {
+                            this.gameDemo.setEntityTarget(entityId, entity.gameX, entity.gameY);
+                        }
+                    }
+                    this.gameDemo.updateStatus(`Stopped ${this.gameDemo.selectedEntityIds.size} unit(s) (Spacebar)`);
+                }
+                event.preventDefault();
+                break;
+
+            case 'Delete':
+                if (this.gameDemo.selectedEntityIds.size > 0) {
+                    for (const entityId of this.gameDemo.selectedEntityIds) {
+                        const entity = this.gameDemo.entities.get(entityId);
+                        if (entity) {
+                            this.gameDemo.setEntityTarget(entityId, entity.gameX, entity.gameY);
+                        }
+                    }
+                    this.gameDemo.updateStatus(`Cancelled commands for ${this.gameDemo.selectedEntityIds.size} unit(s) (Delete key)`);
+                }
+                break;
+        }
+    }
+
+    cleanupDragGraphics() {
+        if (this.dragSelection.graphics && !this.dragSelection.isDragging) {
+            this.gameDemo.app.stage.removeChild(this.dragSelection.graphics);
+            this.dragSelection.graphics = null;
+        }
+    }
+
+    startDragSelection(event) {
+        this.cleanupDragGraphics();
+
+        const rect = this.gameDemo.app.view.getBoundingClientRect();
+        const screenX = event.clientX - rect.left;
+        const screenY = event.clientY - rect.top;
+
+        if (this.dragSelection.mouseLeftCanvas) {
+            this.dragSelection.isDragging = false;
+            this.dragSelection.mouseLeftCanvas = false;
+            if (this.dragSelection.graphics) {
+                this.gameDemo.app.stage.removeChild(this.dragSelection.graphics);
+                this.dragSelection.graphics = null;
+            }
+        }
+
+        this.dragSelection.isDragging = true;
+        this.dragSelection.startX = screenX;
+        this.dragSelection.startY = screenY;
+        this.dragSelection.currentX = screenX;
+        this.dragSelection.currentY = screenY;
+        this.dragSelection.hasDragged = false;
+        this.dragSelection.mouseLeftCanvas = false;
+
+        if (this.dragSelection.graphics) {
+            this.gameDemo.app.stage.removeChild(this.dragSelection.graphics);
+            this.dragSelection.graphics = null;
+        }
+
+        this.dragSelection.graphics = new PIXI.Graphics();
+        this.dragSelection.graphics.alpha = 0;
+        this.dragSelection.graphics.zIndex = 1000;
+        this.gameDemo.app.stage.addChild(this.dragSelection.graphics);
+    }
+
+    updateDragSelection(event) {
+        const rect = this.gameDemo.app.view.getBoundingClientRect();
+        const newX = event.clientX - rect.left;
+        const newY = event.clientY - rect.top;
+
+        const clampedX = Math.max(0, Math.min(newX, this.gameDemo.app.screen.width));
+        const clampedY = Math.max(0, Math.min(newY, this.gameDemo.app.screen.height));
+
+        this.dragSelection.currentX = clampedX;
+        this.dragSelection.currentY = clampedY;
+
+        const dragDistance = Math.sqrt(
+            (clampedX - this.dragSelection.startX) ** 2 +
+            (clampedY - this.dragSelection.startY) ** 2
+        );
+
+        if (dragDistance > GameDemo.GAME_CONFIG.LIMITS.dragThreshold) {
+            if (!this.dragSelection.hasDragged) {
+                this.dragSelection.hasDragged = true;
+            }
+
+            if (this.dragSelection.graphics) {
+                this.dragSelection.graphics.clear();
+                this.dragSelection.graphics.lineStyle(2, 0x00FF00, 0.8);
+                this.dragSelection.graphics.beginFill(0x00FF00, 0.2);
+
+                const x = Math.min(this.dragSelection.startX, this.dragSelection.currentX);
+                const y = Math.min(this.dragSelection.startY, this.dragSelection.currentY);
+                const width = Math.abs(this.dragSelection.currentX - this.dragSelection.startX);
+                const height = Math.abs(this.dragSelection.currentY - this.dragSelection.startY);
+
+                if (width > 1 && height > 1) {
+                    this.dragSelection.graphics.drawRect(x, y, width, height);
+                    this.dragSelection.graphics.alpha = 1;
+                } else {
+                    this.dragSelection.graphics.alpha = 0;
+                }
+            }
+        }
+    }
+
+    cancelDragSelection() {
+        this.dragSelection.isDragging = false;
+        this.dragSelection.mouseLeftCanvas = false;
+
+        if (this.dragSelection.graphics) {
+            this.gameDemo.app.stage.removeChild(this.dragSelection.graphics);
+            this.dragSelection.graphics = null;
+        }
+    }
+
+    processDragSelection() {
+        const selectionBounds = this.calculateSelectionBounds();
+
+        if (this.isValidSelectionBounds(selectionBounds)) {
+            this.dragSelection.justFinishedDrag = true;
+            this.gameDemo.selectionManager.selectEntitiesInRectangle(selectionBounds);
+        } else {
+            this.dragSelection.justFinishedDrag = false;
+        }
+
+        this.finalizeSelection();
+    }
+
+    calculateSelectionBounds() {
+        return {
+            x: Math.min(this.dragSelection.startX, this.dragSelection.currentX),
+            y: Math.min(this.dragSelection.startY, this.dragSelection.currentY),
+            width: Math.abs(this.dragSelection.currentX - this.dragSelection.startX),
+            height: Math.abs(this.dragSelection.currentY - this.dragSelection.startY)
+        };
+    }
+
+    isValidSelectionBounds(bounds) {
+        return bounds.width > GameDemo.GAME_CONFIG.LIMITS.dragThreshold &&
+               bounds.height > GameDemo.GAME_CONFIG.LIMITS.dragThreshold;
+    }
+
+    finalizeSelection() {
+        if (this.dragSelection.graphics) {
+            this.gameDemo.app.stage.removeChild(this.dragSelection.graphics);
+            this.dragSelection.graphics = null;
+        }
+    }
+}
+
+/**
+ * Управляет рендерингом сущностей и визуальными эффектами
+ */
+class EntityRenderer {
+    constructor(gameDemo) {
+        this.gameDemo = gameDemo;
+        this.targetIndicator = null;
+        this.alertHighlight = null;
+        this.gridContainer = null;
+    }
+
+    setupGrid() {
+        this.updateGrid();
+    }
+
+    updateGrid() {
+        if (this.gridContainer) {
+            this.gameDemo.app.stage.removeChild(this.gridContainer);
+        }
+
+        this.gridContainer = new PIXI.Container();
+        const gridGraphics = new PIXI.Graphics();
+        gridGraphics.lineStyle(1, 0x444444, 0.5);
+
+        const gridSize = 50;
+        const scaleX = this.gameDemo.app.screen.width / this.gameDemo.gameWidth;
+        const scaleY = this.gameDemo.app.screen.height / this.gameDemo.gameHeight;
+
+        for (let x = 0; x <= this.gameDemo.gameWidth; x += gridSize) {
+            const scaledX = x * scaleX;
+            gridGraphics.moveTo(scaledX, 0);
+            gridGraphics.lineTo(scaledX, this.gameDemo.app.screen.height);
+        }
+
+        for (let y = 0; y <= this.gameDemo.gameHeight; y += gridSize) {
+            const scaledY = y * scaleY;
+            gridGraphics.moveTo(0, scaledY);
+            gridGraphics.lineTo(this.gameDemo.app.screen.width, scaledY);
+        }
+
+        this.gridContainer.addChild(gridGraphics);
+        this.gameDemo.app.stage.addChildAt(this.gridContainer, 0);
+    }
+
+    drawGrid() {
+        this.updateGrid();
+    }
+
+    cleanupOrphanedGraphics() {
+        let removedCount = 0;
+        for (let i = this.gameDemo.app.stage.children.length - 1; i >= 0; i--) {
+            const child = this.gameDemo.app.stage.children[i];
+            if (child instanceof PIXI.Graphics) {
+                const isEssential = child === this.gridContainer ||
+                    child === this.targetIndicator ||
+                    child === this.alertHighlight;
+                if (!isEssential) {
+                    this.gameDemo.app.stage.removeChild(child);
+                    removedCount++;
+                }
+            }
+        }
+        if (removedCount > 0) {
+            console.log(`Cleaned up ${removedCount} orphaned graphics objects`);
+        }
+    }
+
+    createEntitySprite(id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
+        const scaleX = this.gameDemo.app.screen.width / this.gameDemo.gameWidth;
+        const scaleY = this.gameDemo.app.screen.height / this.gameDemo.gameHeight;
+        const screenX = x * scaleX;
+        const screenY = y * scaleY;
+
+        const graphics = new PIXI.Graphics();
+        let color;
+        let alpha = 1.0;
+
+        if (entityType === 'base') {
+            color = 0x2196F3;
+            graphics.beginFill(color);
+            graphics.drawRect(-15, -15, 30, 30);
+            if (vehicleType && vehicleType.startsWith('floors_')) {
+                const floorCount = parseInt(vehicleType.split('_')[1]) || 1;
+                for (let i = 0; i < floorCount; i++) {
+                    const angle = (i / floorCount) * Math.PI * 2;
+                    const radius = 20;
+                    const fx = Math.cos(angle) * radius;
+                    const fy = Math.sin(angle) * radius;
+                    graphics.drawCircle(fx, fy, 3);
+                }
+            }
+        } else {
+            switch (vehicleType) {
+                case 'scout':
+                    color = faction === 'Neutral' ? 0x00BCD4 :
+                           faction === 'Wild' ? 0x8D6E63 :
+                           faction === 'Enemy' ? 0x2E7D32 : 0x4CAF50;
+                    graphics.beginFill(color);
+                    graphics.drawCircle(0, 0, 8);
+                    break;
+                case 'tank':
+                    color = faction === 'Neutral' ? 0x00BCD4 :
+                           faction === 'Wild' ? 0x8D6E63 :
+                           faction === 'Enemy' ? 0xB71C1C : 0xFF5722;
+                    graphics.beginFill(color);
+                    graphics.drawRect(-10, -8, 20, 16);
+                    break;
+                case 'transport':
+                    color = faction === 'Neutral' ? 0x00BCD4 :
+                           faction === 'Wild' ? 0x8D6E63 :
+                           faction === 'Enemy' ? 0x0D47A1 : 0x2196F3;
+                    graphics.beginFill(color);
+                    graphics.drawRect(-12, -10, 24, 20);
+                    break;
+                default:
+                    if (vehicleType && vehicleType.includes('_')) {
+                        let alertType, alertState;
+                        [alertType, alertState] = vehicleType.split('_');
+
+                        if (alertState === 'Hidden') {
+                            color = 0xB8860B;
+                            alpha = 0.7;
+                            graphics.lineStyle(2, color, alpha);
+                            graphics.drawCircle(0, 0, 8);
+                            graphics.moveTo(-3, -6);
+                            graphics.lineTo(3, -6);
+                            graphics.lineTo(3, -2);
+                            graphics.lineTo(0, 0);
+                            graphics.lineTo(0, 4);
+                            graphics.moveTo(0, 6);
+                            graphics.lineTo(0, 7);
+                        } else {
+                            color = 0xB8860B;
+                            graphics.lineStyle(3, color, 1);
+                            graphics.drawCircle(0, 0, 12);
+                            graphics.moveTo(-4, -8);
+                            graphics.lineTo(4, -8);
+                            graphics.lineTo(4, -3);
+                            graphics.lineTo(0, -1);
+                            graphics.lineTo(0, 5);
+                            graphics.moveTo(0, 7);
+                            graphics.lineTo(0, 8);
+                        }
+                        break;
+                    }
+                    color = faction === 'Neutral' ? 0x00BCD4 :
+                           faction === 'Wild' ? 0x8D6E63 :
+                           faction === 'Enemy' ? 0xB71C1C : 0x4CAF50;
+                    graphics.beginFill(color);
+                    graphics.drawCircle(0, 0, 8);
+                    break;
+            }
+        }
+
+        graphics.alpha = alpha;
+        graphics.endFill();
+
+        const text = new PIXI.Text(id.toString(), {
+            fontSize: 10,
+            fill: 0xFFFFFF,
+            align: 'center'
+        });
+        text.anchor.set(0.5);
+        text.y = -20;
+
+        const container = new PIXI.Container();
+        container.addChild(graphics);
+        container.addChild(text);
+        container.x = screenX;
+        container.y = screenY;
+
+        this.gameDemo.app.stage.addChild(container);
+        this.gameDemo.entities.set(id, {
+            container,
+            x: screenX,
+            y: screenY,
+            gameX: x,
+            gameY: y,
+            vehicleType,
+            entityType,
+            faction
+        });
+    }
+
+    findEntityAtPosition(x, y) {
+        let closestEntity = null;
+        let closestDistance = 20;
+        let priorityEntities = { base: null, vehicle: null, alert: null };
+
+        for (const [id, entity] of this.gameDemo.entities) {
+            const distance = Math.sqrt((entity.container.x - x) ** 2 + (entity.container.y - y) ** 2);
+            if (distance < closestDistance) {
+                if (entity.entityType === 'base' && (!priorityEntities.base || distance < priorityEntities.base.distance)) {
+                    priorityEntities.base = { id, distance };
+                } else if (entity.entityType === 'vehicle' && (!priorityEntities.vehicle || distance < priorityEntities.vehicle.distance)) {
+                    priorityEntities.vehicle = { id, distance };
+                } else if (entity.entityType === 'alert' && (!priorityEntities.alert || distance < priorityEntities.alert.distance)) {
+                    priorityEntities.alert = { id, distance };
+                }
+            }
+        }
+
+        if (priorityEntities.base) {
+            closestEntity = priorityEntities.base.id;
+        } else if (priorityEntities.vehicle) {
+            closestEntity = priorityEntities.vehicle.id;
+        } else if (priorityEntities.alert) {
+            closestEntity = priorityEntities.alert.id;
+        }
+
+        return closestEntity;
+    }
+
+    findAlertAtPosition(gameX, gameY) {
+        let closestAlert = null;
+        let closestDistance = 15;
+
+        for (const [id, entity] of this.gameDemo.entities) {
+            if (entity.entityType === 'alert') {
+                const distance = Math.sqrt((entity.gameX - gameX) ** 2 + (entity.gameY - gameY) ** 2);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestAlert = { x: entity.gameX, y: entity.gameY, id: id };
+                }
+            }
+        }
+
+        return closestAlert;
+    }
+
+    showTargetIndicator(gameX, gameY) {
+        if (this.targetIndicator) {
+            this.gameDemo.app.stage.removeChild(this.targetIndicator);
+        }
+
+        const scaleX = this.gameDemo.app.screen.width / this.gameDemo.gameWidth;
+        const scaleY = this.gameDemo.app.screen.height / this.gameDemo.gameHeight;
+        const screenX = gameX * scaleX;
+        const screenY = gameY * scaleY;
+
+        const graphics = new PIXI.Graphics();
+        graphics.lineStyle(2, 0xFF0000, 1);
+        graphics.drawCircle(0, 0, 10);
+        graphics.moveTo(-15, 0);
+        graphics.lineTo(15, 0);
+        graphics.moveTo(0, -15);
+        graphics.lineTo(0, 15);
+
+        graphics.x = screenX;
+        graphics.y = screenY;
+
+        this.gameDemo.app.stage.addChild(graphics);
+        this.targetIndicator = graphics;
+
+        setTimeout(() => {
+            if (this.targetIndicator) {
+                this.gameDemo.app.stage.removeChild(this.targetIndicator);
+                this.targetIndicator = null;
+            }
+        }, 2000);
+    }
+
+    highlightTargetAlert(alert) {
+        if (this.alertHighlight) {
+            this.gameDemo.app.stage.removeChild(this.alertHighlight);
+        }
+
+        const scaleX = this.gameDemo.app.screen.width / this.gameDemo.gameWidth;
+        const scaleY = this.gameDemo.app.screen.height / this.gameDemo.gameHeight;
+        const screenX = alert.x * scaleX;
+        const screenY = alert.y * scaleY;
+
+        const graphics = new PIXI.Graphics();
+        graphics.lineStyle(4, 0x00FF00, 1);
+        graphics.drawCircle(0, 0, 20);
+        graphics.alertId = alert.id;
+
+        graphics.x = screenX;
+        graphics.y = screenY;
+
+        this.gameDemo.app.stage.addChild(graphics);
+        this.alertHighlight = graphics;
+
+        setTimeout(() => {
+            if (this.alertHighlight && this.alertHighlight === graphics) {
+                this.gameDemo.app.stage.removeChild(this.alertHighlight);
+                this.alertHighlight = null;
+            }
+        }, 3000);
+    }
+
+    createDamageEffect(attackerId, targetId, damage) {
+        const attacker = this.gameDemo.entities.get(attackerId);
+        const target = this.gameDemo.entities.get(targetId);
+
+        if (!attacker || !target) return;
+
+        const graphics = new PIXI.Graphics();
+        graphics.lineStyle(3, 0xFF0000, 0.8);
+        graphics.moveTo(attacker.container.x, attacker.container.y);
+        graphics.lineTo(target.container.x, target.container.y);
+
+        const angle = Math.atan2(target.container.y - attacker.container.y, target.container.x - attacker.container.x);
+        const arrowLength = 15;
+        const arrowAngle = Math.PI / 6;
+
+        graphics.moveTo(target.container.x, target.container.y);
+        graphics.lineTo(
+            target.container.x - arrowLength * Math.cos(angle - arrowAngle),
+            target.container.y - arrowLength * Math.sin(angle - arrowAngle)
+        );
+        graphics.moveTo(target.container.x, target.container.y);
+        graphics.lineTo(
+            target.container.x - arrowLength * Math.cos(angle + arrowAngle),
+            target.container.y - arrowLength * Math.sin(angle + arrowAngle)
+        );
+
+        this.gameDemo.app.stage.addChild(graphics);
+
+        const damageText = new PIXI.Text(`-${damage.toFixed(1)}`, {
+            fontSize: 14,
+            fill: 0xFF0000,
+            fontWeight: 'bold',
+            stroke: 0xFFFFFF,
+            strokeThickness: 2
+        });
+        damageText.anchor.set(0.5);
+        damageText.x = (attacker.container.x + target.container.x) / 2;
+        damageText.y = (attacker.container.y + target.container.y) / 2 - 10;
+
+        this.gameDemo.app.stage.addChild(damageText);
+
+        const flashGraphics = new PIXI.Graphics();
+        flashGraphics.beginFill(0xFF0000, 0.3);
+        flashGraphics.drawCircle(0, 0, 25);
+        flashGraphics.endFill();
+        flashGraphics.x = target.container.x;
+        flashGraphics.y = target.container.y;
+        this.gameDemo.app.stage.addChild(flashGraphics);
+
+        let alpha = 1.0;
+        const animate = () => {
+            alpha -= 0.05;
+            graphics.alpha = alpha;
+            damageText.alpha = alpha;
+            flashGraphics.alpha = alpha * 0.5;
+
+            if (alpha > 0) {
+                requestAnimationFrame(animate);
+            } else {
+                this.gameDemo.app.stage.removeChild(graphics);
+                this.gameDemo.app.stage.removeChild(damageText);
+                this.gameDemo.app.stage.removeChild(flashGraphics);
+            }
+        };
+        animate();
+    }
+
+    createDestructionEffect(entityId) {
+        const entity = this.gameDemo.entities.get(entityId);
+        if (!entity) return;
+
+        const explosionGraphics = new PIXI.Graphics();
+        explosionGraphics.beginFill(0xFFA500, 0.8);
+        explosionGraphics.drawCircle(0, 0, 5);
+        explosionGraphics.endFill();
+        explosionGraphics.x = entity.container.x;
+        explosionGraphics.y = entity.container.y;
+        this.gameDemo.app.stage.addChild(explosionGraphics);
+
+        const particles = [];
+        for (let i = 0; i < 8; i++) {
+            const particle = new PIXI.Graphics();
+            particle.beginFill(0xFF4500, 0.6);
+            particle.drawCircle(0, 0, 2);
+            particle.endFill();
+            particle.x = entity.container.x;
+            particle.y = entity.container.y;
+            particle.vx = (Math.random() - 0.5) * 200;
+            particle.vy = (Math.random() - 0.5) * 200;
+            this.gameDemo.app.stage.addChild(particle);
+            particles.push(particle);
+        }
+
+        let scale = 1.0;
+        let particleAlpha = 1.0;
+        const animate = () => {
+            scale += 0.1;
+            explosionGraphics.scale.set(scale);
+            explosionGraphics.alpha = Math.max(0, 1.0 - scale * 0.2);
+
+            particleAlpha -= 0.02;
+            for (const particle of particles) {
+                particle.x += particle.vx * 0.016;
+                particle.y += particle.vy * 0.016;
+                particle.alpha = particleAlpha;
+                particle.vx *= 0.98;
+                particle.vy *= 0.98;
+            }
+
+            if (scale < 3.0) {
+                requestAnimationFrame(animate);
+            } else {
+                this.gameDemo.app.stage.removeChild(explosionGraphics);
+                for (const particle of particles) {
+                    this.gameDemo.app.stage.removeChild(particle);
+                }
+            }
+        };
+        animate();
+    }
+}
+
+/**
+ * Управляет выделением сущностей
+ */
+class SelectionManager {
+    constructor(gameDemo) {
+        this.gameDemo = gameDemo;
+        this.isSelecting = false;
+        this.selectionOperationInProgress = false;
+    }
+
+    handleEntityClick(entityId, isMultiSelect, event) {
+        const entity = this.gameDemo.entities.get(entityId);
+        if (!entity) return;
+
+        if (this.isSelecting) return;
+        this.isSelecting = true;
+        this.selectionOperationInProgress = true;
+
+        try {
+            if (this.hasImmobilePlayerUnitSelected()) {
+                this.handleImmobileUnitSelection(entityId);
+                return;
+            }
+
+            if (this.hasNonPlayerUnitSelected()) {
+                this.handleNonPlayerUnitSelection(entityId);
+                return;
+            }
+
+            this.handleStandardEntityClick(entityId, event, isMultiSelect);
+        } finally {
+            this.isSelecting = false;
+            setTimeout(() => {
+                this.selectionOperationInProgress = false;
+            }, 100);
+        }
+    }
+
+    hasImmobilePlayerUnitSelected() {
+        for (const selectedId of this.gameDemo.selectedEntityIds) {
+            const selectedEntity = this.gameDemo.entities.get(selectedId);
+            if (selectedEntity && selectedEntity.faction === 'Player' && selectedEntity.entityType === 'base') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    hasNonPlayerUnitSelected() {
+        for (const selectedId of this.gameDemo.selectedEntityIds) {
+            const selectedEntity = this.gameDemo.entities.get(selectedId);
+            if (selectedEntity && selectedEntity.faction !== 'Player') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    handleImmobileUnitSelection(entityId) {
+        this.clearAllSelections(true);
+        const selectionSuccessful = this.selectEntity(entityId, true, true);
+        if (selectionSuccessful) {
+            this.gameDemo.updateStatus(`Switched selection from immobile unit to entity ${entityId}`);
+        }
+        this.gameDemo.displayEntityInfo(entityId);
+    }
+
+    handleNonPlayerUnitSelection(entityId) {
+        this.clearAllSelections(true);
+        const selectionSuccessful = this.selectEntity(entityId, true, true);
+        if (selectionSuccessful) {
+            this.gameDemo.updateStatus(`Switched selection to entity ${entityId}`);
+        }
+        this.gameDemo.displayEntityInfo(entityId);
+    }
+
+    handleStandardEntityClick(entityId, event, isMultiSelect) {
+        const entity = this.gameDemo.entities.get(entityId);
+        if (!entity) return;
+
+        const ctrlPressed = event && (event.ctrlKey || event.metaKey);
+        const shiftPressed = event && event.shiftKey;
+
+        if (this.gameDemo.selectedEntityIds.size > 0 && !isMultiSelect && !ctrlPressed && !shiftPressed && entity.entityType === 'alert') {
+            if (this.gameDemo.entityRenderer.alertHighlight) {
+                this.gameDemo.app.stage.removeChild(this.gameDemo.entityRenderer.alertHighlight);
+                this.gameDemo.entityRenderer.alertHighlight = null;
+            }
+            this.gameDemo.setGroupTarget(entity.gameX, entity.gameY);
+            this.gameDemo.updateStatus(`Moving group to alert at (${entity.gameX.toFixed(1)}, ${entity.gameY.toFixed(1)})`);
+            this.gameDemo.entityRenderer.highlightTargetAlert({ x: entity.gameX, y: entity.gameY, id: entityId });
+            return;
+        }
+
+        if (this.gameDemo.selectedEntityIds.size > 0 && !isMultiSelect && !ctrlPressed && !shiftPressed) {
+            const targetEntity = entity;
+            const isNonPlayerFaction = targetEntity.faction && targetEntity.faction !== 'Player';
+
+            if (isNonPlayerFaction && this.hasPlayerUnitsSelected()) {
+                if (this.gameDemo.entityRenderer.alertHighlight) {
+                    this.gameDemo.app.stage.removeChild(this.gameDemo.entityRenderer.alertHighlight);
+                    this.gameDemo.entityRenderer.alertHighlight = null;
+                }
+                this.gameDemo.setGroupTarget(targetEntity.gameX, targetEntity.gameY);
+                this.gameDemo.updateStatus(`Group targeting enemy unit!`);
+                return;
+            }
+        }
+
+        let selectionSuccessful = false;
+
+        if (ctrlPressed) {
+            if (this.gameDemo.selectedEntityIds.has(entityId)) {
+                this.deselectEntity(entityId, true);
+                this.gameDemo.updateStatus(`Removed unit ${entityId} from selection`);
+            } else {
+                if (this.gameDemo.selectedEntityIds.size >= GameDemo.GAME_CONFIG.LIMITS.maxGroupSize) {
+                    this.gameDemo.updateStatus(`Cannot select more than ${GameDemo.GAME_CONFIG.LIMITS.maxGroupSize} units in a group (current: ${this.gameDemo.selectedEntityIds.size})`);
+                    return;
+                }
+                selectionSuccessful = this.selectEntity(entityId, true, false);
+                if (selectionSuccessful) {
+                    this.gameDemo.updateStatus(`Added unit ${entityId} to selection (${this.gameDemo.selectedEntityIds.size} total)`);
+                }
+            }
+        } else if (shiftPressed) {
+            if (!this.gameDemo.selectedEntityIds.has(entityId)) {
+                if (this.gameDemo.selectedEntityIds.size >= GameDemo.GAME_CONFIG.LIMITS.maxGroupSize) {
+                    this.gameDemo.updateStatus(`Cannot select more than ${GameDemo.GAME_CONFIG.LIMITS.maxGroupSize} units in a group (current: ${this.gameDemo.selectedEntityIds.size})`);
+                    return;
+                }
+                selectionSuccessful = this.selectEntity(entityId, true, false);
+                if (selectionSuccessful) {
+                    this.gameDemo.updateStatus(`Extended selection to ${this.gameDemo.selectedEntityIds.size} units`);
+                }
+            }
+        } else {
+            this.clearAllSelections(true);
+            selectionSuccessful = this.selectEntity(entityId, true, true);
+
+            if (!selectionSuccessful) {
+                this.clearAllSelections(true);
+            }
+        }
+
+        this.gameDemo.displayEntityInfo(entityId);
+    }
+
+    selectEntity(entityId, bypassCheck = false, exclusive = true) {
+        if (!bypassCheck && this.isSelecting) return false;
+
+        if (this.gameDemo.selectedEntityIds.has(entityId)) return true;
+
+        if (this.gameDemo.selectedEntityIds.size >= GameDemo.GAME_CONFIG.LIMITS.maxGroupSize) {
+            return false;
+        }
+
+        try {
+            const result = select_entity(entityId, exclusive);
+            const selectionResult = JSON.parse(result);
+            if (selectionResult.success) {
+                this.gameDemo.selectedEntityIds.add(entityId);
+                const entity = this.gameDemo.entities.get(entityId);
+                if (entity) {
+                    const selectionGraphics = new PIXI.Graphics();
+                    const isEnemy = entity.faction === 'Enemy' || entity.faction === 'Wild';
+                    const color = isEnemy ? 0xFF0000 : 0x0080FF;
+                    selectionGraphics.lineStyle(3, color, 1);
+                    selectionGraphics.drawCircle(0, 0, 12);
+                    entity.container.addChild(selectionGraphics);
+                    entity.selectionIndicator = selectionGraphics;
+                }
+
+                const count = this.gameDemo.selectedEntityIds.size;
+                if (count === 1) {
+                    this.gameDemo.updateStatus(`Entity ${entityId} selected.`);
+                } else {
+                    this.gameDemo.updateStatus(`${count} entities selected. Click on map to set group movement target.`);
+                }
+
+                this.gameDemo.updateSpawnButtonState();
+                return true;
+            } else {
+                if (!selectionResult.message.includes('is not a player unit') &&
+                    !selectionResult.message.includes('cannot move')) {
+                    console.error('Selection failed:', selectionResult.message);
+                }
+                return false;
+            }
+        } catch (error) {
+            console.error('Selection error:', error);
+            return false;
+        }
+    }
+
+    deselectEntity(entityId, bypassCheck = false) {
+        if (!bypassCheck && this.isSelecting) return;
+
+        if (!this.gameDemo.selectedEntityIds.has(entityId)) return;
+
+        this.gameDemo.selectedEntityIds.delete(entityId);
+        const entity = this.gameDemo.entities.get(entityId);
+        if (entity && entity.selectionIndicator) {
+            entity.container.removeChild(entity.selectionIndicator);
+            entity.selectionIndicator = null;
+        }
+
+        try {
+            const result = deselect_entity(entityId);
+            const selectionResult = JSON.parse(result);
+            if (!selectionResult.success) {
+                console.log(`Entity ${entityId} deselection failed (may be destroyed):`, selectionResult.message);
+            }
+        } catch (error) {
+            console.error('Deselection API error:', error);
+        }
+
+        const count = this.gameDemo.selectedEntityIds.size;
+        if (count === 0) {
+            this.gameDemo.updateStatus('Selection cleared.');
+        } else {
+            this.gameDemo.updateStatus(`${count} entities selected.`);
+        }
+
+        this.gameDemo.updateSpawnButtonState();
+    }
+
+    clearAllSelections(bypassCheck = false) {
+        if (!bypassCheck && this.isSelecting) return;
+        this.selectionOperationInProgress = true;
+
+        try {
+            const result = clear_selection();
+            const clearResult = JSON.parse(result);
+            if (!clearResult.success) {
+                console.error('Failed to clear selection on server:', clearResult.message);
+            }
+        } catch (error) {
+            console.error('Error clearing selection on server:', error);
+        }
+
+        for (const entityId of this.gameDemo.selectedEntityIds) {
+            const entity = this.gameDemo.entities.get(entityId);
+            if (entity && entity.selectionIndicator) {
+                entity.container.removeChild(entity.selectionIndicator);
+                entity.selectionIndicator = null;
+            }
+        }
+        this.gameDemo.selectedEntityIds.clear();
+        this.gameDemo.updateStatus('Selection cleared.');
+        this.gameDemo.updateEntityInfo(null);
+        this.gameDemo.updateSpawnButtonState();
+
+        setTimeout(() => {
+            this.selectionOperationInProgress = false;
+        }, 100);
+    }
+
+    selectEntitiesInRectangle(bounds) {
+        if (this.isSelecting) return;
+
+        this.isSelecting = true;
+        this.selectionOperationInProgress = true;
+
+        try {
+            const entitiesInRectangle = this.findEntitiesInRectangle(bounds);
+
+            if (entitiesInRectangle.length > 0) {
+                this.processRectangleSelection(entitiesInRectangle);
+            }
+        } finally {
+            this.isSelecting = false;
+            setTimeout(() => {
+                this.selectionOperationInProgress = false;
+            }, 100);
+        }
+    }
+
+    findEntitiesInRectangle(bounds) {
+        const entities = [];
+        for (const [id, entity] of this.gameDemo.entities) {
+            if (this.isEntityInBounds(entity, bounds)) {
+                entities.push(id);
+            }
+        }
+        return entities;
+    }
+
+    isEntityInBounds(entity, bounds) {
+        return entity.container.x >= bounds.x &&
+               entity.container.x <= bounds.x + bounds.width &&
+               entity.container.y >= bounds.y &&
+               entity.container.y <= bounds.y + bounds.height;
+    }
+
+    processRectangleSelection(entitiesInRectangle) {
+        this.clearAlertSelections();
+        this.updateExistingSelections(entitiesInRectangle);
+        this.addNewSelections(entitiesInRectangle);
+        this.updateSelectionStatus(entitiesInRectangle.length);
+    }
+
+    clearAlertSelections() {
+        for (const entityId of this.gameDemo.selectedEntityIds) {
+            const entity = this.gameDemo.entities.get(entityId);
+            if (entity && entity.entityType === 'alert') {
+                this.deselectEntity(entityId, true);
+            }
+        }
+    }
+
+    updateExistingSelections(entitiesInRectangle) {
+        for (const entityId of this.gameDemo.selectedEntityIds) {
+            const entity = this.gameDemo.entities.get(entityId);
+            const isPlayerMovableUnit = entity && entity.faction === 'Player' && entity.entityType === 'vehicle';
+
+            if (!entitiesInRectangle.includes(entityId) || !isPlayerMovableUnit) {
+                this.deselectEntity(entityId, true);
+            }
+        }
+    }
+
+    addNewSelections(entitiesInRectangle) {
+        let addedCount = 0;
+        for (const entityId of entitiesInRectangle) {
+            if (!this.gameDemo.selectedEntityIds.has(entityId)) {
+                if (this.gameDemo.selectedEntityIds.size >= GameDemo.GAME_CONFIG.LIMITS.maxGroupSize) {
+                    break;
+                }
+
+                const entity = this.gameDemo.entities.get(entityId);
+                if (entity && entity.faction === 'Player' && entity.entityType === 'vehicle') {
+                    if (this.selectEntity(entityId, true, false)) {
+                        addedCount++;
+                    }
+                }
+            }
+        }
+    }
+
+    updateSelectionStatus(totalFound) {
+        const selectedCount = this.gameDemo.selectedEntityIds.size;
+        if (selectedCount > 0) {
+            const status = totalFound > GameDemo.GAME_CONFIG.LIMITS.maxGroupSize
+                ? `Selected ${selectedCount} units (found ${totalFound}, limited to ${GameDemo.GAME_CONFIG.LIMITS.maxGroupSize})`
+                : `Selected ${selectedCount} units (updated group)`;
+            this.gameDemo.updateStatus(status);
+        } else {
+            this.gameDemo.updateStatus('No selectable units in selection area');
+        }
+    }
+
+    selectAllPlayerUnits() {
+        if (this.isSelecting) return;
+        this.isSelecting = true;
+        this.selectionOperationInProgress = true;
+
+        try {
+            this.clearAllSelections(true);
+
+            const playerUnits = [];
+            for (const [id, entity] of this.gameDemo.entities) {
+                if (entity.faction === 'Player' && entity.entityType === 'vehicle') {
+                    playerUnits.push(id);
+                }
+            }
+
+            if (playerUnits.length > 0) {
+                for (const unitId of playerUnits) {
+                    this.selectEntity(unitId, true, false);
+                }
+
+                this.gameDemo.updateStatus(`Selected all ${playerUnits.length} player units`);
+            } else {
+                this.gameDemo.updateStatus('No player units found to select');
+            }
+        } finally {
+            this.isSelecting = false;
+            setTimeout(() => {
+                this.selectionOperationInProgress = false;
+            }, 1000);
+        }
+    }
+
+    selectSameTypeUnits(entityId) {
+        if (this.isSelecting) return;
+        this.isSelecting = true;
+        this.selectionOperationInProgress = true;
+
+        try {
+            const targetEntity = this.gameDemo.entities.get(entityId);
+            if (!targetEntity) {
+                this.gameDemo.updateStatus('Target entity not found');
+                return;
+            }
+
+            this.clearAllSelections(true);
+
+            const targetVehicleType = targetEntity.vehicleType;
+            const targetEntityType = targetEntity.entityType;
+            const targetFaction = targetEntity.faction;
+
+            const sameTypeUnits = [];
+
+            for (const [id, entity] of this.gameDemo.entities) {
+                if (entity.entityType === targetEntityType &&
+                    entity.vehicleType === targetVehicleType &&
+                    entity.faction === targetFaction) {
+
+                    const distance = Math.sqrt(
+                        (entity.gameX - targetEntity.gameX) ** 2 +
+                        (entity.gameY - targetEntity.gameY) ** 2
+                    );
+
+                    if (distance <= 200) {
+                        sameTypeUnits.push(id);
+                    }
+                }
+            }
+
+            if (sameTypeUnits.length > 0) {
+                const unitsToSelect = sameTypeUnits.slice(0, GameDemo.GAME_CONFIG.LIMITS.maxGroupSize);
+
+                let selectedCount = 0;
+                for (let i = 0; i < unitsToSelect.length; i++) {
+                    const unitId = unitsToSelect[i];
+                    const isFirst = i === 0;
+                    const selectionSuccess = this.selectEntity(unitId, true, !isFirst);
+                    if (selectionSuccess) {
+                        selectedCount++;
+                    }
+                }
+
+                const totalFound = sameTypeUnits.length;
+                const actuallySelected = selectedCount;
+                if (totalFound > GameDemo.GAME_CONFIG.LIMITS.maxGroupSize) {
+                    this.gameDemo.updateStatus(`Selected ${actuallySelected} ${targetVehicleType} units of same type (found ${totalFound}, limited to ${GameDemo.GAME_CONFIG.LIMITS.maxGroupSize})`);
+                } else {
+                    this.gameDemo.updateStatus(`Selected ${actuallySelected} ${targetVehicleType} units of same type`);
+                }
+            } else {
+                this.gameDemo.updateStatus(`No other ${targetVehicleType} units found in visibility range`);
+            }
+        } finally {
+            this.isSelecting = false;
+            setTimeout(() => {
+                this.selectionOperationInProgress = false;
+            }, 100);
+        }
+    }
+
+    selectAllPlayerUnitsAtBase() {
+        if (this.isSelecting) return;
+        this.isSelecting = true;
+        this.selectionOperationInProgress = true;
+
+        try {
+            this.clearAllSelections(true);
+
+            if (this.gameDemo.bases.size === 0) {
+                this.gameDemo.updateStatus('No base found to select units from');
+                return;
+            }
+
+            const baseId = Array.from(this.gameDemo.bases.keys())[0];
+            const base = this.gameDemo.bases.get(baseId);
+
+            const unitsAtBase = [];
+
+            for (const [id, entity] of this.gameDemo.entities) {
+                if (entity.faction === 'Player' && entity.entityType === 'vehicle') {
+                    const distance = Math.sqrt(
+                        (entity.gameX - base.x) ** 2 +
+                        (entity.gameY - base.y) ** 2
+                    );
+
+                    if (distance <= GameDemo.GAME_CONFIG.DISTANCES.baseUnitRadius) {
+                        unitsAtBase.push(id);
+                    }
+                }
+            }
+
+            if (unitsAtBase.length > 0) {
+                let selectedCount = 0;
+                for (let i = 0; i < unitsAtBase.length && selectedCount < GameDemo.GAME_CONFIG.LIMITS.maxGroupSize; i++) {
+                    const unitId = unitsAtBase[i];
+                    const isFirst = i === 0;
+                    const selectionSuccess = this.selectEntity(unitId, true, !isFirst);
+                    if (selectionSuccess) {
+                        selectedCount++;
+                    }
+                }
+
+                this.gameDemo.updateStatus(`Selected ${selectedCount} player units at base`);
+            } else {
+                this.gameDemo.updateStatus('No player units found at base');
+            }
+        } finally {
+            this.isSelecting = false;
+            setTimeout(() => {
+                this.selectionOperationInProgress = false;
+            }, 100);
+        }
+    }
+
+    hasPlayerUnitsSelected() {
+        for (const entityId of this.gameDemo.selectedEntityIds) {
+            const entity = this.gameDemo.entities.get(entityId);
+            if (entity && entity.faction === 'Player') {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+/**
+ * Управляет состоянием игры и коммуникацией с WebAssembly
+ */
+class GameStateManager {
+    constructor(gameDemo) {
+        this.gameDemo = gameDemo;
+        this.combatEffects = new Map();
+    }
+
+    async initializeGame() {
+        this.gameDemo.entityRenderer.cleanupOrphanedGraphics();
+
+        try {
+            const result = gameInit();
+            const gameState = JSON.parse(result);
+            this.gameDemo.isInitialized = true;
+            this.gameDemo.autoUpdateEnabled = false;
+            let status = `Game initialized!\nTime: ${gameState.time}\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}\nAuto update: disabled\nUse "Start Auto Update" or "Update Once" to continue`;
+            if (gameState.debug_messages && gameState.debug_messages.length > 0) {
+                status += '\n\nDebug:\n' + gameState.debug_messages.join('\n');
+            }
+            this.gameDemo.updateStatus(status);
+            this.gameDemo.updateSpawnButtonState();
+        } catch (error) {
+            this.gameDemo.updateStatus(`Game initialization failed: ${error.message}`);
+            console.error('Game init error:', error);
+        }
+    }
+
+    async spawnVehicle() {
+        if (!this.gameDemo.isInitialized) {
+            this.gameDemo.updateStatus('Please initialize the game first!');
+            return;
+        }
+
+        if (!this.gameDemo.isPlayerBaseSelected()) {
+            this.gameDemo.updateStatus('Cannot spawn vehicle: Please select a player base first!');
+            return;
+        }
+
+        const vehicleType = document.getElementById('vehicle-type').value;
+
+        let spawnX, spawnY;
+        for (const entityId of this.gameDemo.selectedEntityIds) {
+            const entity = this.gameDemo.entities.get(entityId);
+            if (entity && entity.entityType === 'base' && entity.faction === 'Player') {
+                const distance = 10 + Math.random() * 30;
+                const angle = Math.random() * Math.PI * 2;
+
+                spawnX = entity.gameX + Math.cos(angle) * distance;
+                spawnY = entity.gameY + Math.sin(angle) * distance;
+                break;
+            }
+        }
+
+        if (spawnX === undefined || spawnY === undefined) {
+            this.gameDemo.updateStatus('Error: Could not determine base position for spawning');
+            return;
+        }
+
+        try {
+            const result = create_vehicle(vehicleType, spawnX, spawnY);
+            const creationResult = JSON.parse(result);
+
+            if (creationResult.success) {
+                try {
+                    const updateResult = update(0.016);
+                    const gameState = JSON.parse(updateResult);
+                    this.gameDemo.syncEntitiesWithGameState(gameState.entities);
+                } catch (error) {
+                    console.error('Update after spawn error:', error);
+                }
+
+                this.gameDemo.selectionManager.selectEntity(creationResult.id, true, true);
+                this.gameDemo.displayEntityInfo(creationResult.id);
+
+                this.gameDemo.updateStatus(`Vehicle spawned and selected!\nID: ${creationResult.id}\nType: ${vehicleType}\nPosition: (${spawnX.toFixed(1)}, ${spawnY.toFixed(1)})`);
+            } else {
+                this.gameDemo.updateStatus(`Failed to spawn vehicle: ${creationResult.message}`);
+            }
+        } catch (error) {
+            this.gameDemo.updateStatus(`Vehicle creation failed: ${error.message}`);
+            console.error('Vehicle creation error:', error);
+        }
+    }
+
+    async createBase() {
+        if (!this.gameDemo.isInitialized) {
+            this.gameDemo.updateStatus('Please initialize the game first!');
+            return;
+        }
+
+        const x = parseFloat(document.getElementById('base-x').value);
+        const y = parseFloat(document.getElementById('base-y').value);
+
+        try {
+            const result = create_base(x, y);
+            const baseInfo = JSON.parse(result);
+
+            this.gameDemo.bases.set(baseInfo.id, baseInfo);
+
+            try {
+                const updateResult = update(0.016);
+                const gameState = JSON.parse(updateResult);
+
+                this.gameDemo.syncEntitiesWithGameState(gameState.entities);
+            } catch (error) {
+                console.error('Update after base creation error:', error);
+            }
+
+            this.gameDemo.updateStatus(`Base created!\nID: ${baseInfo.id}\nPosition: (${x}, ${y})\nFloors: ${baseInfo.floors.length}\nStorage: ${baseInfo.current_storage_usage}/${baseInfo.total_storage_capacity}`);
+        } catch (error) {
+            this.gameDemo.updateStatus(`Base creation failed: ${error.message}`);
+            console.error('Base creation error:', error);
+        }
+    }
+
+    async buildFloor() {
+        if (!this.gameDemo.isInitialized) {
+            this.gameDemo.updateStatus('Please initialize the game first!');
+            return;
+        }
+
+        const floorType = document.getElementById('floor-type').value;
+
+        if (this.gameDemo.bases.size === 0) {
+            this.gameDemo.updateStatus('No bases available. Create a base first!');
+            return;
+        }
+
+        const baseId = Array.from(this.gameDemo.bases.keys())[0];
+
+        try {
+            const result = build_floor(baseId, floorType);
+            const updatedBase = JSON.parse(result);
+
+            this.gameDemo.bases.set(updatedBase.id, updatedBase);
+
+            try {
+                const updateResult = update(0.016);
+                const gameState = JSON.parse(updateResult);
+                this.gameDemo.syncEntitiesWithGameState(gameState.entities);
+            } catch (error) {
+                console.error('Update after floor building error:', error);
+            }
+
+            this.gameDemo.updateStatus(`Floor construction started!\nBase ID: ${baseId}\nFloor Type: ${floorType}\nTotal Floors: ${updatedBase.floors.length}`);
+        } catch (error) {
+            this.gameDemo.updateStatus(`Floor building failed: ${error.message}`);
+            console.error('Floor building error:', error);
+        }
+    }
+
+    async createRandomAlert() {
+        if (!this.gameDemo.isInitialized) {
+            this.gameDemo.updateStatus('Please initialize the game first!');
+            return;
+        }
+
+        try {
+            const result = create_random_alert();
+            const alertResult = JSON.parse(result);
+
+            if (alertResult.success) {
+                try {
+                    const updateResult = update(0.016);
+                    const gameState = JSON.parse(updateResult);
+                    this.gameDemo.syncEntitiesWithGameState(gameState.entities);
+                } catch (error) {
+                    console.error('Update after alert creation error:', error);
+                }
+
+                this.gameDemo.updateStatus(`Random alert created!\nID: ${alertResult.id}\n${alertResult.message}`);
+            } else {
+                this.gameDemo.updateStatus(`Failed to create alert: ${alertResult.message}`);
+            }
+        } catch (error) {
+            this.gameDemo.updateStatus(`Alert creation failed: ${error.message}`);
+            console.error('Alert creation error:', error);
+        }
+    }
+
+    manualUpdate() {
+        if (!this.gameDemo.isInitialized) {
+            this.gameDemo.updateStatus('Please initialize the game first!');
+            return;
+        }
+
+        const now = Date.now();
+        const dt = (now - this.gameDemo.lastUpdate) / 1000;
+        this.gameDemo.lastUpdate = now;
+
+        try {
+            const result = update(dt);
+            const gameState = JSON.parse(result);
+            this.gameDemo.updateStatus(`Game updated!\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}\nDelta Time: ${dt.toFixed(3)}s`);
+            this.gameDemo.syncEntitiesWithGameState(gameState.entities);
+        } catch (error) {
+            this.gameDemo.updateStatus(`Game update failed: ${error.message}`);
+            console.error('Game update error:', error);
+        }
+    }
+
+    startAutoUpdate() {
+        this.gameDemo.autoUpdateEnabled = true;
+        this.gameDemo.updateStatus('Auto update started - game will update automatically');
+    }
+
+    stopAutoUpdate() {
+        this.gameDemo.autoUpdateEnabled = false;
+        this.gameDemo.updateStatus('Auto update stopped - use "Update Once" or "Start Auto Update" to continue');
+    }
+
+    updateOnce() {
+        if (!this.gameDemo.isInitialized) {
+            this.gameDemo.updateStatus('Please initialize the game first!');
+            return;
+        }
+
+        const now = Date.now();
+        const dt = (now - this.gameDemo.lastUpdate) / 1000;
+        this.gameDemo.lastUpdate = now;
+
+        try {
+            const result = update(dt);
+            const gameState = JSON.parse(result);
+            this.gameDemo.syncEntitiesWithGameState(gameState.entities);
+            this.gameDemo.updateStatus(`Single update completed!\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`);
+        } catch (error) {
+            this.gameDemo.updateStatus(`Single update failed: ${error.message}`);
+            console.error('Single update error:', error);
+        }
+    }
+
+    async setEntityTarget(entityId, x, y) {
+        try {
+            const result = set_entity_target(entityId, x, y);
+            const movementResult = JSON.parse(result);
+
+            if (movementResult.success) {
+                this.gameDemo.updateStatus(`Target set: ${movementResult.message}`);
+                this.gameDemo.entityRenderer.showTargetIndicator(x, y);
+                this.gameDemo.selectionManager.clearAllSelections();
+                if (this.gameDemo.entityRenderer.alertHighlight) {
+                    this.gameDemo.app.stage.removeChild(this.gameDemo.entityRenderer.alertHighlight);
+                    this.gameDemo.entityRenderer.alertHighlight = null;
+                }
+            } else {
+                this.gameDemo.updateStatus(`Failed to set target: ${movementResult.message}`);
+                console.error('Failed to set target:', movementResult.message);
+            }
+        } catch (error) {
+            this.gameDemo.updateStatus(`Error setting target: ${error.message}`);
+            console.error('Target setting error:', error);
+        }
+    }
+
+    async setGroupTarget(x, y) {
+        try {
+            const result = set_group_target(x, y);
+            const groupResult = JSON.parse(result);
+
+            if (groupResult.success) {
+                this.gameDemo.updateStatus(`Group target set: ${groupResult.message}`);
+                this.gameDemo.entityRenderer.showTargetIndicator(x, y);
+                if (this.gameDemo.entityRenderer.alertHighlight) {
+                    this.gameDemo.app.stage.removeChild(this.gameDemo.entityRenderer.alertHighlight);
+                    this.gameDemo.entityRenderer.alertHighlight = null;
+                }
+            } else {
+                this.gameDemo.updateStatus(`Failed to set group target: ${groupResult.message}`);
+                console.error('Failed to set group target:', groupResult.message);
+            }
+        } catch (error) {
+            this.gameDemo.updateStatus(`Error setting group target: ${error.message}`);
+            console.error('Group target setting error:', error);
+        }
+    }
+
+    processCombatMessages(debugMessages) {
+        const combatEvents = [];
+
+        for (const message of debugMessages) {
+            const damageMatch = message.match(/Entity (\d+) dealt ([\d.]+) damage to entity (\d+)/);
+            if (damageMatch) {
+                const [, attackerId, damage, targetId] = damageMatch;
+                combatEvents.push({
+                    type: 'damage',
+                    attackerId: parseInt(attackerId),
+                    targetId: parseInt(targetId),
+                    damage: parseFloat(damage)
+                });
+                continue;
+            }
+
+            const destroyMatch = message.match(/Entity (\d+) was destroyed!/);
+            if (destroyMatch) {
+                const [, entityId] = destroyMatch;
+                combatEvents.push({
+                    type: 'destroyed',
+                    entityId: parseInt(entityId)
+                });
+                continue;
+            }
+
+            const collisionMatch = message.match(/Collision detected between entities (\d+) and (\d+)/);
+            if (collisionMatch) {
+                const [, entityAId, entityBId] = collisionMatch;
+                combatEvents.push({
+                    type: 'collision',
+                    entityAId: parseInt(entityAId),
+                    entityBId: parseInt(entityBId)
+                });
+                continue;
+            }
+        }
+
+        for (const event of combatEvents) {
+            this.createCombatVisualization(event);
+        }
+    }
+
+    createCombatVisualization(event) {
+        switch (event.type) {
+            case 'damage':
+                this.gameDemo.entityRenderer.createDamageEffect(event.attackerId, event.targetId, event.damage);
+                break;
+            case 'destroyed':
+                this.gameDemo.entityRenderer.createDestructionEffect(event.entityId);
+                break;
+            case 'collision':
+                this.gameDemo.entityRenderer.createCollisionEffect(event.entityAId, event.entityBId);
+                break;
+        }
+    }
+
+    gameLoop() {
+        if (this.gameDemo.isInitialized && this.gameDemo.autoUpdateEnabled) {
+            const now = Date.now();
+            const dt = (now - this.gameDemo.lastUpdate) / 1000;
+            this.gameDemo.lastUpdate = now;
+
+            try {
+                const result = update(dt);
+                const gameState = JSON.parse(result);
+
+                if (Math.random() < 0.01) {
+                    this.gameDemo.updateStatus(`Running (Auto)...\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`);
+                }
+
+                this.gameDemo.syncEntitiesWithGameState(gameState.entities);
+                this.gameDemo.updateSelectedEntityInfo();
+
+                if (gameState.debug_messages && gameState.debug_messages.length > 0) {
+                    this.processCombatMessages(gameState.debug_messages);
+                }
+
+            } catch (error) {
+                console.error('Game loop error:', error);
+            }
+        }
+    }
+}
+
+/**
+ * Главный класс игры, координирующий работу всех подсистем
+ */
 class GameDemo {
     // Constants for game configuration
     static GAME_CONFIG = {
@@ -41,29 +1687,22 @@ class GameDemo {
         }
     };
 
+    /**
+     * Создает экземпляр игры
+     */
     constructor() {
         this.app = null;
         this.entities = new Map();
         this.isInitialized = false;
         this.lastUpdate = Date.now();
         this.selectedEntityIds = new Set();
-        this.combatEffects = new Map();
-        this.isSelecting = false;
-        this.selectionOperationInProgress = false;
-        this.autoUpdateEnabled = false;
         this.bases = new Map();
 
-        this.dragSelection = {
-            isDragging: false,
-            startX: 0,
-            startY: 0,
-            currentX: 0,
-            currentY: 0,
-            graphics: null,
-            hasDragged: false,
-            justFinishedDrag: false,
-            mouseLeftCanvas: false
-        };
+        // Инициализация подсистем
+        this.inputHandler = new InputHandler(this);
+        this.entityRenderer = new EntityRenderer(this);
+        this.selectionManager = new SelectionManager(this);
+        this.gameStateManager = new GameStateManager(this);
 
         this.initPixi();
         this.setupEventListeners();
@@ -107,26 +1746,15 @@ class GameDemo {
         this.gameWidth = 800;
         this.gameHeight = 600;
 
-        // Add a grid for reference
-        this.drawGrid();
-
-        // Add mouse event handlers for canvas (DOM events)
-        this.app.view.addEventListener('mousedown', (event) => this.handleMouseDown(event));
-        this.app.view.addEventListener('mousemove', (event) => this.handleMouseMove(event));
-        this.app.view.addEventListener('mouseup', (event) => this.handleMouseUp(event));
-        this.app.view.addEventListener('mouseleave', (event) => this.handleMouseLeave(event));
-        this.app.view.addEventListener('mouseenter', (event) => this.handleMouseEnter(event));
-        this.app.view.addEventListener('click', (event) => this.handleCanvasClick(event));
-        this.app.view.addEventListener('dblclick', (event) => this.handleDoubleClick(event));
-        this.app.view.addEventListener('contextmenu', (event) => {
-            event.preventDefault(); // Prevent browser context menu
-        });
+        // Setup subsystems
+        this.entityRenderer.setupGrid();
+        this.inputHandler.setupEventListeners();
 
         // Add resize handler
         window.addEventListener('resize', () => this.handleResize());
 
         // Clean up any existing graphics on startup
-        this.cleanupOrphanedGraphics();
+        this.entityRenderer.cleanupOrphanedGraphics();
 
         // Start render loop
         this.app.ticker.add(() => this.gameLoop());
@@ -1963,11 +3591,24 @@ class GameDemo {
     }
 
     updateStatus(message) {
-        // Add selection counter to status if there are selected units
         let fullMessage = message;
+
         if (this.selectedEntityIds.size > 0) {
-            fullMessage += `\n\n[Выбрано юнитов: ${this.selectedEntityIds.size}/12]`;
+            if (this.selectedEntityIds.size === 1) {
+                // Show info about the single selected unit
+                const entityId = Array.from(this.selectedEntityIds)[0];
+                const entity = this.entities.get(entityId);
+                if (entity) {
+                    const entityType = entity.entityType === 'vehicle' ? entity.vehicleType : entity.entityType;
+                    const faction = entity.faction || 'Unknown';
+                    fullMessage += `\n\n[Выбран: ${entityType} (${faction}) #${entityId}]`;
+                }
+            } else {
+                // Show count for multiple units
+                fullMessage += `\n\n[Выбрано юнитов: ${this.selectedEntityIds.size}/12]`;
+            }
         }
+
         document.getElementById('status').textContent = fullMessage;
     }
 
