@@ -82,15 +82,15 @@ fn check_alert_completions(world: &mut hecs::World) {
 /// Spawn entities for a revealed alert
 fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position: &Position) -> Vec<u32> {
     let mut spawned = Vec::new();
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     match alert_type {
         AlertType::TrashAlert => {
             // Spawn 1-3 hostile scavengers (wild faction - hostile to everyone)
-            let count = rng.gen_range(1..=3);
+            let count = rng.random_range(1..=3);
             for _i in 0..count {
-                let offset_x = rng.gen_range(-10.0..10.0);
-                let offset_y = rng.gen_range(-10.0..10.0);
+                let offset_x = rng.random_range(-10.0..10.0);
+                let offset_y = rng.random_range(-10.0..10.0);
                 let entity_pos = Position::new(position.x + offset_x, position.y + offset_y);
 
                 let health = Health::new(30.0);
@@ -109,10 +109,10 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
         }
         AlertType::WasteAlert => {
             // Spawn 1-2 toxic mutants (wild faction - hostile to everyone)
-            let count = rng.gen_range(1..=2);
+            let count = rng.random_range(1..=2);
             for _i in 0..count {
-                let offset_x = rng.gen_range(-15.0..15.0);
-                let offset_y = rng.gen_range(-15.0..15.0);
+                let offset_x = rng.random_range(-15.0..15.0);
+                let offset_y = rng.random_range(-15.0..15.0);
                 let entity_pos = Position::new(position.x + offset_x, position.y + offset_y);
 
                 let health = Health::new(50.0);
@@ -131,10 +131,10 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
         }
         AlertType::MutantAlert => {
             // Spawn 2-4 mutant creatures with movement (wild faction)
-            let count = rng.gen_range(2..=4);
+            let count = rng.random_range(2..=4);
             for _i in 0..count {
-                let offset_x = rng.gen_range(-20.0..20.0);
-                let offset_y = rng.gen_range(-20.0..20.0);
+                let offset_x = rng.random_range(-20.0..20.0);
+                let offset_y = rng.random_range(-20.0..20.0);
                 let entity_pos = Position::new(position.x + offset_x, position.y + offset_y);
 
                 let health = Health::new(80.0);
@@ -153,10 +153,10 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
         }
         AlertType::RaiderAlert => {
             // Spawn 1-2 raider vehicles (enemy faction)
-            let count = rng.gen_range(1..=2);
+            let count = rng.random_range(1..=2);
             for _i in 0..count {
-                let offset_x = rng.gen_range(-25.0..25.0);
-                let offset_y = rng.gen_range(-25.0..25.0);
+                let offset_x = rng.random_range(-25.0..25.0);
+                let offset_y = rng.random_range(-25.0..25.0);
                 let entity_pos = Position::new(position.x + offset_x, position.y + offset_y);
 
                 let health = Health::new(100.0);
@@ -225,11 +225,11 @@ pub fn spawn_random_alert(world: &mut hecs::World) {
 
 /// Generate a random alert at a random position
 pub fn generate_random_alert() -> Alert {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     // Random position within visible map area (800x600), with margin from edges
-    let x = rng.gen_range(50.0..750.0);
-    let y = rng.gen_range(50.0..550.0);
+    let x = rng.random_range(50.0..750.0);
+    let y = rng.random_range(50.0..550.0);
 
     // Random alert type with weights
     let alert_types = [
@@ -243,7 +243,7 @@ pub fn generate_random_alert() -> Alert {
     ];
 
     let total_weight: u32 = alert_types.iter().map(|(_, w)| w).sum();
-    let mut choice = rng.gen_range(0..total_weight);
+    let mut choice = rng.random_range(0..total_weight);
 
     let mut selected_type = AlertType::TrashAlert;
     for (alert_type, weight) in alert_types.iter() {
