@@ -1294,11 +1294,30 @@ class GameDemo {
         }
 
         const vehicleType = document.getElementById('vehicle-type').value;
-        const x = parseFloat(document.getElementById('spawn-x').value);
-        const y = parseFloat(document.getElementById('spawn-y').value);
+
+        // Find the selected player base and calculate spawn position near it
+        let spawnX, spawnY;
+        for (const entityId of this.selectedEntityIds) {
+            const entity = this.entities.get(entityId);
+            if (entity && entity.entityType === 'base' && entity.faction === 'Player') {
+                // Spawn vehicle at a random position near the base (50-80 units away)
+                const distance = 10 + Math.random() * 30; // Random distance between 50-80
+                const angle = Math.random() * Math.PI * 2; // Random angle in radians
+
+                spawnX = entity.gameX + Math.cos(angle) * distance;
+                spawnY = entity.gameY + Math.sin(angle) * distance;
+                break; // Use the first selected base found
+            }
+        }
+
+        // Fallback if no base position found (shouldn't happen due to earlier check)
+        if (spawnX === undefined || spawnY === undefined) {
+            this.updateStatus('Error: Could not determine base position for spawning');
+            return;
+        }
 
         try {
-            const result = create_vehicle(vehicleType, x, y);
+            const result = create_vehicle(vehicleType, spawnX, spawnY);
             const creationResult = JSON.parse(result);
 
             if (creationResult.success) {
@@ -1314,7 +1333,10 @@ class GameDemo {
                 // Select only the newly spawned vehicle
                 this.selectEntity(creationResult.id, true, true);
 
-                this.updateStatus(`Vehicle spawned and selected!\nID: ${creationResult.id}\nType: ${vehicleType}\nPosition: (${x}, ${y})`);
+                // Display information for the newly spawned vehicle
+                this.displayEntityInfo(creationResult.id);
+
+                this.updateStatus(`Vehicle spawned and selected!\nID: ${creationResult.id}\nType: ${vehicleType}\nPosition: (${spawnX.toFixed(1)}, ${spawnY.toFixed(1)})`);
             } else {
                 this.updateStatus(`Failed to spawn vehicle: ${creationResult.message}`);
             }
