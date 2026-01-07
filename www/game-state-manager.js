@@ -227,6 +227,7 @@ export class GameStateManager {
             const result = update(dt);
             const gameState = JSON.parse(result);
             this.gameDemo.syncEntitiesWithGameState(gameState.entities);
+            this.gameDemo.updateSelectedEntityInfo();
             this.gameDemo.updateStatus(`Single update completed!\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`);
         } catch (error) {
             this.gameDemo.updateStatus(`Single update failed: ${error.message}`);
@@ -247,6 +248,8 @@ export class GameStateManager {
                     this.gameDemo.app.stage.removeChild(this.gameDemo.entityRenderer.alertHighlight);
                     this.gameDemo.entityRenderer.alertHighlight = null;
                 }
+                // Update selected entity info after clearing selection
+                this.gameDemo.updateSelectedEntityInfo();
             } else {
                 this.gameDemo.updateStatus(`Failed to set target: ${movementResult.message}`);
                 console.error('Failed to set target:', movementResult.message);
@@ -269,6 +272,8 @@ export class GameStateManager {
                     this.gameDemo.app.stage.removeChild(this.gameDemo.entityRenderer.alertHighlight);
                     this.gameDemo.entityRenderer.alertHighlight = null;
                 }
+                // Update selected entity info after group target
+                this.gameDemo.updateSelectedEntityInfo();
             } else {
                 this.gameDemo.updateStatus(`Failed to set group target: ${groupResult.message}`);
                 console.error('Failed to set group target:', groupResult.message);
