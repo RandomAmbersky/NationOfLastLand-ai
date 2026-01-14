@@ -277,8 +277,6 @@ export class GameDemo {
         this.entityRenderer.createEntitySprite(gameEntity.id, posX, posY, vehicleType, faction, entityType);
     }
 
-
-
     updateStatus(message) {
         document.getElementById('status').textContent = message;
     }
@@ -339,8 +337,6 @@ export class GameDemo {
             this.updateEntityInfo(null);
             return;
         }
-
-
 
         if (this.selectedEntityIds.size > 1) {
             this.updateGroupInfo(gameEntities);
@@ -654,8 +650,6 @@ export class GameDemo {
             y: y * scale.y
         };
     }
-
-
 
     isPlayerBaseSelected() {
         // Check if any selected entity is a player base

@@ -47,7 +47,6 @@ export class EntityRenderer {
     }
 
     cleanupOrphanedGraphics() {
-        let removedCount = 0;
         for (let i = this.gameDemo.app.stage.children.length - 1; i >= 0; i--) {
             const child = this.gameDemo.app.stage.children[i];
             if (child instanceof PIXI.Graphics) {
@@ -56,11 +55,9 @@ export class EntityRenderer {
                     child === this.alertHighlight;
                 if (!isEssential) {
                     this.gameDemo.app.stage.removeChild(child);
-                    removedCount++;
                 }
             }
         }
-        // Removed debug logging - no output for cleanup
     }
 
     createEntitySprite(id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
@@ -399,6 +396,4 @@ export class EntityRenderer {
         };
         animate();
     }
-
-
 }

@@ -109,8 +109,6 @@ export class SelectionManager {
         this.gameDemo.updateStatus(`Группа атакует: ${targetType} (#${targetAssignment.target_entity_id}) ${targetFaction}`);
     }
 
-
-
     selectEntity(entityId, bypassCheck = false, exclusive = true) {
         if (!bypassCheck && this.isSelecting) return false;
 

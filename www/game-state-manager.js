@@ -45,7 +45,6 @@ export class GameStateManager {
             this.gameDemo.app.stage.removeChild(this.gameDemo.entityRenderer.alertHighlight);
             this.gameDemo.entityRenderer.alertHighlight = null;
         }
-
     }
 
     async spawnVehicle() {
