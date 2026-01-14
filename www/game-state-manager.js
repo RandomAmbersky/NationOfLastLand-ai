@@ -6,7 +6,6 @@ import { gameInit, create_vehicle, update, set_entity_target, set_group_target, 
 export class GameStateManager {
     constructor(gameDemo) {
         this.gameDemo = gameDemo;
-        this.combatEffects = new Map();
     }
 
     async initializeGame() {
@@ -46,9 +45,7 @@ export class GameStateManager {
             this.gameDemo.app.stage.removeChild(this.gameDemo.entityRenderer.alertHighlight);
             this.gameDemo.entityRenderer.alertHighlight = null;
         }
-        // Note: updateSelectedEntityInfo will be called without gameState in this context
-        // It will fall back to using get_entity_info for individual entities
-        // this.gameDemo.updateSelectedEntityInfo();
+
     }
 
     async spawnVehicle() {
@@ -183,10 +180,6 @@ export class GameStateManager {
             this.gameDemo.syncEntitiesWithGameState(gameState.entities);
             this.gameDemo.updateSelectedEntityInfo(gameState.entities);
 
-            // if (gameState.debug_messages && gameState.debug_messages.length > 0) {
-            //     this.processDebugMessages(gameState.debug_messages);
-            // }
-
         } catch (error) {
             console.error('Game loop error:', error);
         }
@@ -225,63 +218,6 @@ export class GameStateManager {
         } catch (error) {
             this.gameDemo.updateStatus(`Error setting group target: ${error.message}`);
             console.error('Group target setting error:', error);
-        }
-    }
-
-    processDebugMessages(debugMessages) {
-        const combatEvents = [];
-
-        for (const message of debugMessages) {
-            const damageMatch = message.match(/Entity (\d+) dealt ([\d.]+) damage to entity (\d+)/);
-            if (damageMatch) {
-                const [, attackerId, damage, targetId] = damageMatch;
-                combatEvents.push({
-                    type: 'damage',
-                    attackerId: parseInt(attackerId),
-                    targetId: parseInt(targetId),
-                    damage: parseFloat(damage)
-                });
-                continue;
-            }
-
-            const destroyMatch = message.match(/Entity (\d+) was destroyed!/);
-            if (destroyMatch) {
-                const [, entityId] = destroyMatch;
-                combatEvents.push({
-                    type: 'destroyed',
-                    entityId: parseInt(entityId)
-                });
-                continue;
-            }
-
-            const collisionMatch = message.match(/Collision detected between entities (\d+) and (\d+)/);
-            if (collisionMatch) {
-                const [, entityAId, entityBId] = collisionMatch;
-                combatEvents.push({
-                    type: 'collision',
-                    entityAId: parseInt(entityAId),
-                    entityBId: parseInt(entityBId)
-                });
-                continue;
-            }
-        }
-
-        for (const event of combatEvents) {
-            this.createCombatVisualization(event);
-        }
-    }
-
-    createCombatVisualization(event) {
-        switch (event.type) {
-            case 'damage':
-                this.gameDemo.entityRenderer.createDamageEffect(event.attackerId, event.targetId, event.damage);
-                break;
-            case 'destroyed':
-                this.gameDemo.entityRenderer.createDestructionEffect(event.entityId);
-                break;
-            case 'collision':
-                this.gameDemo.entityRenderer.createCollisionEffect(event.entityAId, event.entityBId);
-                break;
         }
     }
 

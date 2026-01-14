@@ -46,10 +46,6 @@ export class EntityRenderer {
         this.gameDemo.app.stage.addChildAt(this.gridContainer, 0);
     }
 
-    drawGrid() {
-        this.updateGrid();
-    }
-
     cleanupOrphanedGraphics() {
         let removedCount = 0;
         for (let i = this.gameDemo.app.stage.children.length - 1; i >= 0; i--) {
@@ -404,7 +400,5 @@ export class EntityRenderer {
         animate();
     }
 
-    createCollisionEffect(entityAId, entityBId) {
-        // Collision effect disabled - no visual feedback for collisions
-    }
+
 }

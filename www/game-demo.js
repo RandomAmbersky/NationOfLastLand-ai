@@ -277,45 +277,7 @@ export class GameDemo {
         this.entityRenderer.createEntitySprite(gameEntity.id, posX, posY, vehicleType, faction, entityType);
     }
 
-    areFactionsHostile(factionA, factionB) {
-        // Check if two factions are hostile towards each other
-        // Based on the faction logic from faction.rs
-        if (!factionA || !factionB) return false;
 
-        switch (`${factionA}-${factionB}`) {
-            // Player and Enemy are hostile to each other
-            case 'Player-Enemy':
-            case 'Enemy-Player':
-                return true;
-
-            // Player considers Wild creatures hostile
-            case 'Player-Wild':
-            case 'Wild-Player':
-                return true;
-
-            // Wild creatures attack everyone except their own kind
-            case 'Wild-Wild':
-                return false;
-            default:
-                if (factionA.startsWith('Wild-') || factionB.startsWith('Wild-')) {
-                    return true;
-                }
-                break;
-        }
-
-        // Neutral entities don't attack anyone
-        if (factionA === 'Neutral' || factionB === 'Neutral') {
-            return false;
-        }
-
-        // Same faction - never hostile
-        if (factionA === factionB) {
-            return false;
-        }
-
-        // Default: not hostile
-        return false;
-    }
 
     updateStatus(message) {
         document.getElementById('status').textContent = message;
@@ -378,7 +340,7 @@ export class GameDemo {
             return;
         }
 
-        // console.log(this.selectedEntityIds)
+
 
         if (this.selectedEntityIds.size > 1) {
             this.updateGroupInfo(gameEntities);
@@ -596,15 +558,11 @@ export class GameDemo {
 
     // Отображение информации о группе выбранных юнитов игрока (здоровье каждого)
     updateGroupInfo(gameEntities) {
-        // console.log('updateGroupInfo called with gameState:', gameState ? 'present' : 'null');
-
         // Фильтруем только юнитов игрока
         const playerUnits = Array.from(this.selectedEntityIds).filter(entityId => {
             const entity = this.entities.get(entityId);
             return entity && entity.faction === 'Player';
         });
-
-        // console.log('Player units found:', playerUnits.length);
 
         if (playerUnits.length === 0) {
             this.updateEntityInfo(null);
@@ -627,7 +585,6 @@ export class GameDemo {
                 const healthBar = this.createHealthBar(current, max);
                 healthText = `${healthBar} ${percentage}%`;
                 if (current <= 0) isDead = true;
-                // console.log(`Health from gameState for entity ${entityId}: ${current}/${max}`);
             } else {
                 console.log(`No health in gameState for entity ${entityId}`);
             }
@@ -643,7 +600,6 @@ export class GameDemo {
                         const healthBar = this.createHealthBar(current, max);
                         healthText = `${healthBar} ${percentage}%`;
                         if (current <= 0) isDead = true;
-                        console.log(`Health from get_entity_info for entity ${entityId}: ${current}/${max}`);
                     }
                 } catch (error) {
                     console.error(`Error getting entity info for ${entityId}:`, error);
@@ -662,7 +618,6 @@ export class GameDemo {
 
         // Always update for group info (no change check needed)
         entityInfoDiv.innerHTML = infoText;
-        // console.log('Group info updated');
     }
 
     // Create a visual health bar
@@ -700,36 +655,7 @@ export class GameDemo {
         };
     }
 
-    // Utility methods for creating visual indicators
-    createSelectionIndicator(entity, isEnemy = false) {
-        const color = isEnemy ?
-            GAME_CONFIG.COLORS.selection.enemy :
-            GAME_CONFIG.COLORS.selection.player;
 
-        const graphics = new PIXI.Graphics();
-        graphics.lineStyle(3, color, 1);
-        graphics.drawCircle(0, 0, GAME_CONFIG.UI.indicatorSize);
-        entity.container.addChild(graphics);
-        return graphics;
-    }
-
-    createInfoIndicator(entity) {
-        const graphics = new PIXI.Graphics();
-        graphics.lineStyle(3, GAME_CONFIG.COLORS.info, 1);
-        graphics.drawCircle(0, 0, GAME_CONFIG.UI.indicatorSize);
-        entity.container.addChild(graphics);
-        return graphics;
-    }
-
-    // Utility method for distance calculation
-    calculateDistance(x1, y1, x2, y2) {
-        return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-    }
-
-    // Utility method for checking entity existence
-    isEntityValid(entityId) {
-        return this.entities.has(entityId) && this.entities.get(entityId) !== null;
-    }
 
     isPlayerBaseSelected() {
         // Check if any selected entity is a player base
