@@ -120,7 +120,9 @@ export class InputHandler {
         const entityAtPosition = this.gameDemo.entityRenderer.findEntityAtPosition(screenX, screenY);
 
         if (entityAtPosition !== null) {
-            this.gameDemo.selectionManager.handleEntityClick(entityAtPosition, false, event);
+            // Проверяем, нажата ли клавиша Shift для множественного выбора
+            const isMultiSelect = event.shiftKey;
+            this.gameDemo.selectionManager.handleEntityClick(entityAtPosition, isMultiSelect, event);
         } else {
             // Клик по пустому месту - установка цели для группы или снятие выделения
             if (this.gameDemo.selectedEntityIds.size > 0) {
