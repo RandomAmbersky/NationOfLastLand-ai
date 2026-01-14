@@ -86,6 +86,7 @@
 - **State Serialization**: Current JSON output is placeholder, not real game state
 - **Configuration Validation**: No runtime validation of YAML configuration files
 - **Dead Unit Display Bug**: ✅ FIXED - Dead units were showing in UI due to missing health checks in API functions
+- **Group Health Display**: ✅ NEW - Added group health display showing each unit's health bar when multiple units are selected
 
 ### Performance Considerations
 - **Memory Allocation**: No optimization for game loop performance

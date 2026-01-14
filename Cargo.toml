@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 hecs = "0.10"
@@ -22,3 +22,7 @@ getrandom = { version = "0.3", features = ["wasm_js"] }
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false
+
+[[example]]
+name = "selection_rules"
+path = "examples/selection_rules.rs"

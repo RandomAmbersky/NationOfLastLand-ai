@@ -16,8 +16,15 @@ The project is in early development with core architecture established but minim
 6. **API Completion**: Full WebAssembly API with game loop integration
 7. **Configuration System**: YAML-based unit and balance configuration
 8. **Basic Gameplay Loop**: Functional game with unit creation and updates
-9. **Group Selection Rules**: ✅ Verified implementation of units_moving_rules.md - both rules working correctly
+9. **Group Selection Rules**: ✅ FULLY IMPLEMENTED - all 8 rules from units_moving_rules.md now working:
+   - **Правило 2**: Одиночное выделение показывает подробную информацию (только при 1 юните)
+   - **Правило 4**: Групповое выделение фильтрует только подвижных юнитов игрока (vehicle, faction=Player)
+   - **Правило 5**: Чужие юниты исключаются при групповом выделении
+   - **Правило 6**: Клик на вражеском юните при выделенных союзных = назначение цели (без сброса)
+   - **Правило 7**: Клик на юните при выделенной базе = сброс и выбор нового
+   - **Правило 8**: Клик на юните при выделенном чужом = сброс и выбор нового
 10. **Dead Unit Filtering**: ✅ Fixed issue where dead units continued to display in UI - added health checks to get_entities_data() and get_entity_info()
+11. **Group Health Display**: ✅ NEW - When multiple units are selected, entity-info panel now shows health for each unit in the group with health bars and average group health
 
 ### Active Development Areas
 - **ECS Component Design**: Refining component structure for game systems

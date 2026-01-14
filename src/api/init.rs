@@ -1,6 +1,6 @@
 use crate::config::GameConfig;
 use crate::game::{
-    components::{Base, FactionComponent, Health, Position, Selection, Vehicle},
+    components::{Base, FactionComponent, Health, Movement, Position, Selection, Vehicle},
     Alert, GameWorld,
 };
 use hecs::World;
@@ -11,12 +11,13 @@ use wasm_bindgen::prelude::*;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EntityData {
     pub id: u32,
-    pub x: f32,
-    pub y: f32,
+    pub position: Option<Position>,
     pub entity_type: String,
     pub subtype: Option<String>, // vehicle_type for vehicles, alert_type for alerts
     pub faction: Option<String>, // faction name (Player, Enemy, Neutral, Wild)
     pub is_selected: bool,       // whether this entity is currently selected
+    pub health: Option<(f32, f32)>, // (current, maximum) health values, None if no health component
+    pub movement: Option<Movement>, // movement component if entity can move
 }
 
 #[derive(Serialize, Deserialize)]
@@ -57,6 +58,14 @@ pub fn init() -> Result<String, JsValue> {
         world
             .debug_messages
             .push("Created initial player base at (400, 300)".to_string());
+
+        // Create initial player vehicles using the same logic as create_vehicle function
+        use crate::api::create_vehicle::create_vehicle_in_world;
+        let entity1 = create_vehicle_in_world(&mut world.world, "scout", 350.0, 250.0);
+        world.debug_messages.push(format!("Created player scout car at (350, 250) with entity ID {}", entity1.id()));
+
+        let entity2 = create_vehicle_in_world(&mut world.world, "scout", 450.0, 350.0);
+        world.debug_messages.push(format!("Created player scout car at (450, 350) with entity ID {}", entity2.id()));
     }
 
     if let Some(world) = GAME_WORLD.get() {
@@ -84,113 +93,66 @@ pub fn init() -> Result<String, JsValue> {
 pub fn get_entities_data(world: &World) -> Vec<EntityData> {
     let mut entities = Vec::new();
 
-    // Get all entities with Health component first, then filter by alive status
-    let mut alive_entity_ids = std::collections::HashSet::new();
-    for (entity, health) in world.query::<&Health>().iter() {
-        if health.is_alive() {
-            alive_entity_ids.insert(entity.id());
-        } else {
-            eprintln!("Entity {} is dead (health: {}/{})", entity.id(), health.current, health.maximum);
-        }
-    }
+    // Проходим циклом по всем entity которые есть в мире
+    for entity_ref in world.iter() {
+        let entity_id = entity_ref.entity();
 
-    // Add entities with Position components (vehicles, etc.) but exclude bases and alerts
-    for (entity, position) in world.query::<&Position>().without::<&Base>().without::<&Alert>().iter() {
-        // Check if entity is alive (must have Health component and be alive)
-        if !alive_entity_ids.contains(&entity.id()) {
-            eprintln!("Skipping entity {} - not alive or no health component", entity.id());
-            continue;
-        }
-
-        // Try to get vehicle type if entity has Vehicle component
-        let vehicle_type = if let Ok(mut query) = world.query_one::<&Vehicle>(entity) {
-            if let Some(vehicle) = query.get() {
-                Some(vehicle.vehicle_type.name().to_string())
-            } else {
-                None
-            }
+        // Определяем тип entity и собираем данные
+        let (entity_type, subtype) = if let Some(alert) = world.get::<&Alert>(entity_id).ok() {
+            // Alert entity
+            (
+                "alert".to_string(),
+                Some(format!("{:?}_{:?}", alert.alert_type, alert.state)),
+            )
+        } else if let Some(base) = world.get::<&Base>(entity_id).ok() {
+            // Base entity
+            (
+                "base".to_string(),
+                Some(format!("floors_{}", base.floors.len())),
+            )
+        } else if let Some(vehicle) = world.get::<&Vehicle>(entity_id).ok() {
+            // Vehicle entity
+            (
+                "vehicle".to_string(),
+                Some(vehicle.vehicle_type.name().to_string()),
+            )
         } else {
-            None
+            // Other entity
+            (
+                "unknown".to_string(),
+                None,
+            )
         };
 
-        // Try to get faction if entity has FactionComponent
-        let faction = if let Ok(mut query) = world.query_one::<&FactionComponent>(entity) {
-            if let Some(faction_component) = query.get() {
-                Some(faction_component.faction.name().to_string())
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        // Читаем faction отдельно для всех entity
+        let faction = world.get::<&FactionComponent>(entity_id).ok()
+            .map(|faction_component| faction_component.faction.name().to_string());
 
-        // Try to get selection state if entity has Selection component
-        let is_selected = if let Ok(mut query) = world.query_one::<&Selection>(entity) {
-            if let Some(selection) = query.get() {
-                selection.is_selected
-            } else {
-                false
-            }
-        } else {
-            false
-        };
+        // Читаем позицию отдельно для всех entity
+        let position = world.get::<&Position>(entity_id).ok().map(|p| *p);
+
+        // Проверяем состояние выделения
+        let is_selected = world.get::<&Selection>(entity_id).ok()
+            .map(|selection| selection.is_selected)
+            .unwrap_or(false);
+
+        // Получаем информацию о здоровье
+        let health = world.get::<&Health>(entity_id).ok()
+            .map(|h| (h.current, h.maximum));
+
+        // Получаем информацию о движении
+        let movement = world.get::<&Movement>(entity_id).ok()
+            .map(|m| *m);
 
         entities.push(EntityData {
-            id: entity.id(),
-            x: position.x,
-            y: position.y,
-            entity_type: "vehicle".to_string(), // For now, all entities are vehicles
-            subtype: vehicle_type,
+            id: entity_id.id(),
+            position,
+            entity_type,
+            subtype,
             faction,
             is_selected,
-        });
-    }
-
-    // Add Alert entities (show all alerts, but mark their state)
-    for (entity, alert) in world.query::<&Alert>().iter() {
-        // Check selection state for alerts (though they shouldn't be selectable)
-        let is_selected = if let Ok(mut query) = world.query_one::<&Selection>(entity) {
-            if let Some(selection) = query.get() {
-                selection.is_selected
-            } else {
-                false
-            }
-        } else {
-            false
-        };
-
-        entities.push(EntityData {
-            id: entity.id(),
-            x: alert.position.x,
-            y: alert.position.y,
-            entity_type: "alert".to_string(),
-            subtype: Some(format!("{:?}_{:?}", alert.alert_type, alert.state)),
-            faction: None,      // Alerts don't have factions
-            is_selected,        // Check actual selection state
-        });
-    }
-
-    // Add Base entities
-    for (entity, (base, position)) in world.query::<(&Base, &Position)>().iter() {
-        // Check selection state for bases
-        let is_selected = if let Ok(mut query) = world.query_one::<&Selection>(entity) {
-            if let Some(selection) = query.get() {
-                selection.is_selected
-            } else {
-                false
-            }
-        } else {
-            false
-        };
-
-        entities.push(EntityData {
-            id: entity.id(),
-            x: position.x,
-            y: position.y,
-            entity_type: "base".to_string(),
-            subtype: Some(format!("floors_{}", base.floors.len())),
-            faction: Some("Player".to_string()), // Bases belong to player
-            is_selected,
+            health,
+            movement,
         });
     }
 

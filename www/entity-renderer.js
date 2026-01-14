@@ -1,3 +1,5 @@
+import { GAME_CONFIG } from './game-config.js';
+
 /**
  * Управляет рендерингом сущностей и визуальными эффектами
  */
@@ -5,7 +7,9 @@ export class EntityRenderer {
     constructor(gameDemo) {
         this.gameDemo = gameDemo;
         this.targetIndicator = null;
+        this.targetIndicatorTimeout = null;
         this.alertHighlight = null;
+        this.alertHighlightTimeout = null;
         this.gridContainer = null;
     }
 
@@ -60,9 +64,7 @@ export class EntityRenderer {
                 }
             }
         }
-        if (removedCount > 0) {
-            console.log(`Cleaned up ${removedCount} orphaned graphics objects`);
-        }
+        // Removed debug logging - no output for cleanup
     }
 
     createEntitySprite(id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
@@ -79,36 +81,27 @@ export class EntityRenderer {
             color = 0x2196F3;
             graphics.beginFill(color);
             graphics.drawRect(-15, -15, 30, 30);
-            if (vehicleType && vehicleType.startsWith('floors_')) {
-                const floorCount = parseInt(vehicleType.split('_')[1]) || 1;
-                for (let i = 0; i < floorCount; i++) {
-                    const angle = (i / floorCount) * Math.PI * 2;
-                    const radius = 20;
-                    const fx = Math.cos(angle) * radius;
-                    const fy = Math.sin(angle) * radius;
-                    graphics.drawCircle(fx, fy, 3);
-                }
-            }
+
         } else {
             switch (vehicleType) {
                 case 'scout':
-                    color = faction === 'Neutral' ? 0x00BCD4 :
-                           faction === 'Wild' ? 0x8D6E63 :
-                           faction === 'Enemy' ? 0x2E7D32 : 0x4CAF50;
+                    color = faction === 'Neutral' ? GAME_CONFIG.COLORS.neutral.scout :
+                           faction === 'Wild' ? GAME_CONFIG.COLORS.wild.scout :
+                           faction === 'Enemy' ? GAME_CONFIG.COLORS.enemy.scout : GAME_CONFIG.COLORS.player.scout;
                     graphics.beginFill(color);
                     graphics.drawCircle(0, 0, 8);
                     break;
                 case 'tank':
-                    color = faction === 'Neutral' ? 0x00BCD4 :
-                           faction === 'Wild' ? 0x8D6E63 :
-                           faction === 'Enemy' ? 0xB71C1C : 0xFF5722;
+                    color = faction === 'Neutral' ? GAME_CONFIG.COLORS.neutral.tank :
+                           faction === 'Wild' ? GAME_CONFIG.COLORS.wild.tank :
+                           faction === 'Enemy' ? GAME_CONFIG.COLORS.enemy.tank : GAME_CONFIG.COLORS.player.tank;
                     graphics.beginFill(color);
                     graphics.drawRect(-10, -8, 20, 16);
                     break;
                 case 'transport':
-                    color = faction === 'Neutral' ? 0x00BCD4 :
-                           faction === 'Wild' ? 0x8D6E63 :
-                           faction === 'Enemy' ? 0x0D47A1 : 0x2196F3;
+                    color = faction === 'Neutral' ? GAME_CONFIG.COLORS.neutral.transport :
+                           faction === 'Wild' ? GAME_CONFIG.COLORS.wild.transport :
+                           faction === 'Enemy' ? GAME_CONFIG.COLORS.enemy.transport : GAME_CONFIG.COLORS.player.transport;
                     graphics.beginFill(color);
                     graphics.drawRect(-12, -10, 24, 20);
                     break;
@@ -118,7 +111,7 @@ export class EntityRenderer {
                         [alertType, alertState] = vehicleType.split('_');
 
                         if (alertState === 'Hidden') {
-                            color = 0xB8860B;
+                            color = GAME_CONFIG.COLORS.alert;
                             alpha = 0.7;
                             graphics.lineStyle(2, color, alpha);
                             graphics.drawCircle(0, 0, 8);
@@ -130,7 +123,7 @@ export class EntityRenderer {
                             graphics.moveTo(0, 6);
                             graphics.lineTo(0, 7);
                         } else {
-                            color = 0xB8860B;
+                            color = GAME_CONFIG.COLORS.alert;
                             graphics.lineStyle(3, color, 1);
                             graphics.drawCircle(0, 0, 12);
                             graphics.moveTo(-4, -8);
@@ -143,9 +136,9 @@ export class EntityRenderer {
                         }
                         break;
                     }
-                    color = faction === 'Neutral' ? 0x00BCD4 :
-                           faction === 'Wild' ? 0x8D6E63 :
-                           faction === 'Enemy' ? 0xB71C1C : 0x4CAF50;
+                    color = faction === 'Neutral' ? GAME_CONFIG.COLORS.neutral.scout :
+                           faction === 'Wild' ? GAME_CONFIG.COLORS.wild.scout :
+                           faction === 'Enemy' ? GAME_CONFIG.COLORS.enemy.scout : GAME_CONFIG.COLORS.player.scout;
                     graphics.beginFill(color);
                     graphics.drawCircle(0, 0, 8);
                     break;
@@ -185,27 +178,13 @@ export class EntityRenderer {
     findEntityAtPosition(x, y) {
         let closestEntity = null;
         let closestDistance = 20;
-        let priorityEntities = { base: null, vehicle: null, alert: null };
 
         for (const [id, entity] of this.gameDemo.entities) {
             const distance = Math.sqrt((entity.container.x - x) ** 2 + (entity.container.y - y) ** 2);
             if (distance < closestDistance) {
-                if (entity.entityType === 'base' && (!priorityEntities.base || distance < priorityEntities.base.distance)) {
-                    priorityEntities.base = { id, distance };
-                } else if (entity.entityType === 'vehicle' && (!priorityEntities.vehicle || distance < priorityEntities.vehicle.distance)) {
-                    priorityEntities.vehicle = { id, distance };
-                } else if (entity.entityType === 'alert' && (!priorityEntities.alert || distance < priorityEntities.alert.distance)) {
-                    priorityEntities.alert = { id, distance };
-                }
+                closestDistance = distance;
+                closestEntity = id;
             }
-        }
-
-        if (priorityEntities.base) {
-            closestEntity = priorityEntities.base.id;
-        } else if (priorityEntities.vehicle) {
-            closestEntity = priorityEntities.vehicle.id;
-        } else if (priorityEntities.alert) {
-            closestEntity = priorityEntities.alert.id;
         }
 
         return closestEntity;
@@ -228,16 +207,29 @@ export class EntityRenderer {
         return closestAlert;
     }
 
-    showTargetIndicator(gameX, gameY) {
-        if (this.targetIndicator) {
-            this.gameDemo.app.stage.removeChild(this.targetIndicator);
-        }
-
+    // Helper method to get screen coordinates from game coordinates
+    getScreenCoords(gameX, gameY) {
         const scaleX = this.gameDemo.app.screen.width / this.gameDemo.gameWidth;
         const scaleY = this.gameDemo.app.screen.height / this.gameDemo.gameHeight;
-        const screenX = gameX * scaleX;
-        const screenY = gameY * scaleY;
+        return {
+            x: gameX * scaleX,
+            y: gameY * scaleY
+        };
+    }
 
+    showTargetIndicator(gameX, gameY) {
+        // Clear any existing timeout to prevent memory leaks
+        if (this.targetIndicatorTimeout) {
+            clearTimeout(this.targetIndicatorTimeout);
+            this.targetIndicatorTimeout = null;
+        }
+
+        if (this.targetIndicator) {
+            this.gameDemo.app.stage.removeChild(this.targetIndicator);
+            this.targetIndicator = null;
+        }
+
+        const screenCoords = this.getScreenCoords(gameX, gameY);
         const graphics = new PIXI.Graphics();
         graphics.lineStyle(2, 0xFF0000, 1);
         graphics.drawCircle(0, 0, 10);
@@ -245,48 +237,50 @@ export class EntityRenderer {
         graphics.lineTo(15, 0);
         graphics.moveTo(0, -15);
         graphics.lineTo(0, 15);
-
-        graphics.x = screenX;
-        graphics.y = screenY;
+        graphics.x = screenCoords.x;
+        graphics.y = screenCoords.y;
 
         this.gameDemo.app.stage.addChild(graphics);
         this.targetIndicator = graphics;
 
-        setTimeout(() => {
+        this.targetIndicatorTimeout = setTimeout(() => {
             if (this.targetIndicator) {
                 this.gameDemo.app.stage.removeChild(this.targetIndicator);
                 this.targetIndicator = null;
             }
-        }, 2000);
+        }, GAME_CONFIG.TIMEOUTS.targetIndicator);
+    }
+
+    clearTargetIndicator() {
+        // Clear timeout first to prevent memory leaks
+        if (this.targetIndicatorTimeout) {
+            clearTimeout(this.targetIndicatorTimeout);
+            this.targetIndicatorTimeout = null;
+        }
+
+        // Remove indicator from stage
+        if (this.targetIndicator) {
+            this.gameDemo.app.stage.removeChild(this.targetIndicator);
+            this.targetIndicator = null;
+        }
     }
 
     highlightTargetAlert(alert) {
         if (this.alertHighlight) {
             this.gameDemo.app.stage.removeChild(this.alertHighlight);
+            this.alertHighlight = null;
         }
 
-        const scaleX = this.gameDemo.app.screen.width / this.gameDemo.gameWidth;
-        const scaleY = this.gameDemo.app.screen.height / this.gameDemo.gameHeight;
-        const screenX = alert.x * scaleX;
-        const screenY = alert.y * scaleY;
-
+        const screenCoords = this.getScreenCoords(alert.x, alert.y);
         const graphics = new PIXI.Graphics();
-        graphics.lineStyle(4, 0x00FF00, 1);
+        graphics.lineStyle(4, GAME_CONFIG.COLORS.alert, 1);
         graphics.drawCircle(0, 0, 20);
         graphics.alertId = alert.id;
-
-        graphics.x = screenX;
-        graphics.y = screenY;
+        graphics.x = screenCoords.x;
+        graphics.y = screenCoords.y;
 
         this.gameDemo.app.stage.addChild(graphics);
         this.alertHighlight = graphics;
-
-        setTimeout(() => {
-            if (this.alertHighlight && this.alertHighlight === graphics) {
-                this.gameDemo.app.stage.removeChild(this.alertHighlight);
-                this.alertHighlight = null;
-            }
-        }, 3000);
     }
 
     createDamageEffect(attackerId, targetId, damage) {
@@ -414,4 +408,3 @@ export class EntityRenderer {
         // Collision effect disabled - no visual feedback for collisions
     }
 }
-

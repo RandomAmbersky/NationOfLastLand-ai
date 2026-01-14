@@ -3,6 +3,35 @@ pub mod config;
 pub mod game;
 pub mod types;
 
+// Re-export commonly used types for examples and external usage
+pub use api::group::{
+    has_immobile_player_unit_selected,
+    has_non_player_unit_selected,
+    get_selected_player_movable_units,
+    is_non_player_faction_entity,
+    handle_immobile_unit_selection,
+    handle_non_player_unit_selection,
+    handle_group_targeting,
+    handle_standard_entity_selection,
+    select_entity_internal,
+    get_selected_entities_internal,
+    SelectionResult,
+    SelectionAction,
+    TargetAssignment,
+};
+pub use game::components::{
+    FactionComponent,
+    Vehicle,
+    Base,
+    Alert,
+    Position,
+    Movement,
+    Selection,
+    Faction,
+    VehicleType,
+    AlertType,
+};
+
 use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global

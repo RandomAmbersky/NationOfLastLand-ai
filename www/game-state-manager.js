@@ -29,11 +29,30 @@ export class GameStateManager {
         }
     }
 
-    async spawnVehicle() {
+    _checkInitialized() {
         if (!this.gameDemo.isInitialized) {
             this.gameDemo.updateStatus('Please initialize the game first!');
-            return;
+            return false;
         }
+        return true;
+    }
+
+    _handleTargetSet(x, y, clearSelection = true) {
+        this.gameDemo.entityRenderer.showTargetIndicator(x, y);
+        if (clearSelection) {
+            this.gameDemo.selectionManager.clearAllSelections();
+        }
+        if (this.gameDemo.entityRenderer.alertHighlight) {
+            this.gameDemo.app.stage.removeChild(this.gameDemo.entityRenderer.alertHighlight);
+            this.gameDemo.entityRenderer.alertHighlight = null;
+        }
+        // Note: updateSelectedEntityInfo will be called without gameState in this context
+        // It will fall back to using get_entity_info for individual entities
+        // this.gameDemo.updateSelectedEntityInfo();
+    }
+
+    async spawnVehicle() {
+        if (!this._checkInitialized()) return;
 
         if (!this.gameDemo.isPlayerBaseSelected()) {
             this.gameDemo.updateStatus('Cannot spawn vehicle: Please select a player base first!');
@@ -65,14 +84,6 @@ export class GameStateManager {
             const creationResult = JSON.parse(result);
 
             if (creationResult.success) {
-                try {
-                    const updateResult = update(0.016);
-                    const gameState = JSON.parse(updateResult);
-                    this.gameDemo.syncEntitiesWithGameState(gameState.entities);
-                } catch (error) {
-                    console.error('Update after spawn error:', error);
-                }
-
                 this.gameDemo.selectionManager.selectEntity(creationResult.id, true, true);
                 this.gameDemo.displayEntityInfo(creationResult.id);
 
@@ -87,10 +98,7 @@ export class GameStateManager {
     }
 
     async createBase() {
-        if (!this.gameDemo.isInitialized) {
-            this.gameDemo.updateStatus('Please initialize the game first!');
-            return;
-        }
+        if (!this._checkInitialized()) return;
 
         const x = parseFloat(document.getElementById('base-x').value);
         const y = parseFloat(document.getElementById('base-y').value);
@@ -100,16 +108,6 @@ export class GameStateManager {
             const baseInfo = JSON.parse(result);
 
             this.gameDemo.bases.set(baseInfo.id, baseInfo);
-
-            try {
-                const updateResult = update(0.016);
-                const gameState = JSON.parse(updateResult);
-
-                this.gameDemo.syncEntitiesWithGameState(gameState.entities);
-            } catch (error) {
-                console.error('Update after base creation error:', error);
-            }
-
             this.gameDemo.updateStatus(`Base created!\nID: ${baseInfo.id}\nPosition: (${x}, ${y})\nFloors: ${baseInfo.floors.length}\nStorage: ${baseInfo.current_storage_usage}/${baseInfo.total_storage_capacity}`);
         } catch (error) {
             this.gameDemo.updateStatus(`Base creation failed: ${error.message}`);
@@ -118,10 +116,7 @@ export class GameStateManager {
     }
 
     async buildFloor() {
-        if (!this.gameDemo.isInitialized) {
-            this.gameDemo.updateStatus('Please initialize the game first!');
-            return;
-        }
+        if (!this._checkInitialized()) return;
 
         const floorType = document.getElementById('floor-type').value;
 
@@ -137,15 +132,6 @@ export class GameStateManager {
             const updatedBase = JSON.parse(result);
 
             this.gameDemo.bases.set(updatedBase.id, updatedBase);
-
-            try {
-                const updateResult = update(0.016);
-                const gameState = JSON.parse(updateResult);
-                this.gameDemo.syncEntitiesWithGameState(gameState.entities);
-            } catch (error) {
-                console.error('Update after floor building error:', error);
-            }
-
             this.gameDemo.updateStatus(`Floor construction started!\nBase ID: ${baseId}\nFloor Type: ${floorType}\nTotal Floors: ${updatedBase.floors.length}`);
         } catch (error) {
             this.gameDemo.updateStatus(`Floor building failed: ${error.message}`);
@@ -154,24 +140,13 @@ export class GameStateManager {
     }
 
     async createRandomAlert() {
-        if (!this.gameDemo.isInitialized) {
-            this.gameDemo.updateStatus('Please initialize the game first!');
-            return;
-        }
+        if (!this._checkInitialized()) return;
 
         try {
             const result = create_random_alert();
             const alertResult = JSON.parse(result);
 
             if (alertResult.success) {
-                try {
-                    const updateResult = update(0.016);
-                    const gameState = JSON.parse(updateResult);
-                    this.gameDemo.syncEntitiesWithGameState(gameState.entities);
-                } catch (error) {
-                    console.error('Update after alert creation error:', error);
-                }
-
                 this.gameDemo.updateStatus(`Random alert created!\nID: ${alertResult.id}\n${alertResult.message}`);
             } else {
                 this.gameDemo.updateStatus(`Failed to create alert: ${alertResult.message}`);
@@ -179,27 +154,6 @@ export class GameStateManager {
         } catch (error) {
             this.gameDemo.updateStatus(`Alert creation failed: ${error.message}`);
             console.error('Alert creation error:', error);
-        }
-    }
-
-    manualUpdate() {
-        if (!this.gameDemo.isInitialized) {
-            this.gameDemo.updateStatus('Please initialize the game first!');
-            return;
-        }
-
-        const now = Date.now();
-        const dt = (now - this.gameDemo.lastUpdate) / 1000;
-        this.gameDemo.lastUpdate = now;
-
-        try {
-            const result = update(dt);
-            const gameState = JSON.parse(result);
-            this.gameDemo.updateStatus(`Game updated!\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}\nDelta Time: ${dt.toFixed(3)}s`);
-            this.gameDemo.syncEntitiesWithGameState(gameState.entities);
-        } catch (error) {
-            this.gameDemo.updateStatus(`Game update failed: ${error.message}`);
-            console.error('Game update error:', error);
         }
     }
 
@@ -214,11 +168,6 @@ export class GameStateManager {
     }
 
     updateOnce() {
-        if (!this.gameDemo.isInitialized) {
-            this.gameDemo.updateStatus('Please initialize the game first!');
-            return;
-        }
-
         const now = Date.now();
         const dt = (now - this.gameDemo.lastUpdate) / 1000;
         this.gameDemo.lastUpdate = now;
@@ -226,12 +175,20 @@ export class GameStateManager {
         try {
             const result = update(dt);
             const gameState = JSON.parse(result);
+
+            if (Math.random() < 0.01) {
+                this.gameDemo.updateStatus(`Running (Auto)...\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`);
+            }
+
             this.gameDemo.syncEntitiesWithGameState(gameState.entities);
-            this.gameDemo.updateSelectedEntityInfo();
-            this.gameDemo.updateStatus(`Single update completed!\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`);
+            this.gameDemo.updateSelectedEntityInfo(gameState.entities);
+
+            // if (gameState.debug_messages && gameState.debug_messages.length > 0) {
+            //     this.processDebugMessages(gameState.debug_messages);
+            // }
+
         } catch (error) {
-            this.gameDemo.updateStatus(`Single update failed: ${error.message}`);
-            console.error('Single update error:', error);
+            console.error('Game loop error:', error);
         }
     }
 
@@ -242,14 +199,7 @@ export class GameStateManager {
 
             if (movementResult.success) {
                 this.gameDemo.updateStatus(`Target set: ${movementResult.message}`);
-                this.gameDemo.entityRenderer.showTargetIndicator(x, y);
-                this.gameDemo.selectionManager.clearAllSelections();
-                if (this.gameDemo.entityRenderer.alertHighlight) {
-                    this.gameDemo.app.stage.removeChild(this.gameDemo.entityRenderer.alertHighlight);
-                    this.gameDemo.entityRenderer.alertHighlight = null;
-                }
-                // Update selected entity info after clearing selection
-                this.gameDemo.updateSelectedEntityInfo();
+                this._handleTargetSet(x, y);
             } else {
                 this.gameDemo.updateStatus(`Failed to set target: ${movementResult.message}`);
                 console.error('Failed to set target:', movementResult.message);
@@ -267,13 +217,7 @@ export class GameStateManager {
 
             if (groupResult.success) {
                 this.gameDemo.updateStatus(`Group target set: ${groupResult.message}`);
-                this.gameDemo.entityRenderer.showTargetIndicator(x, y);
-                if (this.gameDemo.entityRenderer.alertHighlight) {
-                    this.gameDemo.app.stage.removeChild(this.gameDemo.entityRenderer.alertHighlight);
-                    this.gameDemo.entityRenderer.alertHighlight = null;
-                }
-                // Update selected entity info after group target
-                this.gameDemo.updateSelectedEntityInfo();
+                this._handleTargetSet(x, y, false); // Don't clear selection for group target
             } else {
                 this.gameDemo.updateStatus(`Failed to set group target: ${groupResult.message}`);
                 console.error('Failed to set group target:', groupResult.message);
@@ -284,7 +228,7 @@ export class GameStateManager {
         }
     }
 
-    processCombatMessages(debugMessages) {
+    processDebugMessages(debugMessages) {
         const combatEvents = [];
 
         for (const message of debugMessages) {
@@ -343,28 +287,7 @@ export class GameStateManager {
 
     gameLoop() {
         if (this.gameDemo.isInitialized && this.gameDemo.autoUpdateEnabled) {
-            const now = Date.now();
-            const dt = (now - this.gameDemo.lastUpdate) / 1000;
-            this.gameDemo.lastUpdate = now;
-
-            try {
-                const result = update(dt);
-                const gameState = JSON.parse(result);
-
-                if (Math.random() < 0.01) {
-                    this.gameDemo.updateStatus(`Running (Auto)...\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`);
-                }
-
-                this.gameDemo.syncEntitiesWithGameState(gameState.entities);
-                this.gameDemo.updateSelectedEntityInfo();
-
-                if (gameState.debug_messages && gameState.debug_messages.length > 0) {
-                    this.processCombatMessages(gameState.debug_messages);
-                }
-
-            } catch (error) {
-                console.error('Game loop error:', error);
-            }
+            this.updateOnce()
         }
     }
 }

@@ -37,5 +37,13 @@ export const GAME_CONFIG = {
         targetIndicatorSize: 10,
         explosionScale: 3.0,
         healthBarLength: 10
+    },
+    VISIBILITY: {
+        range: 200,
+        sameTypeUnitRadius: 200
+    },
+    TIMEOUTS: {
+        targetIndicator: 2000,
+        alertHighlight: 3000
     }
 };

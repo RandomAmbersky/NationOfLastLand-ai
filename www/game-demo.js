@@ -21,6 +21,7 @@ export class GameDemo {
         this.lastUpdate = Date.now();
         this.selectedEntityIds = new Set();
         this.bases = new Map();
+        this._scaleCache = null;
 
         // Инициализация подсистем
         this.inputHandler = new InputHandler(this);
@@ -31,6 +32,26 @@ export class GameDemo {
         this.initPixi();
         this.setupEventListeners();
         this.updateStatus('WebAssembly module loading...');
+    }
+
+    /**
+     * Get cached scale values (invalidated on resize)
+     */
+    getScale() {
+        if (!this._scaleCache) {
+            this._scaleCache = {
+                x: this.app.screen.width / this.gameWidth,
+                y: this.app.screen.height / this.gameHeight
+            };
+        }
+        return this._scaleCache;
+    }
+
+    /**
+     * Invalidate scale cache (call on resize)
+     */
+    invalidateScaleCache() {
+        this._scaleCache = null;
     }
 
     async init() {
@@ -91,6 +112,9 @@ export class GameDemo {
         // Resize Pixi application
         this.app.renderer.resize(rect.width, rect.height);
 
+        // Invalidate scale cache
+        this.invalidateScaleCache();
+
         // Update grid
         this.entityRenderer.updateGrid();
     }
@@ -101,7 +125,6 @@ export class GameDemo {
         document.getElementById('create-base-btn').addEventListener('click', () => this.createBase());
         document.getElementById('build-floor-btn').addEventListener('click', () => this.buildFloor());
         document.getElementById('create-alert-btn').addEventListener('click', () => this.createRandomAlert());
-        document.getElementById('update-btn').addEventListener('click', () => this.manualUpdate());
         document.getElementById('clear-selection-btn').addEventListener('click', () => this.clearAllSelections());
         document.getElementById('start-auto-update-btn').addEventListener('click', () => this.startAutoUpdate());
         document.getElementById('stop-auto-update-btn').addEventListener('click', () => this.stopAutoUpdate());
@@ -126,10 +149,6 @@ export class GameDemo {
 
     async createRandomAlert() {
         await this.gameStateManager.createRandomAlert();
-    }
-
-    manualUpdate() {
-        this.gameStateManager.manualUpdate();
     }
 
     startAutoUpdate() {
@@ -159,7 +178,6 @@ export class GameDemo {
     syncEntitiesWithGameState(gameEntities) {
         // Remove entities that no longer exist in game state
         const gameEntityIds = new Set(gameEntities.map(e => e.id));
-        const alertIds = new Set(gameEntities.filter(e => e.entity_type === 'alert').map(e => e.id));
 
         for (const [id, entity] of this.entities) {
             if (!gameEntityIds.has(id)) {
@@ -192,40 +210,26 @@ export class GameDemo {
             this.entityRenderer.alertHighlight = null;
         }
 
+        // Get cached scale values
+        const scale = this.getScale();
+
         // Update existing entities and add new ones
         for (const gameEntity of gameEntities) {
             if (this.entities.has(gameEntity.id)) {
                 // Update existing entity position and faction
                 const entity = this.entities.get(gameEntity.id);
-                const scaleX = this.app.screen.width / this.gameWidth;
-                const scaleY = this.app.screen.height / this.gameHeight;
-                entity.container.x = gameEntity.x * scaleX;
-                entity.container.y = gameEntity.y * scaleY;
+                const posX = gameEntity.position ? gameEntity.position.x : 0;
+                const posY = gameEntity.position ? gameEntity.position.y : 0;
+                entity.container.x = posX * scale.x;
+                entity.container.y = posY * scale.y;
                 entity.x = entity.container.x;
                 entity.y = entity.container.y;
-                entity.gameX = gameEntity.x;
-                entity.gameY = gameEntity.y;
+                entity.gameX = posX;
+                entity.gameY = posY;
                 entity.faction = gameEntity.faction || null;
 
-                // Update selection indicator based on server state, but only if it differs from local state
-                // and we're not in the middle of a local selection operation
-                const locallySelected = this.selectedEntityIds.has(gameEntity.id);
-                if (!this.selectionManager.selectionOperationInProgress && gameEntity.is_selected !== locallySelected) {
-                    if (gameEntity.is_selected && !entity.selectionIndicator) {
-                        // Add selection indicator if server says selected but we don't have one
-                        const selectionGraphics = new PIXI.Graphics();
-                        selectionGraphics.lineStyle(3, 0x0080FF, 1); // Blue border
-                        selectionGraphics.drawCircle(0, 0, 12);
-                        entity.container.addChild(selectionGraphics);
-                        entity.selectionIndicator = selectionGraphics;
-                        this.selectedEntityIds.add(gameEntity.id);
-                    } else if (!gameEntity.is_selected && entity.selectionIndicator) {
-                        // Remove selection indicator if server says not selected but we have one
-                        entity.container.removeChild(entity.selectionIndicator);
-                        entity.selectionIndicator = null;
-                        this.selectedEntityIds.delete(gameEntity.id);
-                    }
-                }
+                // Selection indicators are managed by SelectionManager, not synced from server state
+                // This prevents unwanted deselection when server state doesn't match local selection
             } else {
                 // Create new visual entity
                 this.createEntityFromGameState(gameEntity);
@@ -240,15 +244,12 @@ export class GameDemo {
         let faction = gameEntity.faction || null;
 
         if (gameEntity.subtype) {
-            // Check entity type first to determine how to handle subtype
-            if (entityType === 'alert') {
-                // This is an alert - use subtype directly
+            // Check if subtype contains '_' which indicates an alert/revealed unit with state (e.g., 'Scout Car_Revealed')
+            if (gameEntity.subtype.includes('_')) {
+                // Keep full subtype for rendering (handles alerts, revealed enemy units, etc.)
                 vehicleType = gameEntity.subtype;
-            } else if (entityType === 'base') {
-                // For bases, always use 'base' as vehicleType for consistent rendering
-                vehicleType = 'base';
-            } else if (entityType === 'vehicle') {
-                // Convert from Rust enum names to JS names for vehicles
+            } else {
+                // Standard vehicle subtype without underscore
                 switch (gameEntity.subtype) {
                     case 'Scout Car':
                         vehicleType = 'scout';
@@ -259,17 +260,21 @@ export class GameDemo {
                     case 'Armored Truck':
                         vehicleType = 'transport';
                         break;
+                    case 'raider':
+                    case 'hostile':
+                    case 'static':
+                        vehicleType = gameEntity.subtype;
+                        break;
                     default:
                         vehicleType = 'scout';
                 }
-            } else if (entityType === 'base') {
-                // For bases, always use 'base' as vehicleType for consistent rendering
-                vehicleType = 'base';
             }
         }
 
         // Create entity with game coordinates (createEntitySprite will convert to screen coordinates)
-        this.entityRenderer.createEntitySprite(gameEntity.id, gameEntity.x, gameEntity.y, vehicleType, faction, entityType);
+        const posX = gameEntity.position ? gameEntity.position.x : 0;
+        const posY = gameEntity.position ? gameEntity.position.y : 0;
+        this.entityRenderer.createEntitySprite(gameEntity.id, posX, posY, vehicleType, faction, entityType);
     }
 
     areFactionsHostile(factionA, factionB) {
@@ -313,25 +318,7 @@ export class GameDemo {
     }
 
     updateStatus(message) {
-        let fullMessage = message;
-
-        if (this.selectedEntityIds.size > 0) {
-            if (this.selectedEntityIds.size === 1) {
-                // Show info about the single selected unit
-                const entityId = Array.from(this.selectedEntityIds)[0];
-                const entity = this.entities.get(entityId);
-                if (entity) {
-                    const entityType = entity.entityType === 'vehicle' ? entity.vehicleType : entity.entityType;
-                    const faction = entity.faction || 'Unknown';
-                    fullMessage += `\n\n[Выбран: ${entityType} (${faction}) #${entityId}]`;
-                }
-            } else {
-                // Show count for multiple units
-                fullMessage += `\n\n[Выбрано юнитов: ${this.selectedEntityIds.size}/12]`;
-            }
-        }
-
-        document.getElementById('status').textContent = fullMessage;
+        document.getElementById('status').textContent = message;
     }
 
     updateEntityInfo(message) {
@@ -380,45 +367,21 @@ export class GameDemo {
     }
 
     // Update information for selected entities dynamically
-    async updateSelectedEntityInfo() {
-        // Clean up dead entities from selection first
-        const entitiesToRemove = [];
-        for (const entityId of this.selectedEntityIds) {
-            // Check if entity exists in visual representation
-            if (!this.entities.has(entityId)) {
-                entitiesToRemove.push(entityId);
-                continue;
-            }
+    async updateSelectedEntityInfo(gameEntities) {
 
-            // Check if entity is dead by checking game state
-            try {
-                const updateResult = update(0.001);
-                const gameState = JSON.parse(updateResult);
-                const gameEntity = gameState.entities.find(entity => entity.id === entityId);
+        // Check if selected units still have targets - hide target indicator if none do
+        this.checkAndUpdateTargetIndicator(gameEntities);
 
-                if (!gameEntity || (gameEntity.health && gameEntity.health[0] <= 0)) {
-                    entitiesToRemove.push(entityId);
-                }
-            } catch (error) {
-                // If we can't check, assume entity is dead
-                entitiesToRemove.push(entityId);
-            }
-        }
-
-        // Remove dead entities from selection
-        for (const entityId of entitiesToRemove) {
-            this.selectedEntityIds.delete(entityId);
-            const entity = this.entities.get(entityId);
-            if (entity && entity.selectionIndicator) {
-                entity.container.removeChild(entity.selectionIndicator);
-                entity.selectionIndicator = null;
-            }
-        }
-
-        // Now check if we should show info: only for single selected entities, not for groups
-        if (this.selectedEntityIds.size !== 1) {
-            // If no entities or multiple entities selected, clear the info
+        // If no entities selected, clear info
+        if (this.selectedEntityIds.size === 0) {
             this.updateEntityInfo(null);
+            return;
+        }
+
+        // console.log(this.selectedEntityIds)
+
+        if (this.selectedEntityIds.size > 1) {
+            this.updateGroupInfo(gameEntities);
             return;
         }
 
@@ -427,47 +390,38 @@ export class GameDemo {
         // Get the first selected entity to display its info
         const selectedEntityId = Array.from(this.selectedEntityIds)[0];
 
-        // First check if the selected entity is still alive by checking game state
-        // This prevents showing stale information for dead entities
-        try {
-            const updateResult = update(0.001); // Minimal update to get current state
-            const gameState = JSON.parse(updateResult);
-
-            // Check if the selected entity still exists in the current game state
-            const gameEntity = gameState.entities.find(entity => entity.id === selectedEntityId);
-            if (!gameEntity) {
-                this.updateEntityInfo(null);
-                // Remove from selection
-                this.selectedEntityIds.delete(selectedEntityId);
-                const entity = this.entities.get(selectedEntityId);
-                if (entity && entity.selectionIndicator) {
-                    entity.container.removeChild(entity.selectionIndicator);
-                    entity.selectionIndicator = null;
-                }
-                return;
+        // Check if the selected entity still exists in the current game state
+        const gameEntity = gameEntities.find(entity => entity.id === selectedEntityId);
+        if (!gameEntity) {
+            this.updateEntityInfo(null);
+            // Remove from selection
+            this.selectedEntityIds.delete(selectedEntityId);
+            const entity = this.entities.get(selectedEntityId);
+            if (entity && entity.selectionIndicator) {
+                entity.container.removeChild(entity.selectionIndicator);
+                entity.selectionIndicator = null;
             }
+            return;
+        }
 
-            // Check if entity is dead (health <= 0)
-            const isDead = gameEntity.health && gameEntity.health[0] <= 0;
+        // Check if entity is dead (health <= 0)
+        const isDead = gameEntity.health && gameEntity.health[0] <= 0;
 
-            if (isDead) {
-                this.updateEntityInfo(null);
-                // Remove from selection
-                this.selectedEntityIds.delete(selectedEntityId);
-                const entity = this.entities.get(selectedEntityId);
-                if (entity && entity.selectionIndicator) {
-                    entity.container.removeChild(entity.selectionIndicator);
-                    entity.selectionIndicator = null;
-                }
-                // Clear any info indicators
-                if (entity && entity.infoIndicator) {
-                    entity.container.removeChild(entity.infoIndicator);
-                    entity.infoIndicator = null;
-                }
-                return;
+        if (isDead) {
+            this.updateEntityInfo(null);
+            // Remove from selection
+            this.selectedEntityIds.delete(selectedEntityId);
+            const entity = this.entities.get(selectedEntityId);
+            if (entity && entity.selectionIndicator) {
+                entity.container.removeChild(entity.selectionIndicator);
+                entity.selectionIndicator = null;
             }
-        } catch (error) {
-            console.error('Error checking entity existence:', error);
+            // Clear any info indicators
+            if (entity && entity.infoIndicator) {
+                entity.container.removeChild(entity.infoIndicator);
+                entity.infoIndicator = null;
+            }
+            return;
         }
 
         try {
@@ -571,6 +525,14 @@ export class GameDemo {
             }
         }
 
+        // Add selection info
+        const isSelected = entityInfo.selection?.is_selected ?? false;
+        const groupId = entityInfo.selection?.group_id;
+
+        if (groupId !== null && groupId !== undefined) {
+            infoText += `👥 Group: ${groupId}\n`;
+        }
+
         // Add commands if requested
         if (includeCommands && entityInfo.faction === 'Player') {
             if (entityInfo.entity_type === 'base') {
@@ -580,7 +542,7 @@ export class GameDemo {
                 infoText += `  • [Улучшить этаж] - Upgrade existing floor\n`;
                 infoText += `  • [Назначить юнитов] - Assign units to floors\n`;
                 infoText += `  • [Информация] - View base details\n`;
-            } else if (entityInfo.is_selected) {
+            } else if (isSelected) {
                 infoText += `\n Available Commands:\n`;
                 infoText += `  • [Двигаться] - Right-click map\n`;
                 infoText += `  • [Атаковать] - Right-click enemy\n`;
@@ -591,7 +553,7 @@ export class GameDemo {
             }
         }
 
-        if (entityInfo.is_selected) {
+        if (isSelected) {
             infoText += '\n✅ SELECTED';
         }
 
@@ -632,6 +594,77 @@ export class GameDemo {
         }
     }
 
+    // Отображение информации о группе выбранных юнитов игрока (здоровье каждого)
+    updateGroupInfo(gameEntities) {
+        // console.log('updateGroupInfo called with gameState:', gameState ? 'present' : 'null');
+
+        // Фильтруем только юнитов игрока
+        const playerUnits = Array.from(this.selectedEntityIds).filter(entityId => {
+            const entity = this.entities.get(entityId);
+            return entity && entity.faction === 'Player';
+        });
+
+        // console.log('Player units found:', playerUnits.length);
+
+        if (playerUnits.length === 0) {
+            this.updateEntityInfo(null);
+            return;
+        }
+
+        let infoText = `🏷️ Группа (${playerUnits.length} юнитов игрока)\n`;
+        infoText += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+        for (const entityId of playerUnits) {
+            const entity = this.entities.get(entityId);
+            let healthText = '❓ Неизвестно';
+            let isDead = false;
+
+            // Get health from gameState first, fallback to get_entity_info
+            const gameEntity = gameEntities.find(e => e.id === entityId);
+            if (gameEntity && gameEntity.health) {
+                const [current, max] = gameEntity.health;
+                const percentage = (current / max * 100).toFixed(1);
+                const healthBar = this.createHealthBar(current, max);
+                healthText = `${healthBar} ${percentage}%`;
+                if (current <= 0) isDead = true;
+                // console.log(`Health from gameState for entity ${entityId}: ${current}/${max}`);
+            } else {
+                console.log(`No health in gameState for entity ${entityId}`);
+            }
+
+            // Fallback: try to get health via get_entity_info if gameState didn't have it
+            if (healthText === '❓ Неизвестно') {
+                try {
+                    const result = get_entity_info(entityId);
+                    const entityInfo = JSON.parse(result);
+                    if (entityInfo.health) {
+                        const [current, max] = entityInfo.health;
+                        const percentage = (current / max * 100).toFixed(1);
+                        const healthBar = this.createHealthBar(current, max);
+                        healthText = `${healthBar} ${percentage}%`;
+                        if (current <= 0) isDead = true;
+                        console.log(`Health from get_entity_info for entity ${entityId}: ${current}/${max}`);
+                    }
+                } catch (error) {
+                    console.error(`Error getting entity info for ${entityId}:`, error);
+                }
+            }
+
+            const typeName = entity ? (entity.subtype || entity.vehicleType || 'unit') : 'unit';
+            const deadMark = isDead ? ' 💀' : '';
+            infoText += `  #${entityId} (${typeName}): ${healthText}${deadMark}\n`;
+        }
+
+        infoText += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+        // Get the entity info div element
+        const entityInfoDiv = document.getElementById('entity-info');
+
+        // Always update for group info (no change check needed)
+        entityInfoDiv.innerHTML = infoText;
+        // console.log('Group info updated');
+    }
+
     // Create a visual health bar
     createHealthBar(current, max) {
         const percentage = current / max;
@@ -660,11 +693,10 @@ export class GameDemo {
     }
 
     gameToScreen(x, y) {
-        const scaleX = this.app.screen.width / this.gameWidth;
-        const scaleY = this.app.screen.height / this.gameHeight;
+        const scale = this.getScale();
         return {
-            x: x * scaleX,
-            y: y * scaleY
+            x: x * scale.x,
+            y: y * scale.y
         };
     }
 
@@ -728,6 +760,33 @@ export class GameDemo {
 
     clearAllSelections() {
         this.selectionManager.clearAllSelections();
+    }
+
+    // Check if selected units still have targets and hide target indicator if none do
+    checkAndUpdateTargetIndicator(entities) {
+        // If no target indicator is currently shown, nothing to check
+        if (!this.entityRenderer.targetIndicator) {
+            return;
+        }
+
+        // Check if any selected player units still have movement targets
+        let hasAnyTarget = false;
+
+        for (const entityId of this.selectedEntityIds) {
+            const gameEntity = entities.find(e => e.id === entityId);
+            if (gameEntity && gameEntity.movement) {
+                // Check if this unit has a target
+                if (gameEntity.movement.target_x !== null && gameEntity.movement.target_y !== null) {
+                    hasAnyTarget = true;
+                    break;
+                }
+            }
+        }
+
+        // If no selected units have targets, hide the target indicator
+        if (!hasAnyTarget) {
+            this.entityRenderer.clearTargetIndicator();
+        }
     }
 }
 

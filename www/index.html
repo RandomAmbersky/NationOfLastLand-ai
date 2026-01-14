@@ -6,12 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nation of Last Land - WebAssembly Demo</title>
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        html,
-        body {
+        * { box-sizing: border-box; }
+        html, body {
             margin: 0;
             padding: 0;
             height: 100%;
@@ -19,9 +15,7 @@
             background-color: #1a1a1a;
             color: #ffffff;
             overflow: hidden;
-            /* Предотвращает прокрутку */
         }
-
         .container {
             height: 100vh;
             display: flex;
@@ -29,7 +23,6 @@
             padding: 10px;
             gap: 10px;
         }
-
         h1 {
             text-align: center;
             color: #4CAF50;
@@ -37,23 +30,18 @@
             font-size: 1.5rem;
             flex-shrink: 0;
         }
-
         .demo-section {
             flex: 1;
             display: flex;
             gap: 15px;
             min-height: 0;
-            /* Позволяет flex элементам сжиматься */
         }
-
         .game-container {
             flex: 1;
             display: flex;
             flex-direction: column;
             min-width: 0;
-            /* Позволяет сжиматься */
         }
-
         #game-canvas {
             flex: 1;
             border: 2px solid #4CAF50;
@@ -62,7 +50,6 @@
             min-height: 300px;
             max-height: calc(100vh - 200px);
         }
-
         .controls {
             background-color: #2a2a2a;
             padding: 15px;
@@ -75,21 +62,13 @@
             gap: 10px;
             overflow-y: auto;
         }
-
         .control-group {
             display: flex;
             flex-direction: column;
             gap: 5px;
         }
-
-        label {
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
-
-        input,
-        select,
-        button {
+        label { font-weight: bold; font-size: 0.9rem; }
+        input, select, button {
             padding: 8px;
             border: 1px solid #555;
             border-radius: 4px;
@@ -97,7 +76,6 @@
             color: #fff;
             font-size: 0.9rem;
         }
-
         button {
             background-color: #4CAF50;
             border: none;
@@ -105,12 +83,8 @@
             font-weight: bold;
             transition: background-color 0.2s;
         }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
-        #status {
+        button:hover { background-color: #45a049; }
+        #status, #entity-info {
             padding: 10px;
             background-color: #333;
             border-radius: 4px;
@@ -120,37 +94,11 @@
             overflow-y: auto;
             min-height: 40px;
         }
-
-        #entity-info {
-            padding: 10px;
-            background-color: #333;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.8rem;
-            white-space: pre-wrap;
-            overflow-y: auto;
-            min-height: 60px;
-            border: 1px solid #4CAF50;
-        }
-
-
-        /* Медиа-запросы для мобильных устройств */
+        #entity-info { border: 1px solid #4CAF50; }
         @media (max-width: 768px) {
-            .container {
-                padding: 5px;
-                gap: 5px;
-            }
-
-            h1 {
-                font-size: 1.2rem;
-                margin-bottom: 5px;
-            }
-
-            .demo-section {
-                flex-direction: column;
-                gap: 10px;
-            }
-
+            .container { padding: 5px; gap: 5px; }
+            h1 { font-size: 1.2rem; margin-bottom: 5px; }
+            .demo-section { flex-direction: column; gap: 10px; }
             .controls {
                 min-width: unset;
                 max-width: unset;
@@ -159,54 +107,24 @@
                 padding: 10px;
                 gap: 8px;
             }
-
-            .control-group {
-                flex: 1;
-                min-width: 120px;
-            }
-
-            #status {
-                font-size: 0.75rem;
-                min-height: 40px;
-            }
-
-            #entity-info {
-                font-size: 0.75rem;
-                min-height: 40px;
-            }
-
+            .control-group { flex: 1; min-width: 120px; }
+            #status, #entity-info { font-size: 0.75rem; }
         }
-
         @media (max-width: 480px) {
-            .controls {
-                flex-direction: column;
-                gap: 5px;
-            }
-
-            .control-group {
-                min-width: unset;
-            }
-
-            input,
-            select,
-            button {
-                font-size: 0.85rem;
-                padding: 6px;
-            }
-
+            .controls { flex-direction: column; gap: 5px; }
+            .control-group { min-width: unset; }
+            input, select, button { font-size: 0.85rem; padding: 6px; }
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h1>🧱 Nation of Last Land - WebAssembly Demo</h1>
-
+        <h1>Nation of Last Land - WebAssembly Demo</h1>
         <div class="demo-section">
             <div class="game-container">
                 <canvas id="game-canvas" width="800" height="600"></canvas>
             </div>
-
             <div class="controls">
                 <div class="control-group">
                     <label for="vehicle-type">Vehicle Type:</label>
@@ -216,27 +134,14 @@
                         <option value="transport">Transport</option>
                     </select>
                 </div>
-
-                <div class="control-group">
-                    <label for="spawn-x">X Position:</label>
-                    <input type="number" id="spawn-x" value="200" min="0" max="800">
-                </div>
-
-                <div class="control-group">
-                    <label for="spawn-y">Y Position:</label>
-                    <input type="number" id="spawn-y" value="150" min="0" max="600">
-                </div>
-
                 <div class="control-group">
                     <label for="base-x">Base X:</label>
                     <input type="number" id="base-x" value="100" min="0" max="800">
                 </div>
-
                 <div class="control-group">
                     <label for="base-y">Base Y:</label>
                     <input type="number" id="base-y" value="100" min="0" max="600">
                 </div>
-
                 <div class="control-group">
                     <label for="floor-type">Floor Type:</label>
                     <select id="floor-type">
@@ -246,36 +151,26 @@
                         <option value="rest">Rest</option>
                     </select>
                 </div>
-
                 <button id="spawn-btn">Spawn Vehicle</button>
                 <button id="create-base-btn">Create Base</button>
                 <button id="build-floor-btn">Build Floor</button>
                 <button id="create-alert-btn">Create Random Alert</button>
                 <button id="init-btn">Initialize Game</button>
-                <button id="update-btn">Update Game</button>
                 <button id="clear-selection-btn">Clear Selection</button>
-
                 <div style="margin: 8px 0; display: flex; gap: 5px; flex-wrap: wrap;">
                     <button id="start-auto-update-btn">Start Auto Update</button>
                     <button id="stop-auto-update-btn">Stop Auto Update</button>
                     <button id="update-once-btn">Update Once</button>
                 </div>
-
                 <div class="info-section">
                     <div id="status">Ready to initialize...</div>
-                    <div id="entity-info" style="margin-top: 10px; padding: 8px; background-color: #2a2a2a; border-radius: 4px; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; overflow-y: auto; min-height: 60px; display: none;">No entity selected</div>
+                    <div id="entity-info" style="display: none;">No entity selected</div>
                 </div>
             </div>
         </div>
     </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
-    <script type="module" src="./wasm-imports.js"></script>
-    <script type="module" src="./input-handler.js"></script>
-    <script type="module" src="./entity-renderer.js"></script>
-    <script type="module" src="./selection-manager.js"></script>
-    <script type="module" src="./game-state-manager.js"></script>
     <script type="module" src="./game-demo.js"></script>
 </body>
-
 </html>
+

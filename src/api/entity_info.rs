@@ -1,5 +1,6 @@
 use crate::api::init::GAME_WORLD;
 use crate::game::components::*;
+use crate::game::components::selection::Selection;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -23,7 +24,7 @@ pub struct EntityInfo {
     pub devices: Vec<DeviceInfo>,
     pub combat_cooldown: Option<(f32, f32)>, // (current, max)
     pub speed: Option<f32>,
-    pub is_selected: bool,
+    pub selection: Option<Selection>,
 }
 
 #[wasm_bindgen]
@@ -88,7 +89,7 @@ pub fn get_entity_info(entity_id: u32) -> Result<String, JsValue> {
             devices: Vec::new(),
             combat_cooldown: None,
             speed: None,
-            is_selected: false,
+            selection: None,
         };
 
         // Get position
@@ -108,7 +109,7 @@ pub fn get_entity_info(entity_id: u32) -> Result<String, JsValue> {
         // Get selection state
         if let Ok(mut query) = world.world.query_one::<&Selection>(entity) {
             if let Some(selection) = query.get() {
-                entity_info.is_selected = selection.is_selected;
+                entity_info.selection = Some(selection.clone());
             }
         }
 
