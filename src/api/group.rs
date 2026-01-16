@@ -286,6 +286,8 @@ pub fn handle_standard_entity_selection(
     }
 }
 
+
+
 /// Internal function to select an entity
 pub fn select_entity_internal(world: &mut hecs::World, entity: hecs::Entity, exclusive: bool) {
     if exclusive {
@@ -730,6 +732,72 @@ mod tests {
     use crate::game::components::Faction;
     use hecs::World;
 
+    /// Test version of handle_entity_selection that works with a direct world reference
+    /// This is used for testing to avoid global state issues
+    pub fn handle_entity_selection_test(
+        world: &mut hecs::World,
+        entity_id: u32,
+        is_multi_select: bool,
+        current_selected_ids: Vec<u32>
+    ) -> Result<String, JsValue> {
+        // Find the clicked entity
+        let mut clicked_entity = None;
+        for (entity, ()) in world.query::<()>().iter() {
+            if entity.id() == entity_id {
+                clicked_entity = Some(entity);
+                break;
+            }
+        }
+
+        let clicked_entity = match clicked_entity {
+            Some(entity) => entity,
+            None => {
+                let result = SelectionResult {
+                    success: false,
+                    message: format!("Entity {} not found", entity_id),
+                    action: SelectionAction::NoAction,
+                    selected_entities: current_selected_ids,
+                    target_assigned: None,
+                };
+                return serde_json::to_string(&result)
+                    .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)));
+            }
+        };
+
+        // Get current selected entities
+        let mut current_selected_entities = Vec::new();
+        for &selected_id in &current_selected_ids {
+            for (entity, ()) in world.query::<()>().iter() {
+                if entity.id() == selected_id {
+                    current_selected_entities.push(entity);
+                    break;
+                }
+            }
+        }
+
+        // Rule 7: If immobile player unit (base) is selected and clicking on another unit
+        // Clear selection and select the new unit
+        if has_immobile_player_unit_selected(world, &current_selected_entities) {
+            return handle_immobile_unit_selection(world, clicked_entity, entity_id);
+        }
+
+        // Rule 8: If non-player unit is selected and clicking on another unit
+        // Clear selection and select the new unit
+        if has_non_player_unit_selected(world, &current_selected_entities) {
+            return handle_non_player_unit_selection(world, clicked_entity, entity_id);
+        }
+
+        // Rule 6: If movable player units are selected and clicking on non-player faction unit
+        // Assign as target instead of selecting
+        let selected_player_movable_units = get_selected_player_movable_units(world, &current_selected_entities);
+        if !selected_player_movable_units.is_empty() && is_non_player_faction_entity(world, clicked_entity) {
+            return handle_group_targeting(world, clicked_entity, entity_id);
+        }
+
+        // Standard selection logic
+        handle_standard_entity_selection(world, clicked_entity, entity_id, is_multi_select, &current_selected_entities)
+    }
+
     /// Helper function to create a test world with entities
     fn create_test_world() -> World {
         let mut world = World::new();
@@ -811,7 +879,7 @@ mod tests {
 
         // Click on player vehicle - should clear enemy selection and select player vehicle (Rule 8)
         let current_selected = get_selected_entities_internal(&world);
-        let result = handle_entity_selection(player_vehicle.id(), false, current_selected).unwrap();
+        let result = handle_entity_selection_test(&mut world, player_vehicle.id(), false, current_selected).unwrap();
         let selection_result: SelectionResult = serde_json::from_str(&result).unwrap();
 
         assert!(selection_result.success);
@@ -839,7 +907,7 @@ mod tests {
 
         // Click on enemy vehicle - should assign as target instead of selecting (Rule 6)
         let current_selected = get_selected_entities_internal(&world);
-        let result = handle_entity_selection(enemy_vehicle.id(), false, current_selected).unwrap();
+        let result = handle_entity_selection_test(&mut world, enemy_vehicle.id(), false, current_selected).unwrap();
         let selection_result: SelectionResult = serde_json::from_str(&result).unwrap();
 
         assert!(selection_result.success);
@@ -867,7 +935,7 @@ mod tests {
 
         // Click on alert - should assign as target instead of selecting (Rule 6)
         let current_selected = get_selected_entities_internal(&world);
-        let result = handle_entity_selection(alert.id(), false, current_selected).unwrap();
+        let result = handle_entity_selection_test(&mut world, alert.id(), false, current_selected).unwrap();
         let selection_result: SelectionResult = serde_json::from_str(&result).unwrap();
 
         assert!(selection_result.success);
@@ -891,7 +959,7 @@ mod tests {
 
         // No entities selected initially
         let current_selected = get_selected_entities_internal(&world);
-        let result = handle_entity_selection(player_vehicle.id(), false, current_selected).unwrap();
+        let result = handle_entity_selection_test(&mut world, player_vehicle.id(), false, current_selected).unwrap();
         let selection_result: SelectionResult = serde_json::from_str(&result).unwrap();
 
         assert!(selection_result.success);
@@ -911,16 +979,22 @@ mod tests {
             .find(|(_, v)| v.vehicle_type == VehicleType::ScoutCar)
             .unwrap().0;
 
-        // Select player base first
-        select_entity_internal(&mut world, player_base, true);
+        // Select player vehicle first (movable unit)
+        select_entity_internal(&mut world, player_vehicle, true);
 
-        // Multi-select player vehicle (should add to selection)
+        // Check that vehicle is selected
+        let after_vehicle_select = get_selected_entities_internal(&world);
+        assert_eq!(after_vehicle_select.len(), 1);
+        assert_eq!(after_vehicle_select[0], player_vehicle.id());
+
+        // Multi-select player base (should add to selection since vehicle is movable)
         let current_selected = get_selected_entities_internal(&world);
-        let result = handle_entity_selection(player_vehicle.id(), true, current_selected).unwrap();
+        let result = handle_entity_selection_test(&mut world, player_base.id(), true, current_selected).unwrap();
         let selection_result: SelectionResult = serde_json::from_str(&result).unwrap();
 
         assert!(selection_result.success);
         assert_eq!(selection_result.action, SelectionAction::EntitySelected);
+        assert_eq!(selection_result.selected_entities.len(), 2);
         assert!(selection_result.selected_entities.contains(&player_base.id()));
         assert!(selection_result.selected_entities.contains(&player_vehicle.id()));
         assert!(selection_result.target_assigned.is_none());
@@ -941,7 +1015,7 @@ mod tests {
 
         // Multi-select the same vehicle again (should deselect it)
         let current_selected = get_selected_entities_internal(&world);
-        let result = handle_entity_selection(player_vehicle.id(), true, current_selected).unwrap();
+        let result = handle_entity_selection_test(&mut world, player_vehicle.id(), true, current_selected).unwrap();
         let selection_result: SelectionResult = serde_json::from_str(&result).unwrap();
 
         assert!(selection_result.success);
