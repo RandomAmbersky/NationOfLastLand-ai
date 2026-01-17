@@ -33,13 +33,16 @@ src/
 
 ```rust
 // Инициализация игры
-fn init() -> String // JSON с начальным состоянием
+pub fn init() -> Result<String, JsValue> // JSON с начальным состоянием игры
 
 // Создание юнита
-fn create_vehicle(type: &str, position: (f32, f32)) -> String // JSON с ID юнита
+pub fn create_vehicle(vehicle_type: &str, x: f32, y: f32) -> Result<String, JsValue> // JSON с результатом создания
 
 // Игровой цикл
-fn update(dt: f32) -> String // JSON с обновленным состоянием мира
+pub fn update(dt: f32) -> Result<String, JsValue> // JSON с обновленным состоянием мира
+
+// Загрузка конфигурации
+pub fn load_config(yaml_str: &str) -> Result<(), JsValue> // Загрузка YAML конфигурации
 ```
 
 ## Формат данных
