@@ -259,12 +259,23 @@ export class SelectionManager {
         for (const entityId of unitsToSelect) {
             try {
                 const selectionResult = await this._performEntitySelection(entityId, true);
-                if (!selectionResult.success) {
+                if (selectionResult.success) {
+                    // Обрабатываем действия выбора для последнего выбранного юнита
+                    if (selectionResult.action === 'EntitySelected') {
+                        this.gameDemo.displayEntityInfo(entityId);
+                    }
+                } else {
                     console.warn(`Не удалось выбрать юнит ${entityId}:`, selectionResult.message);
                 }
             } catch (error) {
                 console.error('Ошибка при выборе сущности рамкой:', error);
             }
+        }
+
+        // Если выбран только один юнит, показываем его информацию
+        if (this.gameDemo.selectedEntityIds.size === 1) {
+            const selectedEntityId = Array.from(this.gameDemo.selectedEntityIds)[0];
+            this.gameDemo.displayEntityInfo(selectedEntityId);
         }
     }
 
