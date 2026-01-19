@@ -182,14 +182,11 @@ export class SelectionManager {
             console.error('Ошибка очистки выделения на сервере:', error);
         }
 
-        for (const entityId of this.gameDemo.selectedEntityIds) {
-            const entity = this.gameDemo.entities.get(entityId);
-            if (entity && entity.selectionIndicator) {
-                entity.container.removeChild(entity.selectionIndicator);
-                entity.selectionIndicator = null;
-            }
-        }
-        this.gameDemo.selectedEntityIds.clear();
+        // Используем централизованный метод для очистки состояния
+        // Получаем все текущие выделенные сущности и очищаем их
+        const allSelected = Array.from(this.gameDemo.selectedEntityIds);
+        this.gameDemo.updateSelectionState(allSelected);
+
         this.gameDemo.updateStatus('Выделение снято.');
         this.gameDemo.updateEntityInfo(null);
         this.gameDemo.updateSpawnButtonState();

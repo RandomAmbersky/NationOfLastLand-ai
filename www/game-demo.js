@@ -175,6 +175,98 @@ export class GameDemo {
         this.gameStateManager.gameLoop();
     }
 
+    // Централизованный метод для обновления состояния выделения
+    updateSelectionState(removedEntities = []) {
+        let removedCount = 0;
+
+        // Удаляем сущности, которые были убраны из выделения на сервере
+        for (const entityId of removedEntities) {
+            if (this.selectedEntityIds.has(entityId)) {
+                this.selectedEntityIds.delete(entityId);
+                removedCount++;
+
+                // Удаляем визуальный индикатор выделения
+                const entity = this.entities.get(entityId);
+                if (entity && entity.selectionIndicator) {
+                    entity.container.removeChild(entity.selectionIndicator);
+                    entity.selectionIndicator = null;
+                }
+
+                console.log(`Entity ${entityId} removed from selection (destroyed)`);
+            }
+        }
+
+        // Дополнительная проверка: удаляем сущности, которые больше не существуют в мире
+        const entitiesToRemove = [];
+        for (const entityId of this.selectedEntityIds) {
+            if (!this.entities.has(entityId)) {
+                entitiesToRemove.push(entityId);
+            }
+        }
+
+        for (const entityId of entitiesToRemove) {
+            this.selectedEntityIds.delete(entityId);
+            removedCount++;
+            console.log(`Entity ${entityId} removed from selection (no longer exists)`);
+        }
+
+        if (removedCount > 0) {
+            this.updateStatus(`${removedCount} selected unit(s) were destroyed!`);
+        }
+
+        // Валидация консистентности состояния
+        this._validateSelectionState();
+
+        return removedCount;
+    }
+
+    // Валидация консистентности состояния выделения
+    _validateSelectionState() {
+        const inconsistencies = [];
+
+        for (const entityId of this.selectedEntityIds) {
+            const entity = this.entities.get(entityId);
+            if (!entity) {
+                inconsistencies.push(`Entity ${entityId} in selection but not in entities map`);
+            } else if (!entity.selectionIndicator) {
+                inconsistencies.push(`Entity ${entityId} selected but has no visual indicator`);
+            }
+        }
+
+        // Проверяем, что все визуальные индикаторы соответствуют выделению
+        for (const [entityId, entity] of this.entities) {
+            if (entity.selectionIndicator && !this.selectedEntityIds.has(entityId)) {
+                inconsistencies.push(`Entity ${entityId} has indicator but not in selection`);
+            }
+        }
+
+        if (inconsistencies.length > 0) {
+            console.warn('Selection state inconsistencies detected:', inconsistencies);
+            // Автоматическая коррекция
+            this._fixSelectionInconsistencies();
+        }
+    }
+
+    // Автоматическая коррекция несогласованностей
+    _fixSelectionInconsistencies() {
+        // Удаляем индикаторы для невыделенных сущностей
+        for (const [entityId, entity] of this.entities) {
+            if (entity.selectionIndicator && !this.selectedEntityIds.has(entityId)) {
+                entity.container.removeChild(entity.selectionIndicator);
+                entity.selectionIndicator = null;
+            }
+        }
+
+        // Добавляем недостающие индикаторы для выделенных сущностей
+        for (const entityId of this.selectedEntityIds) {
+            const entity = this.entities.get(entityId);
+            if (entity && !entity.selectionIndicator) {
+                const isEnemy = entity.faction === 'Enemy' || entity.faction === 'Wild' || entity.entityType === 'alert';
+                this.selectionManager._createSelectionIndicator(entity, isEnemy);
+            }
+        }
+    }
+
     syncEntitiesWithGameState(gameEntities) {
         // Remove entities that no longer exist in game state
         const gameEntityIds = new Set(gameEntities.map(e => e.id));
@@ -190,19 +282,8 @@ export class GameDemo {
             }
         }
 
-        // Clear selection for entities that no longer exist
-        const entitiesToRemove = [];
-        for (const entityId of this.selectedEntityIds) {
-            if (!gameEntityIds.has(entityId)) {
-                entitiesToRemove.push(entityId);
-            }
-        }
-        for (const entityId of entitiesToRemove) {
-            this.selectionManager.deselectEntity(entityId, true);
-        }
-        if (entitiesToRemove.length > 0) {
-            this.updateStatus(`${entitiesToRemove.length} selected unit(s) were destroyed!`);
-        }
+        // NOTE: Selection cleanup now handled by updateSelectionState() in game-state-manager.js
+        // to avoid duplication and ensure proper ordering
 
         // Always clear alert highlight on every update (most aggressive cleanup)
         if (this.entityRenderer.alertHighlight) {

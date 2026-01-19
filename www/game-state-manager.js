@@ -176,27 +176,8 @@ export class GameStateManager {
                 this.gameDemo.updateStatus(`Running (Auto)...\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`);
             }
 
-            // Handle entities that were removed from selection during this update
-            if (gameState.removed_entities && gameState.removed_entities.length > 0) {
-                for (const entityId of gameState.removed_entities) {
-                    // Remove from local selection state
-                    this.gameDemo.selectedEntityIds.delete(entityId);
-
-                    // Remove visual selection indicator
-                    const entity = this.gameDemo.entities.get(entityId);
-                    if (entity && entity.selectionIndicator) {
-                        entity.container.removeChild(entity.selectionIndicator);
-                        entity.selectionIndicator = null;
-                    }
-
-                    console.log(`Entity ${entityId} was removed from selection (destroyed)`);
-                }
-
-                // Update UI status if entities were removed
-                if (gameState.removed_entities.length > 0) {
-                    this.gameDemo.updateStatus(`${gameState.removed_entities.length} selected unit(s) were destroyed!`);
-                }
-            }
+            // Централизованное обновление состояния выделения с removed_entities
+            this.gameDemo.updateSelectionState(gameState.removed_entities || []);
 
             this.gameDemo.syncEntitiesWithGameState(gameState.entities);
             this.gameDemo.updateSelectedEntityInfo(gameState.entities);
