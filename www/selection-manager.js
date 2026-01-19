@@ -18,15 +18,9 @@ export class SelectionManager {
         this.isSelecting = true;
 
         try {
-            // Используем новую логику выбора из Rust
-            const currentSelectedIds = Array.from(this.gameDemo.selectedEntityIds);
-            const result = await handle_entity_selection(entityId, isMultiSelect, currentSelectedIds);
-            const selectionResult = JSON.parse(result);
+            const selectionResult = await this._performEntitySelection(entityId, isMultiSelect);
 
             if (selectionResult.success) {
-                // Обновляем локальное состояние на основе результата из Rust
-                this._updateLocalSelectionState(selectionResult);
-
                 // Обрабатываем различные действия
                 switch (selectionResult.action) {
                     case 'EntitySelected':
@@ -107,6 +101,22 @@ export class SelectionManager {
         const targetFaction = targetEntity ? (targetEntity.faction || 'Unknown') : 'Unknown';
 
         this.gameDemo.updateStatus(`Группа атакует: ${targetType} (#${targetAssignment.target_entity_id}) ${targetFaction}`);
+    }
+
+    /**
+     * Выполняет выбор сущности через handle_entity_selection и обновляет локальное состояние
+     */
+    async _performEntitySelection(entityId, isMultiSelect) {
+        const currentSelectedIds = Array.from(this.gameDemo.selectedEntityIds);
+        const result = await handle_entity_selection(entityId, isMultiSelect, currentSelectedIds);
+        const selectionResult = JSON.parse(result);
+
+        if (selectionResult.success) {
+            // Обновляем локальное состояние на основе результата из Rust
+            this._updateLocalSelectionState(selectionResult);
+        }
+
+        return selectionResult;
     }
 
     selectEntity(entityId, bypassCheck = false, exclusive = true) {
@@ -248,19 +258,24 @@ export class SelectionManager {
         // чтобы получить правильное отображение группы
         for (const entityId of unitsToSelect) {
             try {
-                const currentSelectedIds = Array.from(this.gameDemo.selectedEntityIds);
-                const result = await handle_entity_selection(entityId, true, currentSelectedIds);
-                const selectionResult = JSON.parse(result);
-
+                const selectionResult = await this._performEntitySelection(entityId, true);
                 if (selectionResult.success) {
-                    // Обновляем локальное состояние на основе результата из Rust
-                    this._updateLocalSelectionState(selectionResult);
+                    // Обрабатываем действия выбора для последнего выбранного юнита
+                    if (selectionResult.action === 'EntitySelected') {
+                        this.gameDemo.displayEntityInfo(entityId);
+                    }
                 } else {
                     console.warn(`Не удалось выбрать юнит ${entityId}:`, selectionResult.message);
                 }
             } catch (error) {
                 console.error('Ошибка при выборе сущности рамкой:', error);
             }
+        }
+
+        // Если выбран только один юнит, показываем его информацию
+        if (this.gameDemo.selectedEntityIds.size === 1) {
+            const selectedEntityId = Array.from(this.gameDemo.selectedEntityIds)[0];
+            this.gameDemo.displayEntityInfo(selectedEntityId);
         }
     }
 
@@ -321,14 +336,8 @@ export class SelectionManager {
         // чтобы получить правильное отображение группы
         for (const entityId of unitsToSelect) {
             try {
-                const currentSelectedIds = Array.from(this.gameDemo.selectedEntityIds);
-                const result = await handle_entity_selection(entityId, true, currentSelectedIds);
-                const selectionResult = JSON.parse(result);
-
-                if (selectionResult.success) {
-                    // Обновляем локальное состояние на основе результата из Rust
-                    this._updateLocalSelectionState(selectionResult);
-                } else {
+                const selectionResult = await this._performEntitySelection(entityId, true);
+                if (!selectionResult.success) {
                     console.warn(`Не удалось выбрать юнит ${entityId}:`, selectionResult.message);
                 }
             } catch (error) {
