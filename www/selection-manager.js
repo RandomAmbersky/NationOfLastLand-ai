@@ -262,17 +262,6 @@ export class SelectionManager {
                 console.error('Ошибка при выборе сущности рамкой:', error);
             }
         }
-
-        // После выбора всех юнитов обновляем статус и информацию
-        const finalSelectedCount = this.gameDemo.selectedEntityIds.size;
-        if (finalSelectedCount > 0) {
-            // Обновляем статус через gameDemo.updateStatus с правильным сообщением группы
-            this.gameDemo.updateStatus(this.gameDemo.createGroupStatusMessage(finalSelectedCount));
-            // Показываем информацию о группе с здоровьем
-            this.gameDemo.displayGroupInfo();
-        } else {
-            this.gameDemo.updateStatus('Не удалось выбрать юнитов из области выделения');
-        }
     }
 
     _clearAlertSelections() {
@@ -345,17 +334,6 @@ export class SelectionManager {
             } catch (error) {
                 console.error('Ошибка при выборе всех юнитов:', error);
             }
-        }
-
-        // После выбора всех юнитов обновляем статус и информацию
-        const finalSelectedCount = this.gameDemo.selectedEntityIds.size;
-        if (finalSelectedCount > 0) {
-            // Обновляем статус через gameDemo.updateStatus с правильным сообщением группы
-            this.gameDemo.updateStatus(this.gameDemo.createGroupStatusMessage(finalSelectedCount));
-            // Показываем информацию о группе с здоровьем
-            this.gameDemo.displayGroupInfo();
-        } else {
-            this.gameDemo.updateStatus('Не удалось выбрать юнитов');
         }
     }
 
