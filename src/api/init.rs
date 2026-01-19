@@ -27,6 +27,7 @@ pub struct GameState {
     pub entities: Vec<EntityData>,
     pub alerts_count: usize,
     pub debug_messages: Vec<String>,
+    pub removed_entities: Vec<u32>, // Entities that were removed from selection during this update
 }
 
 pub static GAME_WORLD: OnceLock<RwLock<GameWorld>> = OnceLock::new();
@@ -81,6 +82,7 @@ pub fn init() -> Result<String, JsValue> {
             entities,
             alerts_count,
             debug_messages,
+            removed_entities: Vec::new(), // No entities removed during init
         };
 
         serde_json::to_string(&state)

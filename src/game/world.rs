@@ -7,6 +7,7 @@ pub struct GameWorld {
     pub time: f32,
     pub last_alert_spawn: f32,
     pub debug_messages: Vec<String>,
+    pub removed_entities: Vec<u32>, // Entities removed from selection during last update
 }
 
 impl GameWorld {
@@ -16,11 +17,15 @@ impl GameWorld {
             time: 0.0,
             last_alert_spawn: 0.0,
             debug_messages: Vec::new(),
+            removed_entities: Vec::new(),
         }
     }
 
     pub fn update(&mut self, dt: f32) {
         self.time += dt;
+
+        // Clear removed entities from previous update
+        self.removed_entities.clear();
 
         // Run combat systems FIRST to handle deaths immediately
         combat::update_combat_system(self, dt);
@@ -38,8 +43,11 @@ impl GameWorld {
         // Run movement systems
         movement::update_movement_system(&mut self.world, dt);
 
-        // Run selection cleanup system
-        selection::update_selection_system(&mut self.world);
+        // Run selection cleanup system and track removed entities
+        self.removed_entities = selection::update_selection_system(&mut self.world);
+        if !self.removed_entities.is_empty() {
+            self.debug_messages.push(format!("Selection cleanup: removed {} entities from selection", self.removed_entities.len()));
+        }
 
         // Run base systems
         base::update_base_construction_system(&mut self.world, dt);

@@ -646,10 +646,12 @@ export class GameDemo {
 
     // Отображение информации о группе выбранных юнитов игрока (здоровье каждого)
     updateGroupInfo(gameEntities) {
-        // Фильтруем только юнитов игрока
+        // Фильтруем только юнитов игрока, которые еще существуют в gameState
         const playerUnits = Array.from(this.selectedEntityIds).filter(entityId => {
             const entity = this.entities.get(entityId);
-            return entity && entity.faction === 'Player';
+            // Проверяем, что юнит существует визуально и есть в gameState
+            const gameEntity = gameEntities.find(e => e.id === entityId);
+            return entity && entity.faction === 'Player' && gameEntity;
         });
 
         if (playerUnits.length === 0) {
@@ -673,8 +675,6 @@ export class GameDemo {
                 const healthBar = this.createHealthBar(current, max);
                 healthText = `${healthBar} ${percentage}%`;
                 if (current <= 0) isDead = true;
-            } else {
-                console.log(`No health in gameState for entity ${entityId}`);
             }
 
             // Fallback: try to get health via get_entity_info if gameState didn't have it
