@@ -60,3 +60,18 @@ extern "C" {
 pub fn greet() {
     alert("Hello, nation-of-last-land!");
 }
+
+#[wasm_bindgen]
+pub fn get_entities_data() -> Result<String, JsValue> {
+    if let Some(world) = crate::api::init::GAME_WORLD.get() {
+        let world = world
+            .read()
+            .map_err(|_| JsValue::from_str("Failed to acquire read lock"))?;
+        let entities = crate::api::init::get_entities_data(&world.world);
+
+        serde_json::to_string(&entities)
+            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+    } else {
+        Err(JsValue::from_str("Game world not initialized"))
+    }
+}

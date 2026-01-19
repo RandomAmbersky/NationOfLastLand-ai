@@ -1,4 +1,4 @@
-import { init, update, get_entity_info } from './wasm-imports.js';
+import { init, update, get_entity_info, get_entities_data } from './wasm-imports.js';
 import { GAME_CONFIG } from './game-config.js';
 
 import { InputHandler } from './input-handler.js';
@@ -291,6 +291,7 @@ export class GameDemo {
         }
 
         const entityInfoDiv = document.getElementById('entity-info');
+
         if (message) {
             entityInfoDiv.innerHTML = message;
             entityInfoDiv.style.display = 'block';
@@ -324,6 +325,75 @@ export class GameDemo {
                 entityInfoDiv._spawnButtonHandler = null;
             }
         }
+    }
+
+    _displayGroupInfo(entitiesData) {
+        const entityInfoDiv = document.getElementById('entity-info');
+
+        // Фильтруем только выбранные сущности
+        const selectedEntities = entitiesData.filter(entity =>
+            this.selectedEntityIds.has(entity.id)
+        );
+
+        if (selectedEntities.length === 0) {
+            entityInfoDiv.style.display = 'none';
+            return;
+        }
+
+        let html = '<div class="entity-info-content">';
+        html += `<h3>Группа (${selectedEntities.length} юнитов)</h3>`;
+
+        // Вычисляем общее здоровье группы
+        let totalHealth = 0;
+        let totalMaxHealth = 0;
+        let healthyUnits = 0;
+
+        selectedEntities.forEach(entity => {
+            if (entity.health && entity.health.length >= 2) {
+                const [current, max] = entity.health;
+                if (current > 0 && max > 0) {
+                    totalHealth += current;
+                    totalMaxHealth += max;
+                    healthyUnits++;
+                }
+            }
+        });
+
+        if (totalMaxHealth > 0) {
+            const avgHealthPercent = (totalHealth / totalMaxHealth) * 100;
+            html += `
+                <div class="health-bar">
+                    <div class="health-label">Среднее здоровье группы: ${(avgHealthPercent).toFixed(1)}% (${healthyUnits} юнитов)</div>
+                    <div class="health-fill" style="width: ${avgHealthPercent}%"></div>
+                </div>
+            `;
+        }
+
+        // Показываем здоровье каждого юнита в группе
+        html += '<div class="group-units">';
+        selectedEntities.forEach(entity => {
+            if (entity.health && entity.health.length >= 2) {
+                const [current, max] = entity.health;
+                if (current > 0 && max > 0) {
+                    const healthPercent = (current / max) * 100;
+                    const entityName = entity.subtype || entity.entity_type || `Юнит ${entity.id}`;
+                    html += `
+                        <div class="unit-health">
+                            <span class="unit-name">${entityName}</span>
+                            <div class="health-bar small">
+                                <div class="health-fill" style="width: ${healthPercent}%"></div>
+                            </div>
+                            <span class="health-text">${current}/${max}</span>
+                        </div>
+                    `;
+                }
+            }
+        });
+        html += '</div>';
+
+        html += '</div>';
+        entityInfoDiv.innerHTML = html;
+        entityInfoDiv.style.display = 'block';
     }
 
     // Update information for selected entities dynamically
@@ -549,6 +619,28 @@ export class GameDemo {
         } catch (error) {
             console.error('Error getting entity info:', error);
             this.updateEntityInfo(`❌ Error loading entity info: ${error.message}`);
+        }
+    }
+
+    displayGroupInfo() {
+        // Показываем информацию о группе выбранных юнитов
+        if (this.selectedEntityIds.size > 1) {
+            // Получаем актуальные данные о всех сущностях
+            try {
+                const result = get_entities_data();
+                const entitiesData = JSON.parse(result);
+                this._displayGroupInfo(entitiesData);
+            } catch (error) {
+                console.error('Ошибка получения данных сущностей:', error);
+            }
+        } else if (this.selectedEntityIds.size === 1) {
+            // Если пытаемся показать группу, но выбран только один юнит,
+            // показываем детальную информацию об этом юните
+            const selectedId = Array.from(this.selectedEntityIds)[0];
+            this.displayEntityInfo(selectedId);
+        } else {
+            // Ничего не выбрано
+            this.updateEntityInfo(null);
         }
     }
 

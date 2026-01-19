@@ -133,7 +133,7 @@ export class InputHandler {
         }
     }
 
-    handleDoubleClick(event) {
+    async handleDoubleClick(event) {
         if (!this.gameDemo.isInitialized) return;
 
         const { screenX, screenY } = this._getCanvasCoords(event);
@@ -142,8 +142,9 @@ export class InputHandler {
         if (entityId !== null) {
             this.gameDemo.selectionManager.selectSameTypeUnits(entityId);
         } else {
-            this.gameDemo.selectionManager.selectAllPlayerUnits();
-            this.gameDemo.updateStatus('Double click on empty space - Selected all player units');
+            // Двойной клик на пустом месте - выбираем всех юнитов игрока с новой логикой группы
+            await this.gameDemo.selectionManager.selectAllPlayerUnits();
+            // Статус устанавливается внутри selectAllPlayerUnits()
         }
     }
 

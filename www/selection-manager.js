@@ -201,7 +201,7 @@ export class SelectionManager {
         this.gameDemo.updateSpawnButtonState();
     }
 
-    selectEntitiesInRectangle(bounds) {
+    async selectEntitiesInRectangle(bounds) {
         if (this.isSelecting) return;
 
         this.isSelecting = true;
@@ -209,7 +209,7 @@ export class SelectionManager {
         try {
             const entitiesInRectangle = this._findEntitiesInRectangle(bounds);
             if (entitiesInRectangle.length > 0) {
-                this._processRectangleSelection(entitiesInRectangle);
+                await this._processRectangleSelection(entitiesInRectangle);
             }
         } finally {
             this.isSelecting = false;
@@ -233,7 +233,7 @@ export class SelectionManager {
                entity.container.y <= bounds.y + bounds.height;
     }
 
-    _processRectangleSelection(entitiesInRectangle) {
+    async _processRectangleSelection(entitiesInRectangle) {
         this._clearAlertSelections();
 
         const playerMovableUnits = entitiesInRectangle.filter(id => {
@@ -243,22 +243,44 @@ export class SelectionManager {
                    entity.entityType === 'vehicle';
         });
 
+        if (playerMovableUnits.length === 0) {
+            this.gameDemo.updateStatus('Нет подвижных юнитов игрока в области выделения');
+            return;
+        }
+
         this.clearAllSelections(true);
 
         const maxSize = GAME_CONFIG.LIMITS.maxGroupSize;
-        let addedCount = 0;
-        for (const entityId of playerMovableUnits) {
-            if (this.gameDemo.selectedEntityIds.size >= maxSize) break;
-            if (this.selectEntity(entityId, true, false)) {
-                addedCount++;
+        const unitsToSelect = playerMovableUnits.slice(0, maxSize);
+
+        // Используем handle_entity_selection для каждого юнита с isMultiSelect=true
+        // чтобы получить правильное отображение группы
+        for (const entityId of unitsToSelect) {
+            try {
+                const currentSelectedIds = Array.from(this.gameDemo.selectedEntityIds);
+                const result = await handle_entity_selection(entityId, true, currentSelectedIds);
+                const selectionResult = JSON.parse(result);
+
+                if (selectionResult.success) {
+                    // Обновляем локальное состояние на основе результата из Rust
+                    this._updateLocalSelectionState(selectionResult);
+                } else {
+                    console.warn(`Не удалось выбрать юнит ${entityId}:`, selectionResult.message);
+                }
+            } catch (error) {
+                console.error('Ошибка при выборе сущности рамкой:', error);
             }
         }
 
-        if (addedCount > 0) {
-            this.gameDemo.updateStatus(`Выделено ${addedCount} подвижных юнитов игрока`);
-            // this.gameDemo.updateSelectedEntityInfo();
+        // После выбора всех юнитов обновляем статус и информацию
+        const finalSelectedCount = this.gameDemo.selectedEntityIds.size;
+        if (finalSelectedCount > 0) {
+            // Обновляем статус через gameDemo.updateStatus с правильным сообщением группы
+            this.gameDemo.updateStatus(`Группа (${finalSelectedCount} юнитов игрока)`);
+            // Показываем информацию о группе с здоровьем
+            this.gameDemo.displayGroupInfo();
         } else {
-            this.gameDemo.updateStatus('Нет подвижных юнитов игрока в области выделения');
+            this.gameDemo.updateStatus('Не удалось выбрать юнитов из области выделения');
         }
     }
 
@@ -302,28 +324,55 @@ export class SelectionManager {
     }
 
     /**
-     * Выбрать всех подвижных юнитов игрока
+     * Выбрать всех подвижных юнитов игрока (с новой логикой группы)
      */
-    selectAllPlayerUnits() {
+    async selectAllPlayerUnits() {
         this.clearAllSelections(true);
 
-        let addedCount = 0;
-        const maxSize = GAME_CONFIG.LIMITS.maxGroupSize;
-
+        // Собираем всех подвижных юнитов игрока
+        const playerMovableUnits = [];
         for (const [entityId, entity] of this.gameDemo.entities) {
-            if (this.gameDemo.selectedEntityIds.size >= maxSize) break;
             if (entity.faction === 'Player' && entity.entityType === 'vehicle') {
-                if (this.selectEntity(entityId, true, false)) {
-                    addedCount++;
-                }
+                playerMovableUnits.push(entityId);
             }
         }
 
-        if (addedCount > 0) {
-            this.gameDemo.updateStatus(`Выделено ${addedCount} юнитов игрока`);
-            // this.gameDemo.updateSelectedEntityInfo();
-        } else {
+        if (playerMovableUnits.length === 0) {
             this.gameDemo.updateStatus('Нет доступных юнитов игрока');
+            return;
+        }
+
+        const maxSize = GAME_CONFIG.LIMITS.maxGroupSize;
+        const unitsToSelect = playerMovableUnits.slice(0, maxSize);
+
+        // Используем handle_entity_selection для каждого юнита с isMultiSelect=true
+        // чтобы получить правильное отображение группы
+        for (const entityId of unitsToSelect) {
+            try {
+                const currentSelectedIds = Array.from(this.gameDemo.selectedEntityIds);
+                const result = await handle_entity_selection(entityId, true, currentSelectedIds);
+                const selectionResult = JSON.parse(result);
+
+                if (selectionResult.success) {
+                    // Обновляем локальное состояние на основе результата из Rust
+                    this._updateLocalSelectionState(selectionResult);
+                } else {
+                    console.warn(`Не удалось выбрать юнит ${entityId}:`, selectionResult.message);
+                }
+            } catch (error) {
+                console.error('Ошибка при выборе всех юнитов:', error);
+            }
+        }
+
+        // После выбора всех юнитов обновляем статус и информацию
+        const finalSelectedCount = this.gameDemo.selectedEntityIds.size;
+        if (finalSelectedCount > 0) {
+            // Обновляем статус через gameDemo.updateStatus с правильным сообщением группы
+            this.gameDemo.updateStatus(`Группа (${finalSelectedCount} юнитов игрока)`);
+            // Показываем информацию о группе с здоровьем
+            this.gameDemo.displayGroupInfo();
+        } else {
+            this.gameDemo.updateStatus('Не удалось выбрать юнитов');
         }
     }
 
