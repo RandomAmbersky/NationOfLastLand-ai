@@ -202,12 +202,7 @@ export class EntityRenderer {
 
     // Helper method to get screen coordinates from game coordinates
     getScreenCoords(gameX, gameY) {
-        const scaleX = this.gameDemo.app.screen.width / this.gameDemo.gameWidth;
-        const scaleY = this.gameDemo.app.screen.height / this.gameDemo.gameHeight;
-        return {
-            x: gameX * scaleX,
-            y: gameY * scaleY
-        };
+        return this.gameDemo.gameToScreen(gameX, gameY);
     }
 
     showTargetIndicator(gameX, gameY) {

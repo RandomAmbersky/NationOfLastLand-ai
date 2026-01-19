@@ -284,15 +284,7 @@ export class SelectionManager {
         }
     }
 
-    _hasPlayerUnitsSelected() {
-        for (const entityId of this.gameDemo.selectedEntityIds) {
-            const entity = this.gameDemo.entities.get(entityId);
-            if (entity && entity.faction === 'Player') {
-                return true;
-            }
-        }
-        return false;
-    }
+
 
     _createSelectionIndicator(entity, isEnemy = false) {
         const graphics = new PIXI.Graphics();
@@ -401,13 +393,7 @@ export class SelectionManager {
      */
     selectAllPlayerUnitsAtBase() {
         // Find player base first
-        let baseEntity = null;
-        for (const [entityId, entity] of this.gameDemo.entities) {
-            if (entity.faction === 'Player' && entity.entityType === 'base') {
-                baseEntity = entity;
-                break;
-            }
-        }
+        const baseEntity = this.gameDemo.findPlayerBase();
 
         if (!baseEntity) {
             this.gameDemo.updateStatus('База игрока не найдена');

@@ -408,7 +408,8 @@ export class GameDemo {
         }
     }
 
-    _displayGroupInfo(entitiesData) {
+    // Unified method to display group information from different data sources
+    displayGroupInfoFromData(entitiesData, useHtmlFormat = true) {
         const entityInfoDiv = document.getElementById('entity-info');
 
         // Фильтруем только выбранные сущности
@@ -421,60 +422,86 @@ export class GameDemo {
             return;
         }
 
-        let html = '<div class="entity-info-content">';
-        html += `<h3>Группа (${selectedEntities.length} юнитов)</h3>`;
+        if (useHtmlFormat) {
+            let html = '<div class="entity-info-content">';
+            html += `<h3>Группа (${selectedEntities.length} юнитов)</h3>`;
 
-        // Вычисляем общее здоровье группы
-        let totalHealth = 0;
-        let totalMaxHealth = 0;
-        let healthyUnits = 0;
+            // Вычисляем общее здоровье группы
+            let totalHealth = 0;
+            let totalMaxHealth = 0;
+            let healthyUnits = 0;
 
-        selectedEntities.forEach(entity => {
-            if (entity.health && entity.health.length >= 2) {
-                const [current, max] = entity.health;
-                if (current > 0 && max > 0) {
-                    totalHealth += current;
-                    totalMaxHealth += max;
-                    healthyUnits++;
+            selectedEntities.forEach(entity => {
+                if (entity.health && entity.health.length >= 2) {
+                    const [current, max] = entity.health;
+                    if (current > 0 && max > 0) {
+                        totalHealth += current;
+                        totalMaxHealth += max;
+                        healthyUnits++;
+                    }
                 }
+            });
+
+            if (totalMaxHealth > 0) {
+                const avgHealthPercent = (totalHealth / totalMaxHealth) * 100;
+                html += `
+                    <div class="health-bar">
+                        <div class="health-label">Среднее здоровье группы: ${(avgHealthPercent).toFixed(1)}% (${healthyUnits} юнитов)</div>
+                        <div class="health-fill" style="width: ${avgHealthPercent}%"></div>
+                    </div>
+                `;
             }
-        });
 
-        if (totalMaxHealth > 0) {
-            const avgHealthPercent = (totalHealth / totalMaxHealth) * 100;
-            html += `
-                <div class="health-bar">
-                    <div class="health-label">Среднее здоровье группы: ${(avgHealthPercent).toFixed(1)}% (${healthyUnits} юнитов)</div>
-                    <div class="health-fill" style="width: ${avgHealthPercent}%"></div>
-                </div>
-            `;
-        }
-
-        // Показываем здоровье каждого юнита в группе
-        html += '<div class="group-units">';
-        selectedEntities.forEach(entity => {
-            if (entity.health && entity.health.length >= 2) {
-                const [current, max] = entity.health;
-                if (current > 0 && max > 0) {
-                    const healthPercent = (current / max) * 100;
-                    const entityName = entity.subtype || entity.entity_type || `Юнит ${entity.id}`;
-                    html += `
-                        <div class="unit-health">
-                            <span class="unit-name">${entityName}</span>
-                            <div class="health-bar small">
-                                <div class="health-fill" style="width: ${healthPercent}%"></div>
+            // Показываем здоровье каждого юнита в группе
+            html += '<div class="group-units">';
+            selectedEntities.forEach(entity => {
+                if (entity.health && entity.health.length >= 2) {
+                    const [current, max] = entity.health;
+                    if (current > 0 && max > 0) {
+                        const healthPercent = (current / max) * 100;
+                        const entityName = entity.subtype || entity.entity_type || `Юнит ${entity.id}`;
+                        html += `
+                            <div class="unit-health">
+                                <span class="unit-name">${entityName}</span>
+                                <div class="health-bar small">
+                                    <div class="health-fill" style="width: ${healthPercent}%"></div>
+                                </div>
+                                <span class="health-text">${current}/${max}</span>
                             </div>
-                            <span class="health-text">${current}/${max}</span>
-                        </div>
-                    `;
+                        `;
+                    }
                 }
-            }
-        });
-        html += '</div>';
+            });
+            html += '</div>';
 
-        html += '</div>';
-        entityInfoDiv.innerHTML = html;
-        entityInfoDiv.style.display = 'block';
+            html += '</div>';
+            entityInfoDiv.innerHTML = html;
+            entityInfoDiv.style.display = 'block';
+        } else {
+            // Text format for updateGroupInfo
+            let infoText = `🏷️ Группа (${selectedEntities.length} юнитов игрока)\n`;
+            infoText += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+            for (const entity of selectedEntities) {
+                let healthText = '❓ Неизвестно';
+                let isDead = false;
+
+                if (entity.health && entity.health.length >= 2) {
+                    const [current, max] = entity.health;
+                    const percentage = (current / max * 100).toFixed(1);
+                    const healthBar = this.createHealthBar(current, max);
+                    healthText = `${healthBar} ${percentage}%`;
+                    if (current <= 0) isDead = true;
+                }
+
+                const entityName = entity.subtype || entity.entity_type || 'unit';
+                const deadMark = isDead ? ' 💀' : '';
+                infoText += `  #${entity.id} (${entityName}): ${healthText}${deadMark}\n`;
+            }
+
+            infoText += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+            entityInfoDiv.innerHTML = infoText;
+        }
     }
 
     // Update information for selected entities dynamically
@@ -710,7 +737,7 @@ export class GameDemo {
             try {
                 const result = get_entities_data();
                 const entitiesData = JSON.parse(result);
-                this._displayGroupInfo(entitiesData);
+                this.displayGroupInfoFromData(entitiesData, true);
             } catch (error) {
                 console.error('Ошибка получения данных сущностей:', error);
             }
@@ -727,66 +754,7 @@ export class GameDemo {
 
     // Отображение информации о группе выбранных юнитов игрока (здоровье каждого)
     updateGroupInfo(gameEntities) {
-        // Фильтруем только юнитов игрока, которые еще существуют в gameState
-        const playerUnits = Array.from(this.selectedEntityIds).filter(entityId => {
-            const entity = this.entities.get(entityId);
-            // Проверяем, что юнит существует визуально и есть в gameState
-            const gameEntity = gameEntities.find(e => e.id === entityId);
-            return entity && entity.faction === 'Player' && gameEntity;
-        });
-
-        if (playerUnits.length === 0) {
-            this.updateEntityInfo(null);
-            return;
-        }
-
-        let infoText = `🏷️ Группа (${playerUnits.length} юнитов игрока)\n`;
-        infoText += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-
-        for (const entityId of playerUnits) {
-            const entity = this.entities.get(entityId);
-            let healthText = '❓ Неизвестно';
-            let isDead = false;
-
-            // Get health from gameState first, fallback to get_entity_info
-            const gameEntity = gameEntities.find(e => e.id === entityId);
-            if (gameEntity && gameEntity.health) {
-                const [current, max] = gameEntity.health;
-                const percentage = (current / max * 100).toFixed(1);
-                const healthBar = this.createHealthBar(current, max);
-                healthText = `${healthBar} ${percentage}%`;
-                if (current <= 0) isDead = true;
-            }
-
-            // Fallback: try to get health via get_entity_info if gameState didn't have it
-            if (healthText === '❓ Неизвестно') {
-                try {
-                    const result = get_entity_info(entityId);
-                    const entityInfo = JSON.parse(result);
-                    if (entityInfo.health) {
-                        const [current, max] = entityInfo.health;
-                        const percentage = (current / max * 100).toFixed(1);
-                        const healthBar = this.createHealthBar(current, max);
-                        healthText = `${healthBar} ${percentage}%`;
-                        if (current <= 0) isDead = true;
-                    }
-                } catch (error) {
-                    console.error(`Error getting entity info for ${entityId}:`, error);
-                }
-            }
-
-            const typeName = entity ? (entity.subtype || entity.vehicleType || 'unit') : 'unit';
-            const deadMark = isDead ? ' 💀' : '';
-            infoText += `  #${entityId} (${typeName}): ${healthText}${deadMark}\n`;
-        }
-
-        infoText += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-
-        // Get the entity info div element
-        const entityInfoDiv = document.getElementById('entity-info');
-
-        // Always update for group info (no change check needed)
-        entityInfoDiv.innerHTML = infoText;
+        this.displayGroupInfoFromData(gameEntities, false);
     }
 
     // Create a visual health bar
@@ -822,6 +790,16 @@ export class GameDemo {
             x: x * scale.x,
             y: y * scale.y
         };
+    }
+
+    // Find the player's base entity
+    findPlayerBase() {
+        for (const [entityId, entity] of this.entities) {
+            if (entity.faction === 'Player' && entity.entityType === 'base') {
+                return entity;
+            }
+        }
+        return null;
     }
 
     isPlayerBaseSelected() {
