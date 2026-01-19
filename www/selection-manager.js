@@ -267,7 +267,7 @@ export class SelectionManager {
         const finalSelectedCount = this.gameDemo.selectedEntityIds.size;
         if (finalSelectedCount > 0) {
             // Обновляем статус через gameDemo.updateStatus с правильным сообщением группы
-            this.gameDemo.updateStatus(`Группа (${finalSelectedCount} юнитов игрока)`);
+            this.gameDemo.updateStatus(this.gameDemo.createGroupStatusMessage(finalSelectedCount));
             // Показываем информацию о группе с здоровьем
             this.gameDemo.displayGroupInfo();
         } else {
@@ -351,7 +351,7 @@ export class SelectionManager {
         const finalSelectedCount = this.gameDemo.selectedEntityIds.size;
         if (finalSelectedCount > 0) {
             // Обновляем статус через gameDemo.updateStatus с правильным сообщением группы
-            this.gameDemo.updateStatus(`Группа (${finalSelectedCount} юнитов игрока)`);
+            this.gameDemo.updateStatus(this.gameDemo.createGroupStatusMessage(finalSelectedCount));
             // Показываем информацию о группе с здоровьем
             this.gameDemo.displayGroupInfo();
         } else {

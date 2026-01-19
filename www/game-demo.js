@@ -408,6 +408,41 @@ export class GameDemo {
         }
     }
 
+    // Create text format group information
+    createGroupInfoText(entitiesData) {
+        // Фильтруем только выбранные сущности
+        const selectedEntities = entitiesData.filter(entity =>
+            this.selectedEntityIds.has(entity.id)
+        );
+
+        if (selectedEntities.length === 0) {
+            return null;
+        }
+
+        let infoText = `🏷️ Группа (${selectedEntities.length} юнитов игрока)\n`;
+        infoText += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+        for (const entity of selectedEntities) {
+            let healthText = '❓ Неизвестно';
+            let isDead = false;
+
+            if (entity.health && entity.health.length >= 2) {
+                const [current, max] = entity.health;
+                const percentage = (current / max * 100).toFixed(1);
+                const healthBar = this.createHealthBar(current, max);
+                healthText = `${healthBar} ${percentage}%`;
+                if (current <= 0) isDead = true;
+            }
+
+            const entityName = entity.subtype || entity.entity_type || 'unit';
+            const deadMark = isDead ? ' 💀' : '';
+            infoText += `  #${entity.id} (${entityName}): ${healthText}${deadMark}\n`;
+        }
+
+        infoText += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+        return infoText;
+    }
+
     // Unified method to display group information from different data sources
     displayGroupInfoFromData(entitiesData, useHtmlFormat = true) {
         const entityInfoDiv = document.getElementById('entity-info');
@@ -438,6 +473,7 @@ export class GameDemo {
                         totalHealth += current;
                         totalMaxHealth += max;
                         healthyUnits++;
+
                     }
                 }
             });
@@ -478,29 +514,10 @@ export class GameDemo {
             entityInfoDiv.innerHTML = html;
             entityInfoDiv.style.display = 'block';
         } else {
-            // Text format for updateGroupInfo
-            let infoText = `🏷️ Группа (${selectedEntities.length} юнитов игрока)\n`;
-            infoText += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-
-            for (const entity of selectedEntities) {
-                let healthText = '❓ Неизвестно';
-                let isDead = false;
-
-                if (entity.health && entity.health.length >= 2) {
-                    const [current, max] = entity.health;
-                    const percentage = (current / max * 100).toFixed(1);
-                    const healthBar = this.createHealthBar(current, max);
-                    healthText = `${healthBar} ${percentage}%`;
-                    if (current <= 0) isDead = true;
-                }
-
-                const entityName = entity.subtype || entity.entity_type || 'unit';
-                const deadMark = isDead ? ' 💀' : '';
-                infoText += `  #${entity.id} (${entityName}): ${healthText}${deadMark}\n`;
-            }
-
-            infoText += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+            // Use the shared text creation method
+            const infoText = this.createGroupInfoText(entitiesData);
             entityInfoDiv.innerHTML = infoText;
+            entityInfoDiv.style.display = 'block';
         }
     }
 
