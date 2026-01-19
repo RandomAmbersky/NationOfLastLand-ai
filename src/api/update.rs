@@ -1,5 +1,5 @@
 use crate::api::init::{get_entities_data, GameState, GAME_WORLD};
-use crate::game::Alert;
+use crate::game::{systems::selection, Alert};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -8,6 +8,10 @@ pub fn update(dt: f32) -> Result<String, JsValue> {
         let mut world = world
             .write()
             .map_err(|_| JsValue::from_str("Failed to acquire write lock"))?;
+
+        // Capture removed entities before update
+        let removed_entities = selection::update_selection_system(&mut world.world);
+
         world.update(dt);
 
         let entities = get_entities_data(&world.world);
@@ -20,6 +24,7 @@ pub fn update(dt: f32) -> Result<String, JsValue> {
             entities,
             alerts_count,
             debug_messages,
+            removed_entities,
         };
 
         serde_json::to_string(&state)

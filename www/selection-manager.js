@@ -161,15 +161,9 @@ export class SelectionManager {
             entity.selectionIndicator = null;
         }
 
-        try {
-            const result = deselect_entity(entityId);
-            const selectionResult = JSON.parse(result);
-            if (!selectionResult.success) {
-                console.log(`Снятие выделения с ${entityId} не удалось:`, selectionResult.message);
-            }
-        } catch (error) {
-            console.error('Ошибка API снятия выделения:', error);
-        }
+        // Note: We no longer call deselect_entity API here since entity removal
+        // is now handled automatically by the selection cleanup system
+        // and communicated via the game state update
 
         this._updateSelectionStatus();
         // this.gameDemo.updateSelectedEntityInfo();
