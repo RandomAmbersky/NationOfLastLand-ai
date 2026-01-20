@@ -60,7 +60,7 @@ export class GameStateManager {
         let spawnX, spawnY;
         for (const entityId of this.gameDemo.selectedEntityIds) {
             const entity = this.gameDemo.entities.get(entityId);
-            if (entity && entity.entityType === 'base' && entity.faction === 'Player') {
+            if (entity && entity.entityType === 'base' && entity.fraction === 'Player') {
                 const distance = 10 + Math.random() * 30;
                 const angle = Math.random() * Math.PI * 2;
 

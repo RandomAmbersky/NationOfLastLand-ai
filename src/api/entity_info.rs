@@ -16,7 +16,7 @@ pub struct EntityInfo {
     pub id: u32,
     pub entity_type: String,
     pub subtype: Option<String>,
-    pub faction: Option<String>,
+    pub fraction: Option<String>,
     pub position: (f32, f32),
     pub health: Option<(f32, f32)>, // (current, max)
     pub damage: Option<f32>,
@@ -81,7 +81,7 @@ pub fn get_entity_info(entity_id: u32) -> Result<String, JsValue> {
             id: entity_id,
             entity_type: "unknown".to_string(),
             subtype: None,
-            faction: None,
+            fraction: None,
             position: (0.0, 0.0),
             health: None,
             damage: None,
@@ -102,7 +102,7 @@ pub fn get_entity_info(entity_id: u32) -> Result<String, JsValue> {
         // Get fraction
         if let Ok(mut query) = world.world.query_one::<&FractionComponent>(entity) {
             if let Some(fraction_component) = query.get() {
-                entity_info.faction = Some(fraction_component.fraction.name().to_string());
+                entity_info.fraction = Some(fraction_component.fraction.name().to_string());
             }
         }
 
@@ -155,8 +155,8 @@ pub fn get_entity_info(entity_id: u32) -> Result<String, JsValue> {
             let has_base = world.world.get::<&Base>(entity).is_ok();
 
             if !has_vehicle && !has_alert && !has_base {
-                // Determine type based on faction and movement
-                if let Some(faction_name) = &entity_info.faction {
+                // Determine type based on fraction and movement
+                if let Some(faction_name) = &entity_info.fraction {
                     match faction_name.as_str() {
                         "Wild" => {
                             if has_movement {

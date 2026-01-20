@@ -89,7 +89,7 @@ pub fn handle_entity_selection(entity_id: u32, is_multi_select: bool, current_se
             return handle_non_player_unit_selection(&mut world.world, clicked_entity, entity_id);
         }
 
-        // Rule 6: If movable player units are selected and clicking on non-player faction unit
+        // Rule 6: If movable player units are selected and clicking on non-player fraction unit
         // Assign as target instead of selecting
         let selected_player_movable_units = get_selected_player_movable_units(&world.world, &current_selected_entities);
         if !selected_player_movable_units.is_empty() && is_non_player_fraction_entity(&world.world, clicked_entity) {
@@ -203,7 +203,7 @@ pub fn handle_non_player_unit_selection(world: &mut hecs::World, clicked_entity:
         .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
 }
 
-/// Handle group targeting when clicking on non-player faction entity (Rule 6)
+/// Handle group targeting when clicking on non-player fraction entity (Rule 6)
 pub fn handle_group_targeting(world: &mut hecs::World, target_entity: hecs::Entity, target_entity_id: u32) -> Result<String, JsValue> {
     // Get target position
     let target_pos = if let Ok(pos) = world.get::<&crate::game::components::Position>(target_entity) {
@@ -787,7 +787,7 @@ mod tests {
             return handle_non_player_unit_selection(world, clicked_entity, entity_id);
         }
 
-        // Rule 6: If movable player units are selected and clicking on non-player faction unit
+        // Rule 6: If movable player units are selected and clicking on non-player fraction unit
         // Assign as target instead of selecting
         let selected_player_movable_units = get_selected_player_movable_units(world, &current_selected_entities);
         if !selected_player_movable_units.is_empty() && is_non_player_fraction_entity(world, clicked_entity) {

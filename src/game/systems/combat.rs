@@ -46,20 +46,20 @@ fn apply_combat_damage(game_world: &mut GameWorld, entity_a: hecs::Entity, entit
     game_world.debug_messages.push(format!("Starting combat between entities {} and {}", entity_a.id(), entity_b.id()));
 
     // Check fractions first - same fraction units don't attack each other
-    let faction_a = world.get::<&FractionComponent>(entity_a)
+    let fraction_a = world.get::<&FractionComponent>(entity_a)
         .map(|f| f.fraction)
         .unwrap_or(Fraction::Player); // Default to player fraction
 
-    let faction_b = world.get::<&FractionComponent>(entity_b)
+    let fraction_b = world.get::<&FractionComponent>(entity_b)
         .map(|f| f.fraction)
         .unwrap_or(Fraction::Player); // Default to player fraction
 
-    if !faction_a.is_hostile_towards(&faction_b) {
-        game_world.debug_messages.push(format!("Entities {} and {} are not hostile (faction {} vs {}), no combat", entity_a.id(), entity_b.id(), faction_a.name(), faction_b.name()));
+    if !fraction_a.is_hostile_towards(&fraction_b) {
+        game_world.debug_messages.push(format!("Entities {} and {} are not hostile (fraction {} vs {}), no combat", entity_a.id(), entity_b.id(), fraction_a.name(), fraction_b.name()));
         return;
     }
 
-    game_world.debug_messages.push(format!("Combat confirmed: {} vs {}", faction_a.name(), faction_b.name()));
+    game_world.debug_messages.push(format!("Combat confirmed: {} vs {}", fraction_a.name(), fraction_b.name()));
 
     // Collect combat information first (to avoid borrow checker issues)
     let mut damage_events = Vec::new();
@@ -190,7 +190,7 @@ pub fn add_combat_to_vehicle(world: &mut hecs::World, entity: hecs::Entity) {
 }
 
 /// Add fraction component to an entity
-pub fn add_faction_to_entity(world: &mut hecs::World, entity: hecs::Entity, faction: Fraction) {
-    let faction_component = FractionComponent::new(faction);
-    let _ = world.insert_one(entity, faction_component);
+pub fn add_fraction_to_entity(world: &mut hecs::World, entity: hecs::Entity, fraction: Fraction) {
+    let fraction_component = FractionComponent::new(fraction);
+    let _ = world.insert_one(entity, fraction_component);
 }

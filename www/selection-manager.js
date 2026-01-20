@@ -77,7 +77,7 @@ export class SelectionManager {
             if (!this.gameDemo.selectedEntityIds.has(entityId)) {
                 const entity = this.gameDemo.entities.get(entityId);
                 if (entity) {
-                    const isEnemy = entity.faction === 'Enemy' || entity.faction === 'Wild' || entity.entityType === 'alert';
+                    const isEnemy = entity.fraction === 'Enemy' || entity.fraction === 'Wild' || entity.entityType === 'alert';
                     this._createSelectionIndicator(entity, isEnemy);
                 }
             }
@@ -98,7 +98,7 @@ export class SelectionManager {
 
         const targetEntity = this.gameDemo.entities.get(targetAssignment.target_entity_id);
         const targetType = targetEntity ? (targetEntity.vehicleType || targetEntity.entityType) : 'unknown';
-        const targetFaction = targetEntity ? (targetEntity.faction || 'Unknown') : 'Unknown';
+        const targetFaction = targetEntity ? (targetEntity.fraction || 'Unknown') : 'Unknown';
 
         this.gameDemo.updateStatus(`Группа атакует: ${targetType} (#${targetAssignment.target_entity_id}) ${targetFaction}`);
     }
@@ -142,7 +142,7 @@ export class SelectionManager {
                 if (entity) {
                     // Все алерты подсвечиваются как враг
                     const isAlert = entity.entityType === 'alert';
-                    const isEnemy = entity.faction === 'Enemy' || entity.faction === 'Wild' || isAlert;
+                    const isEnemy = entity.fraction === 'Enemy' || entity.fraction === 'Wild' || isAlert;
                     this._createSelectionIndicator(entity, isEnemy);
                 }
 
@@ -240,7 +240,7 @@ export class SelectionManager {
         const playerMovableUnits = entitiesInRectangle.filter(id => {
             const entity = this.gameDemo.entities.get(id);
             return entity &&
-                   entity.faction === 'Player' &&
+                   entity.fraction === 'Player' &&
                    entity.entityType === 'vehicle';
         });
 
@@ -319,7 +319,7 @@ export class SelectionManager {
         // Собираем всех подвижных юнитов игрока
         const playerMovableUnits = [];
         for (const [entityId, entity] of this.gameDemo.entities) {
-            if (entity.faction === 'Player' && entity.entityType === 'vehicle') {
+            if (entity.fraction === 'Player' && entity.entityType === 'vehicle') {
                 playerMovableUnits.push(entityId);
             }
         }
@@ -354,7 +354,7 @@ export class SelectionManager {
         if (!entity) return;
 
         const targetType = entity.vehicleType || entity.entityType;
-        const targetFaction = entity.faction;
+        const targetFaction = entity.fraction;
 
         this.clearAllSelections(true);
 
@@ -364,7 +364,7 @@ export class SelectionManager {
         for (const [id, ent] of this.gameDemo.entities) {
             if (this.gameDemo.selectedEntityIds.size >= maxSize) break;
             const entityType = ent.vehicleType || ent.entityType;
-            if (entityType === targetType && ent.faction === targetFaction) {
+            if (entityType === targetType && ent.fraction === targetFaction) {
                 if (this.selectEntity(id, true, false)) {
                     addedCount++;
                 }
@@ -391,7 +391,7 @@ export class SelectionManager {
 
         // Select the base first
         for (const [entityId, entity] of this.gameDemo.entities) {
-            if (entity.faction === 'Player' && entity.entityType === 'base' && entity.id === baseEntity.id) {
+            if (entity.fraction === 'Player' && entity.entityType === 'base' && entity.id === baseEntity.id) {
                 this.selectEntity(entityId, true, false);
                 break;
             }
@@ -404,7 +404,7 @@ export class SelectionManager {
 
         for (const [entityId, entity] of this.gameDemo.entities) {
             if (this.gameDemo.selectedEntityIds.size >= maxSize) break;
-            if (entity.faction === 'Player' && entity.entityType === 'vehicle') {
+            if (entity.fraction === 'Player' && entity.entityType === 'vehicle') {
                 const distance = Math.sqrt(
                     (entity.gameX - baseEntity.gameX) ** 2 +
                     (entity.gameY - baseEntity.gameY) ** 2

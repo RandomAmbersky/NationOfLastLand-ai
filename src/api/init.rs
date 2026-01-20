@@ -14,7 +14,7 @@ pub struct EntityData {
     pub position: Option<Position>,
     pub entity_type: String,
     pub subtype: Option<String>, // vehicle_type for vehicles, alert_type for alerts
-    pub faction: Option<String>, // faction name (Player, Enemy, Neutral, Wild)
+    pub fraction: Option<String>, // fraction name (Player, Enemy, Neutral, Wild)
     pub is_selected: bool,       // whether this entity is currently selected
     pub health: Option<(f32, f32)>, // (current, maximum) health values, None if no health component
     pub movement: Option<Movement>, // movement component if entity can move
@@ -151,7 +151,7 @@ pub fn get_entities_data(world: &World) -> Vec<EntityData> {
             position,
             entity_type,
             subtype,
-            faction,
+            fraction: faction,
             is_selected,
             health,
             movement,

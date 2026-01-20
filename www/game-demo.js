@@ -261,7 +261,7 @@ export class GameDemo {
         for (const entityId of this.selectedEntityIds) {
             const entity = this.entities.get(entityId);
             if (entity && !entity.selectionIndicator) {
-                const isEnemy = entity.faction === 'Enemy' || entity.faction === 'Wild' || entity.entityType === 'alert';
+                const isEnemy = entity.fraction === 'Enemy' || entity.fraction === 'Wild' || entity.entityType === 'alert';
                 this.selectionManager._createSelectionIndicator(entity, isEnemy);
             }
         }
@@ -307,7 +307,7 @@ export class GameDemo {
                 entity.y = entity.container.y;
                 entity.gameX = posX;
                 entity.gameY = posY;
-                entity.faction = gameEntity.faction || null;
+                entity.fraction = gameEntity.fraction || null;
 
                 // Selection indicators are managed by SelectionManager, not synced from server state
                 // This prevents unwanted deselection when server state doesn't match local selection
@@ -322,7 +322,7 @@ export class GameDemo {
         // Determine entity type and subtype from game entity data
         let vehicleType = 'scout'; // Default
         let entityType = gameEntity.entity_type || 'vehicle';
-        let faction = gameEntity.faction || null;
+        let fraction = gameEntity.fraction || null;
 
         if (gameEntity.subtype) {
             // Check if subtype contains '_' which indicates an alert/revealed unit with state (e.g., 'Scout Car_Revealed')
@@ -355,7 +355,7 @@ export class GameDemo {
         // Create entity with game coordinates (createEntitySprite will convert to screen coordinates)
         const posX = gameEntity.position ? gameEntity.position.x : 0;
         const posY = gameEntity.position ? gameEntity.position.y : 0;
-        this.entityRenderer.createEntitySprite(gameEntity.id, posX, posY, vehicleType, faction, entityType);
+        this.entityRenderer.createEntitySprite(gameEntity.id, posX, posY, vehicleType, fraction, entityType);
     }
 
     updateStatus(message) {
@@ -643,8 +643,8 @@ export class GameDemo {
         }
         infoText += '\n';
 
-        if (entityInfo.faction) {
-            infoText += `🎯 Faction: ${entityInfo.faction}\n`;
+        if (entityInfo.fraction) {
+            infoText += `🎯 Fraction: ${entityInfo.fraction}\n`;
         }
 
         if (entityInfo.health) {
@@ -687,7 +687,7 @@ export class GameDemo {
         }
 
         // Add commands if requested
-        if (includeCommands && entityInfo.faction === 'Player') {
+        if (includeCommands && entityInfo.fraction === 'Player') {
             if (entityInfo.entity_type === 'base') {
                 infoText += `\n🏗️ Available Base Commands:\n`;
                 infoText += `  • <button class="spawn-vehicle-btn" style="background: #4CAF50; color: white; border: none; padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 0.8rem;">Спавн транспорта</button> - Spawn new vehicle\n`;
@@ -812,7 +812,7 @@ export class GameDemo {
     // Find the player's base entity
     findPlayerBase() {
         for (const [entityId, entity] of this.entities) {
-            if (entity.faction === 'Player' && entity.entityType === 'base') {
+            if (entity.fraction === 'Player' && entity.entityType === 'base') {
                 return entity;
             }
         }
@@ -823,7 +823,7 @@ export class GameDemo {
         // Check if any selected entity is a player base
         for (const entityId of this.selectedEntityIds) {
             const entity = this.entities.get(entityId);
-            if (entity && entity.entityType === 'base' && entity.faction === 'Player') {
+            if (entity && entity.entityType === 'base' && entity.fraction === 'Player') {
                 return true;
             }
         }

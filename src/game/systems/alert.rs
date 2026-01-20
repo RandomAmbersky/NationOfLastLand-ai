@@ -86,7 +86,7 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
 
     match alert_type {
         AlertType::TrashAlert => {
-            // Spawn 1-3 hostile scavengers (wild faction - hostile to everyone)
+            // Spawn 1-3 hostile scavengers (wild fraction - hostile to everyone)
             let count = rng.random_range(1..=3);
             for _i in 0..count {
                 let offset_x = rng.random_range(-10.0..10.0);
@@ -102,13 +102,13 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 combat::add_combat_to_vehicle(world, entity);
 
                 // Add wild fraction (hostile to everyone)
-                combat::add_faction_to_entity(world, entity, Fraction::Wild);
+                combat::add_fraction_to_entity(world, entity, Fraction::Wild);
 
                 println!("Spawned hostile scavenger at ({}, {})", entity_pos.x, entity_pos.y);
             }
         }
         AlertType::WasteAlert => {
-            // Spawn 1-2 toxic mutants (wild faction - hostile to everyone)
+            // Spawn 1-2 toxic mutants (wild fraction - hostile to everyone)
             let count = rng.random_range(1..=2);
             for _i in 0..count {
                 let offset_x = rng.random_range(-15.0..15.0);
@@ -124,13 +124,13 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 combat::add_combat_to_vehicle(world, entity);
 
                 // Add wild fraction (hostile to everyone)
-                combat::add_faction_to_entity(world, entity, Fraction::Wild);
+                combat::add_fraction_to_entity(world, entity, Fraction::Wild);
 
                 println!("Spawned toxic mutant at ({}, {})", entity_pos.x, entity_pos.y);
             }
         }
         AlertType::MutantAlert => {
-            // Spawn 2-4 mutant creatures with movement (wild faction)
+            // Spawn 2-4 mutant creatures with movement (wild fraction)
             let count = rng.random_range(2..=4);
             for _i in 0..count {
                 let offset_x = rng.random_range(-20.0..20.0);
@@ -146,13 +146,13 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 combat::add_combat_to_vehicle(world, entity);
 
                 // Add wild fraction
-                combat::add_faction_to_entity(world, entity, Fraction::Wild);
+                combat::add_fraction_to_entity(world, entity, Fraction::Wild);
 
                 println!("Spawned mutant creature at ({}, {})", entity_pos.x, entity_pos.y);
             }
         }
         AlertType::RaiderAlert => {
-            // Spawn 1-2 raider vehicles (enemy faction)
+            // Spawn 1-2 raider vehicles (enemy fraction)
             let count = rng.random_range(1..=2);
             for _i in 0..count {
                 let offset_x = rng.random_range(-25.0..25.0);
@@ -169,7 +169,7 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 combat::add_combat_to_vehicle(world, entity);
 
                 // Add enemy fraction
-                combat::add_faction_to_entity(world, entity, Fraction::Enemy);
+                combat::add_fraction_to_entity(world, entity, Fraction::Enemy);
 
                 println!("Spawned raider vehicle at ({}, {})", entity_pos.x, entity_pos.y);
             }
@@ -182,7 +182,7 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
             spawned.push(entity.id());
 
             // Add neutral fraction
-            combat::add_faction_to_entity(world, entity, Fraction::Neutral);
+            combat::add_fraction_to_entity(world, entity, Fraction::Neutral);
 
             println!("Spawned survivor group at ({}, {})", entity_pos.x, entity_pos.y);
         }
@@ -194,7 +194,7 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
             spawned.push(entity.id());
 
             // Add neutral fraction
-            combat::add_faction_to_entity(world, entity, Fraction::Neutral);
+            combat::add_fraction_to_entity(world, entity, Fraction::Neutral);
 
             println!("Spawned wandering trader at ({}, {})", entity_pos.x, entity_pos.y);
         }
@@ -206,7 +206,7 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
             spawned.push(entity.id());
 
             // Add neutral fraction
-            combat::add_faction_to_entity(world, entity, Fraction::Neutral);
+            combat::add_fraction_to_entity(world, entity, Fraction::Neutral);
 
             println!("Spawned resource deposit at ({}, {})", entity_pos.x, entity_pos.y);
         }

@@ -62,7 +62,7 @@ This report documents the discrepancies found between the project documentation 
 ### Fully Implemented Systems (✅)
 - ECS Architecture with hecs
 - Movement System (unit movement, targeting, navigation)
-- Combat System (damage types, resistances, faction-based combat)
+- Combat System (damage types, resistances, fraction-based combat)
 - Alert System (random event generation, reveal mechanics)
 - Selection System (unit selection, group management)
 - WebAssembly API (init, create_vehicle, update, load_config)

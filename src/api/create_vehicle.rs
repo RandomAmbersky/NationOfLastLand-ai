@@ -82,7 +82,7 @@ pub fn create_vehicle_in_world(world: &mut hecs::World, vehicle_type: &str, x: f
     combat::add_combat_to_vehicle(world, entity);
 
     // Add fraction (player fraction by default for player-created units)
-    combat::add_faction_to_entity(world, entity, Fraction::Player);
+    combat::add_fraction_to_entity(world, entity, Fraction::Player);
 
     entity
 }
