@@ -804,14 +804,14 @@ mod tests {
 
         // Create player base (immobile unit)
         let player_base = world.spawn((
-            FactionComponent::player(),
+            FractionComponent::player(),
             Base::new(1, (100.0, 100.0)),
             Position::new(100.0, 100.0),
         ));
 
         // Create player vehicle (movable unit)
         let player_vehicle = world.spawn((
-            FactionComponent::player(),
+            FractionComponent::player(),
             Vehicle::new(VehicleType::ScoutCar),
             Position::new(150.0, 150.0),
             Movement::new(15.0),
@@ -819,7 +819,7 @@ mod tests {
 
         // Create enemy vehicle
         let enemy_vehicle = world.spawn((
-            FactionComponent::enemy(),
+            FractionComponent::enemy(),
             Vehicle::new(VehicleType::ArmoredTruck),
             Position::new(200.0, 200.0),
             Movement::new(9.0),
