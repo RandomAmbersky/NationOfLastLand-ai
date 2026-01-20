@@ -1,6 +1,6 @@
 //! Alert system for random event generation and management
 
-use crate::game::components::{Alert, AlertState, AlertType, Position, Health, Faction, Selection};
+use crate::game::components::{Alert, AlertState, AlertType, Position, Health, Fraction, Selection};
 use crate::game::systems::combat;
 use rand::Rng;
 
@@ -101,8 +101,8 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 // Add combat capabilities
                 combat::add_combat_to_vehicle(world, entity);
 
-                // Add wild faction (hostile to everyone)
-                combat::add_faction_to_entity(world, entity, Faction::Wild);
+                // Add wild fraction (hostile to everyone)
+                combat::add_faction_to_entity(world, entity, Fraction::Wild);
 
                 println!("Spawned hostile scavenger at ({}, {})", entity_pos.x, entity_pos.y);
             }
@@ -123,8 +123,8 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 // Add combat capabilities
                 combat::add_combat_to_vehicle(world, entity);
 
-                // Add wild faction (hostile to everyone)
-                combat::add_faction_to_entity(world, entity, Faction::Wild);
+                // Add wild fraction (hostile to everyone)
+                combat::add_faction_to_entity(world, entity, Fraction::Wild);
 
                 println!("Spawned toxic mutant at ({}, {})", entity_pos.x, entity_pos.y);
             }
@@ -145,8 +145,8 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 // Add combat capabilities
                 combat::add_combat_to_vehicle(world, entity);
 
-                // Add wild faction
-                combat::add_faction_to_entity(world, entity, Faction::Wild);
+                // Add wild fraction
+                combat::add_faction_to_entity(world, entity, Fraction::Wild);
 
                 println!("Spawned mutant creature at ({}, {})", entity_pos.x, entity_pos.y);
             }
@@ -168,8 +168,8 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
                 // Add combat capabilities
                 combat::add_combat_to_vehicle(world, entity);
 
-                // Add enemy faction
-                combat::add_faction_to_entity(world, entity, Faction::Enemy);
+                // Add enemy fraction
+                combat::add_faction_to_entity(world, entity, Fraction::Enemy);
 
                 println!("Spawned raider vehicle at ({}, {})", entity_pos.x, entity_pos.y);
             }
@@ -181,8 +181,8 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
             let entity = world.spawn((entity_pos, health));
             spawned.push(entity.id());
 
-            // Add neutral faction
-            combat::add_faction_to_entity(world, entity, Faction::Neutral);
+            // Add neutral fraction
+            combat::add_faction_to_entity(world, entity, Fraction::Neutral);
 
             println!("Spawned survivor group at ({}, {})", entity_pos.x, entity_pos.y);
         }
@@ -193,8 +193,8 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
             let entity = world.spawn((entity_pos, health));
             spawned.push(entity.id());
 
-            // Add neutral faction
-            combat::add_faction_to_entity(world, entity, Faction::Neutral);
+            // Add neutral fraction
+            combat::add_faction_to_entity(world, entity, Fraction::Neutral);
 
             println!("Spawned wandering trader at ({}, {})", entity_pos.x, entity_pos.y);
         }
@@ -205,8 +205,8 @@ fn spawn_alert_entities(world: &mut hecs::World, alert_type: AlertType, position
             let entity = world.spawn((entity_pos, health));
             spawned.push(entity.id());
 
-            // Add neutral faction
-            combat::add_faction_to_entity(world, entity, Faction::Neutral);
+            // Add neutral fraction
+            combat::add_faction_to_entity(world, entity, Fraction::Neutral);
 
             println!("Spawned resource deposit at ({}, {})", entity_pos.x, entity_pos.y);
         }

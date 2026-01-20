@@ -99,10 +99,10 @@ pub fn get_entity_info(entity_id: u32) -> Result<String, JsValue> {
             }
         }
 
-        // Get faction
-        if let Ok(mut query) = world.world.query_one::<&FactionComponent>(entity) {
-            if let Some(faction_component) = query.get() {
-                entity_info.faction = Some(faction_component.faction.name().to_string());
+        // Get fraction
+        if let Ok(mut query) = world.world.query_one::<&FractionComponent>(entity) {
+            if let Some(fraction_component) = query.get() {
+                entity_info.faction = Some(fraction_component.fraction.name().to_string());
             }
         }
 

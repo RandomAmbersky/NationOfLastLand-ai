@@ -1,6 +1,6 @@
 use crate::config::GameConfig;
 use crate::game::{
-    components::{Base, FactionComponent, Health, Movement, Position, Selection, Vehicle},
+    components::{Base, FractionComponent, Health, Movement, Position, Selection, Vehicle},
     Alert, GameWorld,
 };
 use hecs::World;
@@ -126,9 +126,9 @@ pub fn get_entities_data(world: &World) -> Vec<EntityData> {
             )
         };
 
-        // Читаем faction отдельно для всех entity
-        let faction = world.get::<&FactionComponent>(entity_id).ok()
-            .map(|faction_component| faction_component.faction.name().to_string());
+        // Читаем fraction отдельно для всех entity
+        let faction = world.get::<&FractionComponent>(entity_id).ok()
+            .map(|fraction_component| fraction_component.fraction.name().to_string());
 
         // Читаем позицию отдельно для всех entity
         let position = world.get::<&Position>(entity_id).ok().map(|p| *p);

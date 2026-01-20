@@ -23,14 +23,14 @@ use nation_of_last_land::{
     get_selected_entities_internal,
     SelectionResult,
     SelectionAction,
-    FactionComponent,
+    FractionComponent,
     Vehicle,
     Base,
     Alert,
     Position,
     Movement,
     Selection,
-    Faction,
+    Fraction,
     VehicleType,
     AlertType,
 };
@@ -216,14 +216,14 @@ fn create_test_world() -> World {
 
     // Создаем базу игрока
     world.spawn((
-        FactionComponent::player(),
+        FractionComponent::player(),
         Base::new(1, (100.0, 100.0)),
         Position::new(100.0, 100.0),
     ));
 
     // Создаем юнит игрока
     world.spawn((
-        FactionComponent::player(),
+        FractionComponent::player(),
         Vehicle::new(VehicleType::ScoutCar),
         Position::new(150.0, 150.0),
         Movement::new(15.0),
@@ -231,7 +231,7 @@ fn create_test_world() -> World {
 
     // Создаем юнит врага
     world.spawn((
-        FactionComponent::enemy(),
+        FractionComponent::enemy(),
         Vehicle::new(VehicleType::ArmoredTruck),
         Position::new(200.0, 200.0),
         Movement::new(9.0),
@@ -258,9 +258,9 @@ fn find_entity_by_type(world: &World, entity_type: EntityType) -> hecs::Entity {
                 .unwrap().0
         }
         EntityType::EnemyVehicle => {
-            world.query::<&FactionComponent>()
+            world.query::<&FractionComponent>()
                 .iter()
-                .find(|(_, f)| f.faction == Faction::Enemy)
+                .find(|(_, f)| f.fraction == Fraction::Enemy)
                 .unwrap().0
         }
         EntityType::Alert => {

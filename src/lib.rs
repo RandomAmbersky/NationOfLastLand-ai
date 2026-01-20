@@ -20,14 +20,14 @@ pub use api::group::{
     TargetAssignment,
 };
 pub use game::components::{
-    FactionComponent,
+    FractionComponent,
     Vehicle,
     Base,
     Alert,
     Position,
     Movement,
     Selection,
-    Faction,
+    Fraction,
     VehicleType,
     AlertType,
 };

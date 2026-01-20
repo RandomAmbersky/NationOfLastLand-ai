@@ -1,6 +1,6 @@
 //! Combat system for automatic unit collisions and damage calculation
 
-use crate::game::components::{Position, Health, Damage, DamageResistance, Vehicle, CombatCooldown, FactionComponent, Faction};
+use crate::game::components::{Position, Health, Damage, DamageResistance, Vehicle, CombatCooldown, FractionComponent, Fraction};
 use crate::game::GameWorld;
 
 /// Update combat system: handle collisions and damage between units
@@ -45,14 +45,14 @@ fn apply_combat_damage(game_world: &mut GameWorld, entity_a: hecs::Entity, entit
     let world = &mut game_world.world;
     game_world.debug_messages.push(format!("Starting combat between entities {} and {}", entity_a.id(), entity_b.id()));
 
-    // Check factions first - same faction units don't attack each other
-    let faction_a = world.get::<&FactionComponent>(entity_a)
-        .map(|f| f.faction)
-        .unwrap_or(Faction::Player); // Default to player faction
+    // Check fractions first - same fraction units don't attack each other
+    let faction_a = world.get::<&FractionComponent>(entity_a)
+        .map(|f| f.fraction)
+        .unwrap_or(Fraction::Player); // Default to player fraction
 
-    let faction_b = world.get::<&FactionComponent>(entity_b)
-        .map(|f| f.faction)
-        .unwrap_or(Faction::Player); // Default to player faction
+    let faction_b = world.get::<&FractionComponent>(entity_b)
+        .map(|f| f.fraction)
+        .unwrap_or(Fraction::Player); // Default to player fraction
 
     if !faction_a.is_hostile_towards(&faction_b) {
         game_world.debug_messages.push(format!("Entities {} and {} are not hostile (faction {} vs {}), no combat", entity_a.id(), entity_b.id(), faction_a.name(), faction_b.name()));
@@ -189,8 +189,8 @@ pub fn add_combat_to_vehicle(world: &mut hecs::World, entity: hecs::Entity) {
     let _ = world.insert_one(entity, cooldown);
 }
 
-/// Add faction component to an entity
-pub fn add_faction_to_entity(world: &mut hecs::World, entity: hecs::Entity, faction: Faction) {
-    let faction_component = FactionComponent::new(faction);
+/// Add fraction component to an entity
+pub fn add_faction_to_entity(world: &mut hecs::World, entity: hecs::Entity, faction: Fraction) {
+    let faction_component = FractionComponent::new(faction);
     let _ = world.insert_one(entity, faction_component);
 }

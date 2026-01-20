@@ -1,6 +1,6 @@
 use crate::api::init::{get_game_config, GAME_WORLD};
 use crate::game::components::{
-    Faction, Health, Movement, Position, Selection, Vehicle, VehicleType,
+    Fraction, Health, Movement, Position, Selection, Vehicle, VehicleType,
 };
 use crate::game::systems::combat;
 use crate::game::GameWorld;
@@ -81,8 +81,8 @@ pub fn create_vehicle_in_world(world: &mut hecs::World, vehicle_type: &str, x: f
     // Add combat capabilities
     combat::add_combat_to_vehicle(world, entity);
 
-    // Add faction (player faction by default for player-created units)
-    combat::add_faction_to_entity(world, entity, Faction::Player);
+    // Add fraction (player fraction by default for player-created units)
+    combat::add_faction_to_entity(world, entity, Fraction::Player);
 
     entity
 }

@@ -1,5 +1,5 @@
 use crate::api::init::GAME_WORLD;
-use crate::game::components::{Selection, FactionComponent, Vehicle, Base, Alert};
+use crate::game::components::{Selection, FractionComponent, Vehicle, Base, Alert};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -114,8 +114,8 @@ pub fn handle_entity_selection(entity_id: u32, is_multi_select: bool, current_se
 /// Check if any immobile player unit (base) is currently selected
 pub fn has_immobile_player_unit_selected(world: &hecs::World, selected_entities: &[hecs::Entity]) -> bool {
     for &entity in selected_entities {
-        if let Ok(faction) = world.get::<&FactionComponent>(entity) {
-            if faction.faction == crate::game::components::Faction::Player {
+        if let Ok(faction) = world.get::<&FractionComponent>(entity) {
+            if faction.fraction == crate::game::components::Fraction::Player {
                 if world.get::<&Base>(entity).is_ok() {
                     return true;
                 }
@@ -128,8 +128,8 @@ pub fn has_immobile_player_unit_selected(world: &hecs::World, selected_entities:
 /// Check if any non-player unit is currently selected
 pub fn has_non_player_unit_selected(world: &hecs::World, selected_entities: &[hecs::Entity]) -> bool {
     for &entity in selected_entities {
-        if let Ok(faction) = world.get::<&FactionComponent>(entity) {
-            if faction.faction != crate::game::components::Faction::Player {
+        if let Ok(faction) = world.get::<&FractionComponent>(entity) {
+            if faction.fraction != crate::game::components::Fraction::Player {
                 return true;
             }
         }
@@ -141,8 +141,8 @@ pub fn has_non_player_unit_selected(world: &hecs::World, selected_entities: &[he
 pub fn get_selected_player_movable_units(world: &hecs::World, selected_entities: &[hecs::Entity]) -> Vec<hecs::Entity> {
     let mut movable_units = Vec::new();
     for &entity in selected_entities {
-        if let Ok(faction) = world.get::<&FactionComponent>(entity) {
-            if faction.faction == crate::game::components::Faction::Player {
+        if let Ok(faction) = world.get::<&FractionComponent>(entity) {
+            if faction.fraction == crate::game::components::Fraction::Player {
                 if world.get::<&Vehicle>(entity).is_ok() {
                     movable_units.push(entity);
                 }
@@ -152,14 +152,14 @@ pub fn get_selected_player_movable_units(world: &hecs::World, selected_entities:
     movable_units
 }
 
-/// Check if entity belongs to non-player faction or is an alert
+/// Check if entity belongs to non-player fraction or is an alert
 pub fn is_non_player_faction_entity(world: &hecs::World, entity: hecs::Entity) -> bool {
-    if let Ok(faction) = world.get::<&FactionComponent>(entity) {
-        if faction.faction != crate::game::components::Faction::Player {
+    if let Ok(faction) = world.get::<&FractionComponent>(entity) {
+        if faction.fraction != crate::game::components::Fraction::Player {
             return true;
         }
     }
-    // Alerts are considered non-player faction
+    // Alerts are considered non-player fraction
     world.get::<&Alert>(entity).is_ok()
 }
 
@@ -728,8 +728,8 @@ pub fn get_selected_entities() -> Result<String, JsValue> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::game::components::{FactionComponent, Position, Movement, VehicleType, AlertType};
-    use crate::game::components::Faction;
+    use crate::game::components::{FractionComponent, Position, Movement, VehicleType, AlertType};
+    use crate::game::components::Fraction;
     use hecs::World;
 
     /// Test version of handle_entity_selection that works with a direct world reference
@@ -865,9 +865,9 @@ mod tests {
         let mut world = create_test_world();
 
         // Find entities
-        let enemy_vehicle = world.query::<&FactionComponent>()
+        let enemy_vehicle = world.query::<&FractionComponent>()
             .iter()
-            .find(|(_, f)| f.faction == Faction::Enemy)
+            .find(|(_, f)| f.fraction == Fraction::Enemy)
             .unwrap().0;
         let player_vehicle = world.query::<&Vehicle>()
             .iter()
@@ -897,9 +897,9 @@ mod tests {
             .iter()
             .find(|(_, v)| v.vehicle_type == VehicleType::ScoutCar)
             .unwrap().0;
-        let enemy_vehicle = world.query::<&FactionComponent>()
+        let enemy_vehicle = world.query::<&FractionComponent>()
             .iter()
-            .find(|(_, f)| f.faction == Faction::Enemy)
+            .find(|(_, f)| f.fraction == Fraction::Enemy)
             .unwrap().0;
 
         // Select player vehicle (movable player unit)
