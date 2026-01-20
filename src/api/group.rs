@@ -92,7 +92,7 @@ pub fn handle_entity_selection(entity_id: u32, is_multi_select: bool, current_se
         // Rule 6: If movable player units are selected and clicking on non-player faction unit
         // Assign as target instead of selecting
         let selected_player_movable_units = get_selected_player_movable_units(&world.world, &current_selected_entities);
-        if !selected_player_movable_units.is_empty() && is_non_player_faction_entity(&world.world, clicked_entity) {
+        if !selected_player_movable_units.is_empty() && is_non_player_fraction_entity(&world.world, clicked_entity) {
             return handle_group_targeting(&mut world.world, clicked_entity, entity_id);
         }
 
@@ -153,7 +153,7 @@ pub fn get_selected_player_movable_units(world: &hecs::World, selected_entities:
 }
 
 /// Check if entity belongs to non-player fraction or is an alert
-pub fn is_non_player_faction_entity(world: &hecs::World, entity: hecs::Entity) -> bool {
+pub fn is_non_player_fraction_entity(world: &hecs::World, entity: hecs::Entity) -> bool {
     if let Ok(faction) = world.get::<&FractionComponent>(entity) {
         if faction.fraction != crate::game::components::Fraction::Player {
             return true;
@@ -790,7 +790,7 @@ mod tests {
         // Rule 6: If movable player units are selected and clicking on non-player faction unit
         // Assign as target instead of selecting
         let selected_player_movable_units = get_selected_player_movable_units(world, &current_selected_entities);
-        if !selected_player_movable_units.is_empty() && is_non_player_faction_entity(world, clicked_entity) {
+        if !selected_player_movable_units.is_empty() && is_non_player_fraction_entity(world, clicked_entity) {
             return handle_group_targeting(world, clicked_entity, entity_id);
         }
 

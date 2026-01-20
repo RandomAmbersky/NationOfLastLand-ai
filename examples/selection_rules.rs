@@ -14,7 +14,7 @@ use nation_of_last_land::{
     has_immobile_player_unit_selected,
     has_non_player_unit_selected,
     get_selected_player_movable_units,
-    is_non_player_faction_entity,
+    is_non_player_fraction_entity,
     handle_immobile_unit_selection,
     handle_non_player_unit_selection,
     handle_group_targeting,
@@ -65,7 +65,7 @@ fn example_rule_6_group_targeting() {
         .collect();
 
     let movable_units = get_selected_player_movable_units(&world, &selected_entities);
-    let is_non_player = is_non_player_faction_entity(&world, enemy_vehicle);
+    let is_non_player = is_non_player_fraction_entity(&world, enemy_vehicle);
 
     println!("   - Выбрано подвижных юнитов игрока: {}", movable_units.len());
     println!("   - Цель является юнитом не игрока: {}", is_non_player);

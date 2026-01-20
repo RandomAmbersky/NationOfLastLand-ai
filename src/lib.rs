@@ -8,7 +8,7 @@ pub use api::group::{
     has_immobile_player_unit_selected,
     has_non_player_unit_selected,
     get_selected_player_movable_units,
-    is_non_player_faction_entity,
+    is_non_player_fraction_entity,
     handle_immobile_unit_selection,
     handle_non_player_unit_selection,
     handle_group_targeting,
