@@ -241,9 +241,46 @@ pub fn handle_standard_entity_selection(
     is_multi_select: bool,
     current_selected_entities: &[hecs::Entity]
 ) -> Result<String, JsValue> {
-    // For now, implement simple selection logic
-    // This can be expanded based on the original JS logic
+    // Check if clicked entity belongs to player fraction and can move (for multi-select logic)
+    let is_player_entity = if let Ok(faction) = world.get::<&FractionComponent>(clicked_entity) {
+        faction.fraction == crate::game::components::Fraction::Player
+    } else {
+        false
+    };
+
+    let can_move = world.get::<&Vehicle>(clicked_entity).is_ok();
+
     if is_multi_select {
+        // Multi-select logic: only player units that can move can be selected
+        // If enemy unit is already selected, it should be deselected when adding player units
+        if !is_player_entity || !can_move {
+            // Cannot add enemy units or non-movable units to multi-selection
+            let result = SelectionResult {
+                success: false,
+                message: format!("Cannot add entity {} to multi-selection (only movable player units allowed)", entity_id),
+                action: SelectionAction::NoAction,
+                selected_entities: get_selected_entities_internal(world),
+                target_assigned: None,
+            };
+            return serde_json::to_string(&result)
+                .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)));
+        }
+
+        // Check if enemy units are currently selected and deselect them
+        let mut enemy_entities_to_deselect = Vec::new();
+        for &selected_entity in current_selected_entities {
+            if let Ok(faction) = world.get::<&FractionComponent>(selected_entity) {
+                if faction.fraction != crate::game::components::Fraction::Player {
+                    enemy_entities_to_deselect.push(selected_entity);
+                }
+            }
+        }
+
+        let has_enemy_selected = !enemy_entities_to_deselect.is_empty();
+        for &enemy_entity in &enemy_entities_to_deselect {
+            deselect_entity_internal(world, enemy_entity);
+        }
+
         // Multi-select: toggle selection
         if current_selected_entities.contains(&clicked_entity) {
             deselect_entity_internal(world, clicked_entity);
@@ -258,9 +295,13 @@ pub fn handle_standard_entity_selection(
                 .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
         } else {
             select_entity_internal(world, clicked_entity, false);
+            let mut message = format!("Added entity {} to selection", entity_id);
+            if has_enemy_selected {
+                message = format!("Added entity {} to selection (deselected enemy units)", entity_id);
+            }
             let result = SelectionResult {
                 success: true,
-                message: format!("Added entity {} to selection", entity_id),
+                message,
                 action: SelectionAction::EntitySelected,
                 selected_entities: get_selected_entities_internal(world),
                 target_assigned: None,
@@ -269,7 +310,7 @@ pub fn handle_standard_entity_selection(
                 .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
         }
     } else {
-        // Single select: clear and select
+        // Single select: allow selecting any entity (including enemy units)
         clear_all_selections(world);
         select_entity_internal(world, clicked_entity, true);
 
@@ -365,6 +406,24 @@ pub fn select_entity(entity_id: u32, exclusive: bool) -> Result<String, JsValue>
 
         match target_entity {
             Some(entity) => {
+                // Check if entity belongs to player fraction
+                let is_player_entity = if let Ok(faction) = world.world.get::<&FractionComponent>(entity) {
+                    faction.fraction == crate::game::components::Fraction::Player
+                } else {
+                    false
+                };
+
+                // Players can only select their own units (player fraction)
+                if !is_player_entity {
+                    let result = GroupOperationResult {
+                        success: false,
+                        message: format!("Cannot select enemy entity {}", entity_id),
+                        selected_count: None,
+                    };
+                    return serde_json::to_string(&result)
+                        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)));
+                }
+
                 // Check if entity has Selection component
                 let has_selection = world.world.get::<&Selection>(entity).is_ok();
 
@@ -973,7 +1032,6 @@ mod tests {
         let mut world = create_test_world();
 
         // Find entities
-        let player_base = world.query::<&Base>().iter().next().unwrap().0;
         let player_vehicle = world.query::<&Vehicle>()
             .iter()
             .find(|(_, v)| v.vehicle_type == VehicleType::ScoutCar)
@@ -987,16 +1045,14 @@ mod tests {
         assert_eq!(after_vehicle_select.len(), 1);
         assert_eq!(after_vehicle_select[0], player_vehicle.id());
 
-        // Multi-select player base (should add to selection since vehicle is movable)
+        // Multi-select the same vehicle again (should deselect it)
         let current_selected = get_selected_entities_internal(&world);
-        let result = handle_entity_selection_test(&mut world, player_base.id(), true, current_selected).unwrap();
+        let result = handle_entity_selection_test(&mut world, player_vehicle.id(), true, current_selected).unwrap();
         let selection_result: SelectionResult = serde_json::from_str(&result).unwrap();
 
         assert!(selection_result.success);
-        assert_eq!(selection_result.action, SelectionAction::EntitySelected);
-        assert_eq!(selection_result.selected_entities.len(), 2);
-        assert!(selection_result.selected_entities.contains(&player_base.id()));
-        assert!(selection_result.selected_entities.contains(&player_vehicle.id()));
+        assert_eq!(selection_result.action, SelectionAction::EntityDeselected);
+        assert!(selection_result.selected_entities.is_empty());
         assert!(selection_result.target_assigned.is_none());
     }
 
@@ -1021,6 +1077,103 @@ mod tests {
         assert!(selection_result.success);
         assert_eq!(selection_result.action, SelectionAction::EntityDeselected);
         assert!(selection_result.selected_entities.is_empty());
+        assert!(selection_result.target_assigned.is_none());
+    }
+
+    #[test]
+    fn test_can_select_enemy_entity_single() {
+        let mut world = create_test_world();
+
+        // Find enemy vehicle
+        let enemy_vehicle = world.query::<&FractionComponent>()
+            .iter()
+            .find(|(_, f)| f.fraction == Fraction::Enemy)
+            .unwrap().0;
+
+        // Single select enemy vehicle - should succeed
+        let current_selected = get_selected_entities_internal(&world);
+        let result = handle_entity_selection_test(&mut world, enemy_vehicle.id(), false, current_selected).unwrap();
+        let selection_result: SelectionResult = serde_json::from_str(&result).unwrap();
+
+        assert!(selection_result.success);
+        assert_eq!(selection_result.action, SelectionAction::EntitySelected);
+        assert_eq!(selection_result.selected_entities, vec![enemy_vehicle.id()]);
+        assert!(selection_result.target_assigned.is_none());
+    }
+
+    #[test]
+    fn test_cannot_select_enemy_entity_multi() {
+        let mut world = create_test_world();
+
+        // Find enemy vehicle
+        let enemy_vehicle = world.query::<&FractionComponent>()
+            .iter()
+            .find(|(_, f)| f.fraction == Fraction::Enemy)
+            .unwrap().0;
+
+        // Try to multi-select enemy vehicle - should fail
+        let current_selected = get_selected_entities_internal(&world);
+        let result = handle_entity_selection_test(&mut world, enemy_vehicle.id(), true, current_selected).unwrap();
+        let selection_result: SelectionResult = serde_json::from_str(&result).unwrap();
+
+        assert!(!selection_result.success);
+        assert_eq!(selection_result.action, SelectionAction::NoAction);
+        assert!(selection_result.selected_entities.is_empty());
+        assert!(selection_result.target_assigned.is_none());
+        assert!(selection_result.message.contains("Cannot add entity"));
+    }
+
+    #[test]
+    fn test_multi_select_deselects_enemy_units() {
+        let mut world = create_test_world();
+
+        // Find entities
+        let enemy_vehicle = world.query::<&FractionComponent>()
+            .iter()
+            .find(|(_, f)| f.fraction == Fraction::Enemy)
+            .unwrap().0;
+        let player_vehicle = world.query::<&Vehicle>()
+            .iter()
+            .find(|(_, v)| v.vehicle_type == VehicleType::ScoutCar)
+            .unwrap().0;
+
+        // First select enemy vehicle (single select)
+        select_entity_internal(&mut world, enemy_vehicle, true);
+
+        // Verify enemy is selected
+        let after_enemy_select = get_selected_entities_internal(&world);
+        assert_eq!(after_enemy_select, vec![enemy_vehicle.id()]);
+
+        // Now multi-select player vehicle - should deselect enemy and select player
+        let current_selected = get_selected_entities_internal(&world);
+        let result = handle_entity_selection_test(&mut world, player_vehicle.id(), true, current_selected).unwrap();
+        let selection_result: SelectionResult = serde_json::from_str(&result).unwrap();
+
+        assert!(selection_result.success);
+        assert_eq!(selection_result.action, SelectionAction::EntitySelected);
+        assert_eq!(selection_result.selected_entities, vec![player_vehicle.id()]);
+        // Enemy should be deselected
+        assert!(!selection_result.selected_entities.contains(&enemy_vehicle.id()));
+    }
+
+    #[test]
+    fn test_can_select_player_entity() {
+        let mut world = create_test_world();
+
+        // Find player vehicle
+        let player_vehicle = world.query::<&Vehicle>()
+            .iter()
+            .find(|(_, v)| v.vehicle_type == VehicleType::ScoutCar)
+            .unwrap().0;
+
+        // Select player vehicle - should succeed
+        let current_selected = get_selected_entities_internal(&world);
+        let result = handle_entity_selection_test(&mut world, player_vehicle.id(), false, current_selected).unwrap();
+        let selection_result: SelectionResult = serde_json::from_str(&result).unwrap();
+
+        assert!(selection_result.success);
+        assert_eq!(selection_result.action, SelectionAction::EntitySelected);
+        assert_eq!(selection_result.selected_entities, vec![player_vehicle.id()]);
         assert!(selection_result.target_assigned.is_none());
     }
 }

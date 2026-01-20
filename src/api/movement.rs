@@ -1,5 +1,5 @@
 use crate::api::init::GAME_WORLD;
-use crate::game::components::Movement;
+use crate::game::components::{Movement, FractionComponent, Fraction};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
@@ -26,6 +26,23 @@ pub fn set_entity_target(entity_id: u32, target_x: f32, target_y: f32) -> Result
 
         match found_entity_id {
             Some(entity) => {
+                // Check if entity belongs to player fraction
+                let is_player_entity = if let Ok(faction) = world.world.get::<&FractionComponent>(entity) {
+                    faction.fraction == Fraction::Player
+                } else {
+                    false
+                };
+
+                // Players can only set targets for their own units (player fraction)
+                if !is_player_entity {
+                    let result = MovementResult {
+                        success: false,
+                        message: format!("Cannot set target for enemy entity {}", entity_id),
+                    };
+                    return serde_json::to_string(&result)
+                        .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)));
+                }
+
                 // Now get mutable access to the movement component
                 match world.world.query_one::<&mut Movement>(entity) {
                     Ok(mut query) => {
