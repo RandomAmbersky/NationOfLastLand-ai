@@ -1,4 +1,5 @@
 import { GAME_CONFIG } from './game-config.js';
+import { CoordinateService } from './coordinate-service.js';
 
 /**
  * Управляет рендерингом сущностей и визуальными эффектами
@@ -11,6 +12,7 @@ export class EntityRenderer {
         this.alertHighlight = null;
         this.alertHighlightTimeout = null;
         this.gridContainer = null;
+        this.coordinateService = new CoordinateService(gameDemo);
     }
 
     setupGrid() {
@@ -202,7 +204,7 @@ export class EntityRenderer {
 
     // Helper method to get screen coordinates from game coordinates
     getScreenCoords(gameX, gameY) {
-        return this.gameDemo.gameToScreen(gameX, gameY);
+        return this.coordinateService.gameToScreen(gameX, gameY);
     }
 
     showTargetIndicator(gameX, gameY) {

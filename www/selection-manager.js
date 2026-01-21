@@ -1,14 +1,18 @@
 import { select_entity, deselect_entity, clear_selection, handle_entity_selection } from './wasm-imports.js';
 import { GAME_CONFIG } from './game-config.js';
+import { SelectionIndicatorManager } from './selection-indicator.js';
+import { EntityService } from './entity-service.js';
 
-/**
- * Управляет выделением сущностей
- */
-export class SelectionManager {
-    constructor(gameDemo) {
-        this.gameDemo = gameDemo;
-        this.isSelecting = false;
-    }
+    /**
+     * Управляет выделением сущностей
+     */
+    export class SelectionManager {
+        constructor(gameDemo) {
+            this.gameDemo = gameDemo;
+            this.isSelecting = false;
+            this.selectionIndicatorManager = new SelectionIndicatorManager(gameDemo);
+            this.entityService = new EntityService(gameDemo);
+        }
 
     async handleEntityClick(entityId, isMultiSelect, event) {
         const entity = this.gameDemo.entities.get(entityId);
@@ -61,27 +65,8 @@ export class SelectionManager {
         // Синхронизируем локальное состояние с состоянием из Rust
         const newSelectedIds = new Set(selectionResult.selected_entities);
 
-        // Удаляем индикаторы выделения для сущностей, которые больше не выбраны
-        for (const entityId of this.gameDemo.selectedEntityIds) {
-            if (!newSelectedIds.has(entityId)) {
-                const entity = this.gameDemo.entities.get(entityId);
-                if (entity && entity.selectionIndicator) {
-                    entity.container.removeChild(entity.selectionIndicator);
-                    entity.selectionIndicator = null;
-                }
-            }
-        }
-
-        // Добавляем индикаторы выделения для новых выбранных сущностей
-        for (const entityId of newSelectedIds) {
-            if (!this.gameDemo.selectedEntityIds.has(entityId)) {
-                const entity = this.gameDemo.entities.get(entityId);
-                if (entity) {
-                    const isEnemy = entity.fraction === 'Enemy' || entity.fraction === 'Wild' || entity.entityType === 'alert';
-                    this._createSelectionIndicator(entity, isEnemy);
-                }
-            }
-        }
+        // Обновляем индикаторы выделения
+        this.selectionIndicatorManager.updateSelectionIndicators(newSelectedIds);
 
         // Обновляем множество выбранных ID
         this.gameDemo.selectedEntityIds = newSelectedIds;
@@ -143,7 +128,7 @@ export class SelectionManager {
                     // Все алерты подсвечиваются как враг
                     const isAlert = entity.entityType === 'alert';
                     const isEnemy = entity.fraction === 'Enemy' || entity.fraction === 'Wild' || isAlert;
-                    this._createSelectionIndicator(entity, isEnemy);
+                    this.selectionIndicatorManager.createSelectionIndicator(entity, isEnemy);
                 }
 
                 const count = this.gameDemo.selectedEntityIds.size;
@@ -167,8 +152,7 @@ export class SelectionManager {
         this.gameDemo.selectedEntityIds.delete(entityId);
         const entity = this.gameDemo.entities.get(entityId);
         if (entity && entity.selectionIndicator) {
-            entity.container.removeChild(entity.selectionIndicator);
-            entity.selectionIndicator = null;
+            this.selectionIndicatorManager.removeSelectionIndicator(entity);
         }
 
         // Note: We no longer call deselect_entity API here since entity removal
@@ -290,13 +274,9 @@ export class SelectionManager {
 
 
 
+    // Метод оставлен для совместимости, но теперь использует SelectionIndicatorManager
     _createSelectionIndicator(entity, isEnemy = false) {
-        const graphics = new PIXI.Graphics();
-        const color = isEnemy ? GAME_CONFIG.COLORS.selection.enemy : GAME_CONFIG.COLORS.selection.player;
-        graphics.lineStyle(3, color, 1);
-        graphics.drawCircle(0, 0, 12);
-        entity.container.addChild(graphics);
-        entity.selectionIndicator = graphics;
+        this.selectionIndicatorManager.createSelectionIndicator(entity, isEnemy);
     }
 
     _updateSelectionStatus() {
@@ -380,7 +360,7 @@ export class SelectionManager {
      */
     selectAllPlayerUnitsAtBase() {
         // Find player base first
-        const baseEntity = this.gameDemo.findPlayerBase();
+        const baseEntity = this.entityService.findPlayerBase();
 
         if (!baseEntity) {
             this.gameDemo.updateStatus('База игрока не найдена');

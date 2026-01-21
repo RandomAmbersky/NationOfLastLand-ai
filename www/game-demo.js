@@ -5,6 +5,9 @@ import { InputHandler } from './input-handler.js';
 import { EntityRenderer } from './entity-renderer.js';
 import { SelectionManager } from './selection-manager.js';
 import { GameStateManager } from './game-state-manager.js';
+import { SelectionIndicatorManager } from './selection-indicator.js';
+import { EntityService } from './entity-service.js';
+import { CoordinateService } from './coordinate-service.js';
 
 /**
  * Главный класс игры, координирующий работу всех подсистем
@@ -21,7 +24,11 @@ export class GameDemo {
         this.lastUpdate = Date.now();
         this.selectedEntityIds = new Set();
         this.bases = new Map();
-        this._scaleCache = null;
+
+        // Инициализация сервисов
+        this.coordinateService = new CoordinateService(this);
+        this.entityService = new EntityService(this);
+        this.selectionIndicatorManager = new SelectionIndicatorManager(this);
 
         // Инициализация подсистем
         this.inputHandler = new InputHandler(this);
@@ -38,20 +45,14 @@ export class GameDemo {
      * Get cached scale values (invalidated on resize)
      */
     getScale() {
-        if (!this._scaleCache) {
-            this._scaleCache = {
-                x: this.app.screen.width / this.gameWidth,
-                y: this.app.screen.height / this.gameHeight
-            };
-        }
-        return this._scaleCache;
+        return this.coordinateService.getScale();
     }
 
     /**
      * Invalidate scale cache (call on resize)
      */
     invalidateScaleCache() {
-        this._scaleCache = null;
+        this.coordinateService.invalidateScaleCache();
     }
 
     async init() {
@@ -188,8 +189,7 @@ export class GameDemo {
                 // Удаляем визуальный индикатор выделения
                 const entity = this.entities.get(entityId);
                 if (entity && entity.selectionIndicator) {
-                    entity.container.removeChild(entity.selectionIndicator);
-                    entity.selectionIndicator = null;
+                    this.selectionIndicatorManager.removeSelectionIndicator(entity);
                 }
 
                 console.log(`Entity ${entityId} removed from selection (destroyed)`);
@@ -215,56 +215,9 @@ export class GameDemo {
         }
 
         // Валидация консистентности состояния
-        this._validateSelectionState();
+        this.selectionIndicatorManager.validateAndFixSelectionState();
 
         return removedCount;
-    }
-
-    // Валидация консистентности состояния выделения
-    _validateSelectionState() {
-        const inconsistencies = [];
-
-        for (const entityId of this.selectedEntityIds) {
-            const entity = this.entities.get(entityId);
-            if (!entity) {
-                inconsistencies.push(`Entity ${entityId} in selection but not in entities map`);
-            } else if (!entity.selectionIndicator) {
-                inconsistencies.push(`Entity ${entityId} selected but has no visual indicator`);
-            }
-        }
-
-        // Проверяем, что все визуальные индикаторы соответствуют выделению
-        for (const [entityId, entity] of this.entities) {
-            if (entity.selectionIndicator && !this.selectedEntityIds.has(entityId)) {
-                inconsistencies.push(`Entity ${entityId} has indicator but not in selection`);
-            }
-        }
-
-        if (inconsistencies.length > 0) {
-            console.warn('Selection state inconsistencies detected:', inconsistencies);
-            // Автоматическая коррекция
-            this._fixSelectionInconsistencies();
-        }
-    }
-
-    // Автоматическая коррекция несогласованностей
-    _fixSelectionInconsistencies() {
-        // Удаляем индикаторы для невыделенных сущностей
-        for (const [entityId, entity] of this.entities) {
-            if (entity.selectionIndicator && !this.selectedEntityIds.has(entityId)) {
-                entity.container.removeChild(entity.selectionIndicator);
-                entity.selectionIndicator = null;
-            }
-        }
-
-        // Добавляем недостающие индикаторы для выделенных сущностей
-        for (const entityId of this.selectedEntityIds) {
-            const entity = this.entities.get(entityId);
-            if (entity && !entity.selectionIndicator) {
-                const isEnemy = entity.fraction === 'Enemy' || entity.fraction === 'Wild' || entity.entityType === 'alert';
-                this.selectionManager._createSelectionIndicator(entity, isEnemy);
-            }
-        }
     }
 
     syncEntitiesWithGameState(gameEntities) {
@@ -795,39 +748,20 @@ export class GameDemo {
 
     // Utility methods for coordinate conversion
     screenToGame(x, y) {
-        return {
-            x: (x / this.app.screen.width) * this.gameWidth,
-            y: (y / this.app.screen.height) * this.gameHeight
-        };
+        return this.coordinateService.screenToGame(x, y);
     }
 
     gameToScreen(x, y) {
-        const scale = this.getScale();
-        return {
-            x: x * scale.x,
-            y: y * scale.y
-        };
+        return this.coordinateService.gameToScreen(x, y);
     }
 
     // Find the player's base entity
     findPlayerBase() {
-        for (const [entityId, entity] of this.entities) {
-            if (entity.fraction === 'Player' && entity.entityType === 'base') {
-                return entity;
-            }
-        }
-        return null;
+        return this.entityService.findPlayerBase();
     }
 
     isPlayerBaseSelected() {
-        // Check if any selected entity is a player base
-        for (const entityId of this.selectedEntityIds) {
-            const entity = this.entities.get(entityId);
-            if (entity && entity.entityType === 'base' && entity.fraction === 'Player') {
-                return true;
-            }
-        }
-        return false;
+        return this.entityService.isPlayerBaseSelected();
     }
 
     updateSpawnButtonState() {
