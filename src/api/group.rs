@@ -327,8 +327,6 @@ pub fn handle_standard_entity_selection(
     }
 }
 
-
-
 /// Internal function to select an entity
 pub fn select_entity_internal(world: &mut hecs::World, entity: hecs::Entity, exclusive: bool) {
     if exclusive {
