@@ -1,4 +1,4 @@
-import { gameInit, create_vehicle, update, set_entity_target, set_group_target, create_base, build_floor, create_random_alert, clear_selection } from './wasm-imports.js';
+import { gameInit, create_vehicle, update, set_group_target, create_base, build_floor, create_random_alert, clear_selection } from './wasm-imports.js';
 
 /**
  * Управляет состоянием игры и коммуникацией с WebAssembly
@@ -187,23 +187,7 @@ export class GameStateManager {
         }
     }
 
-    async setEntityTarget(entityId, x, y) {
-        try {
-            const result = set_entity_target(entityId, x, y);
-            const movementResult = JSON.parse(result);
 
-            if (movementResult.success) {
-                this.gameDemo.updateStatus(`Target set: ${movementResult.message}`);
-                this._handleTargetSet(x, y);
-            } else {
-                this.gameDemo.updateStatus(`Failed to set target: ${movementResult.message}`);
-                console.error('Failed to set target:', movementResult.message);
-            }
-        } catch (error) {
-            this.gameDemo.updateStatus(`Error setting target: ${error.message}`);
-            console.error('Target setting error:', error);
-        }
-    }
 
     async setGroupTarget(x, y) {
         try {

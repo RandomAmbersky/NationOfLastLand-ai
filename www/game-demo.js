@@ -164,9 +164,7 @@ export class GameDemo {
         this.gameStateManager.updateOnce();
     }
 
-    async setEntityTarget(entityId, x, y) {
-        await this.gameStateManager.setEntityTarget(entityId, x, y);
-    }
+
 
     async setGroupTarget(x, y) {
         await this.gameStateManager.setGroupTarget(x, y);

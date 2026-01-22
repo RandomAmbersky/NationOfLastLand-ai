@@ -165,26 +165,28 @@ export class InputHandler {
 
             case ' ':
                 if (this.gameDemo.selectedEntityIds.size > 0) {
-                    for (const entityId of this.gameDemo.selectedEntityIds) {
-                        const entity = this.gameDemo.entities.get(entityId);
-                        if (entity) {
-                            this.gameDemo.setEntityTarget(entityId, entity.gameX, entity.gameY);
-                        }
+                    // Stop units by setting group target to their current positions
+                    // Use the position of the first selected unit as reference
+                    const firstEntityId = this.gameDemo.selectedEntityIds.values().next().value;
+                    const firstEntity = this.gameDemo.entities.get(firstEntityId);
+                    if (firstEntity) {
+                        this.gameDemo.setGroupTarget(firstEntity.gameX, firstEntity.gameY);
+                        this.gameDemo.updateStatus(`Stopped ${this.gameDemo.selectedEntityIds.size} unit(s) (Spacebar)`);
                     }
-                    this.gameDemo.updateStatus(`Stopped ${this.gameDemo.selectedEntityIds.size} unit(s) (Spacebar)`);
                 }
                 event.preventDefault();
                 break;
 
             case 'Delete':
                 if (this.gameDemo.selectedEntityIds.size > 0) {
-                    for (const entityId of this.gameDemo.selectedEntityIds) {
-                        const entity = this.gameDemo.entities.get(entityId);
-                        if (entity) {
-                            this.gameDemo.setEntityTarget(entityId, entity.gameX, entity.gameY);
-                        }
+                    // Cancel commands by setting group target to current positions
+                    // Use the position of the first selected unit as reference
+                    const firstEntityId = this.gameDemo.selectedEntityIds.values().next().value;
+                    const firstEntity = this.gameDemo.entities.get(firstEntityId);
+                    if (firstEntity) {
+                        this.gameDemo.setGroupTarget(firstEntity.gameX, firstEntity.gameY);
+                        this.gameDemo.updateStatus(`Cancelled commands for ${this.gameDemo.selectedEntityIds.size} unit(s) (Delete key)`);
                     }
-                    this.gameDemo.updateStatus(`Cancelled commands for ${this.gameDemo.selectedEntityIds.size} unit(s) (Delete key)`);
                 }
                 break;
         }

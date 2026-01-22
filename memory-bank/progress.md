@@ -20,7 +20,7 @@
 - **WebAssembly Exports**: Core functions exposed to JavaScript
 - **Game Initialization**: `init()` function returns initial game state
 - **Unit Creation**: `create_vehicle()` function for spawning units with movement components
-- **Movement Control**: `set_entity_target()` function for controlling unit movement
+- **Movement Control**: `set_group_target()` function for controlling group unit movement
 - **Game Loop**: `update()` function for game state updates with real movement system
 - **JSON Serialization**: State communication through JSON format
 
