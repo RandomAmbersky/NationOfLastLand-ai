@@ -11,7 +11,8 @@
     "clean": "rm -rf www/pkg target/pkg"
   },
   "devDependencies": {
-    "serve": "^14.2.1"
+    "serve": "^14.2.1",
+    "standard": "^17.1.2"
   },
   "keywords": [
     "wasm",
