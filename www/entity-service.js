@@ -1,3 +1,5 @@
+import { calculateDistance } from './utils.js'
+
 /**
  * Сервис для работы с сущностями игры
  */
@@ -11,7 +13,7 @@ export class EntityService {
      * @returns {Object|null} Сущность базы игрока или null, если не найдена
      */
   findPlayerBase () {
-    for (const [entityId, entity] of this.gameDemo.entities) {
+    for (const [, entity] of this.gameDemo.entities) {
       if (entity.fraction === 'Player' && entity.entityType === 'base') {
         return entity
       }
@@ -41,7 +43,7 @@ export class EntityService {
      */
   findEntitiesByTypeAndFaction (entityType, faction) {
     const result = []
-    for (const [entityId, entity] of this.gameDemo.entities) {
+    for (const [, entity] of this.gameDemo.entities) {
       if (entity.entityType === entityType && entity.fraction === faction) {
         result.push(entity)
       }
@@ -55,7 +57,7 @@ export class EntityService {
      */
   findAllPlayerMovableUnits () {
     const result = []
-    for (const [entityId, entity] of this.gameDemo.entities) {
+    for (const [, entity] of this.gameDemo.entities) {
       if (entity.fraction === 'Player' && entity.entityType === 'vehicle') {
         result.push(entity)
       }
@@ -73,13 +75,10 @@ export class EntityService {
      */
   findEntitiesInRadius (x, y, radius, filterFn = null) {
     const result = []
-    for (const [entityId, entity] of this.gameDemo.entities) {
+    for (const [, entity] of this.gameDemo.entities) {
       if (filterFn && !filterFn(entity)) continue
 
-      const distance = Math.sqrt(
-        (entity.gameX - x) ** 2 +
-                (entity.gameY - y) ** 2
-      )
+      const distance = calculateDistance(entity.gameX, entity.gameY, x, y)
 
       if (distance <= radius) {
         result.push(entity)

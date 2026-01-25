@@ -87,9 +87,9 @@ export class GameDemo {
     const canvas = document.getElementById('game-canvas')
     canvas.parentNode.replaceChild(this.app.view, canvas)
 
-    // Store original game world size
-    this.gameWidth = 800
-    this.gameHeight = 600
+    // Store original game world size from config
+    this.gameWidth = GAME_CONFIG.WORLD_SIZE.width
+    this.gameHeight = GAME_CONFIG.WORLD_SIZE.height
 
     // Setup subsystems
     this.entityRenderer.setupGrid()

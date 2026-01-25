@@ -1,3 +1,5 @@
+import { GAME_CONFIG } from './game-config.js'
+
 /**
  * Сервис для работы с координатами и масштабированием
  */
@@ -14,8 +16,8 @@ export class CoordinateService {
   getScale () {
     if (!this._scaleCache) {
       this._scaleCache = {
-        x: this.gameDemo.app.screen.width / this.gameDemo.gameWidth,
-        y: this.gameDemo.app.screen.height / this.gameDemo.gameHeight
+        x: this.gameDemo.app.screen.width / GAME_CONFIG.WORLD_SIZE.width,
+        y: this.gameDemo.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
       }
     }
     return this._scaleCache
@@ -36,8 +38,8 @@ export class CoordinateService {
      */
   screenToGame (x, y) {
     return {
-      x: (x / this.gameDemo.app.screen.width) * this.gameDemo.gameWidth,
-      y: (y / this.gameDemo.app.screen.height) * this.gameDemo.gameHeight
+      x: (x / this.gameDemo.app.screen.width) * GAME_CONFIG.WORLD_SIZE.width,
+      y: (y / this.gameDemo.app.screen.height) * GAME_CONFIG.WORLD_SIZE.height
     }
   }
 

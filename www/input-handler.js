@@ -244,9 +244,7 @@ export class InputHandler {
     drag.currentX = clampedX
     drag.currentY = clampedY
 
-    const dragDistance = Math.sqrt(
-      (clampedX - drag.startX) ** 2 + (clampedY - drag.startY) ** 2
-    )
+    const dragDistance = Math.hypot(clampedX - drag.startX, clampedY - drag.startY)
 
     if (dragDistance > GAME_CONFIG.LIMITS.dragThreshold) {
       if (!drag.hasDragged) {
@@ -326,8 +324,8 @@ export class InputHandler {
 
   _toGameCoords (screenX, screenY) {
     return {
-      gameX: (screenX / this.gameDemo.app.screen.width) * this.gameDemo.gameWidth,
-      gameY: (screenY / this.gameDemo.app.screen.height) * this.gameDemo.gameHeight
+      gameX: (screenX / this.gameDemo.app.screen.width) * GAME_CONFIG.WORLD_SIZE.width,
+      gameY: (screenY / this.gameDemo.app.screen.height) * GAME_CONFIG.WORLD_SIZE.height
     }
   }
 }

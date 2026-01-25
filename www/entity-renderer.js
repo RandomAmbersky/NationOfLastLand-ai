@@ -1,5 +1,6 @@
 import { GAME_CONFIG } from './game-config.js'
 import { CoordinateService } from './coordinate-service.js'
+import { calculateDistance } from './utils.js'
 
 /**
  * Управляет рендерингом сущностей и визуальными эффектами
@@ -29,16 +30,16 @@ export class EntityRenderer {
     gridGraphics.lineStyle(1, 0x444444, 0.5)
 
     const gridSize = 50
-    const scaleX = this.gameDemo.app.screen.width / this.gameDemo.gameWidth
-    const scaleY = this.gameDemo.app.screen.height / this.gameDemo.gameHeight
+    const scaleX = this.gameDemo.app.screen.width / GAME_CONFIG.WORLD_SIZE.width
+    const scaleY = this.gameDemo.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
 
-    for (let x = 0; x <= this.gameDemo.gameWidth; x += gridSize) {
+    for (let x = 0; x <= GAME_CONFIG.WORLD_SIZE.width; x += gridSize) {
       const scaledX = x * scaleX
       gridGraphics.moveTo(scaledX, 0)
       gridGraphics.lineTo(scaledX, this.gameDemo.app.screen.height)
     }
 
-    for (let y = 0; y <= this.gameDemo.gameHeight; y += gridSize) {
+    for (let y = 0; y <= GAME_CONFIG.WORLD_SIZE.height; y += gridSize) {
       const scaledY = y * scaleY
       gridGraphics.moveTo(0, scaledY)
       gridGraphics.lineTo(this.gameDemo.app.screen.width, scaledY)
@@ -63,8 +64,8 @@ export class EntityRenderer {
   }
 
   createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
-    const scaleX = this.gameDemo.app.screen.width / this.gameDemo.gameWidth
-    const scaleY = this.gameDemo.app.screen.height / this.gameDemo.gameHeight
+    const scaleX = this.gameDemo.app.screen.width / GAME_CONFIG.WORLD_SIZE.width
+    const scaleY = this.gameDemo.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
     const screenX = x * scaleX
     const screenY = y * scaleY
 
@@ -107,8 +108,7 @@ export class EntityRenderer {
           break
         default:
           if (vehicleType && vehicleType.includes('_')) {
-            let alertType, alertState;
-            [alertType, alertState] = vehicleType.split('_')
+            const [alertType, alertState] = vehicleType.split('_')
 
             if (alertState === 'Hidden') {
               color = GAME_CONFIG.COLORS.alert
@@ -182,7 +182,7 @@ export class EntityRenderer {
     let closestDistance = 20
 
     for (const [id, entity] of this.gameDemo.entities) {
-      const distance = Math.sqrt((entity.container.x - x) ** 2 + (entity.container.y - y) ** 2)
+      const distance = calculateDistance(entity.container.x, entity.container.y, x, y)
       if (distance < closestDistance) {
         closestDistance = distance
         closestEntity = id
@@ -198,7 +198,7 @@ export class EntityRenderer {
 
     for (const [id, entity] of this.gameDemo.entities) {
       if (entity.entityType === 'alert') {
-        const distance = Math.sqrt((entity.gameX - gameX) ** 2 + (entity.gameY - gameY) ** 2)
+        const distance = calculateDistance(entity.gameX, entity.gameY, gameX, gameY)
         if (distance < closestDistance) {
           closestDistance = distance
           closestAlert = { x: entity.gameX, y: entity.gameY, id }

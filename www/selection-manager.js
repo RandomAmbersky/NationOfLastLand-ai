@@ -2,6 +2,7 @@ import { select_entity, deselect_entity, clear_selection, handle_entity_selectio
 import { GAME_CONFIG } from './game-config.js'
 import { SelectionIndicatorManager } from './selection-indicator.js'
 import { EntityService } from './entity-service.js'
+import { calculateDistance } from './utils.js'
 
 /**
      * Управляет выделением сущностей
@@ -383,10 +384,7 @@ export class SelectionManager {
     for (const [entityId, entity] of this.gameDemo.entities) {
       if (this.gameDemo.selectedEntityIds.size >= maxSize) break
       if (entity.fraction === 'Player' && entity.entityType === 'vehicle') {
-        const distance = Math.sqrt(
-          (entity.gameX - baseEntity.gameX) ** 2 +
-                    (entity.gameY - baseEntity.gameY) ** 2
-        )
+        const distance = calculateDistance(entity.gameX, entity.gameY, baseEntity.gameX, baseEntity.gameY)
         if (distance <= baseRange) {
           if (this.selectEntity(entityId, true, false)) {
             addedCount++
