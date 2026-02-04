@@ -1,107 +1,137 @@
-import { calculateDistance } from './utils.js'
+import { GAME_CONFIG } from "./game-config.js";
 
 /**
  * Сервис для работы с сущностями игры
  */
 export class EntityService {
-  constructor (gameDemo) {
-    this.gameDemo = gameDemo
+  constructor(gameDemo) {
+    this.gameDemo = gameDemo;
   }
 
   /**
-     * Находит базу игрока
-     * @returns {Object|null} Сущность базы игрока или null, если не найдена
-     */
-  findPlayerBase () {
-    for (const [, entity] of this.gameDemo.entities) {
-      if (entity.fraction === 'Player' && entity.entityType === 'base') {
-        return entity
+   * Создание сущности из данных
+   */
+  createEntity(entityData) {
+    // Определяем тип сущности и подтип
+    let vehicleType = "scout"; // По умолчанию
+    const entityType = entityData.entity_type || "vehicle";
+    const fraction = entityData.fraction || null;
+
+    if (entityData.subtype) {
+      // Проверяем, содержит ли subtype '_' - это указывает на алерт/развернутую единицу
+      if (entityData.subtype.includes("_")) {
+        // Сохраняем полный subtype для отображения (обрабатывает алерты, развернутые враги и т.д.)
+        vehicleType = entityData.subtype;
+      } else {
+        // Стандартный subtype без подчеркивания
+        switch (entityData.subtype) {
+          case "Scout Car":
+            vehicleType = "scout";
+            break;
+          case "Heavy Tank":
+            vehicleType = "tank";
+            break;
+          case "Armored Truck":
+            vehicleType = "transport";
+            break;
+          case "raider":
+          case "hostile":
+          case "static":
+            vehicleType = entityData.subtype;
+            break;
+          default:
+            vehicleType = "scout";
+        }
       }
     }
-    return null
+
+    // Создаем объект сущности с координатами игры
+    const posX = entityData.position ? entityData.position.x : 0;
+    const posY = entityData.position ? entityData.position.y : 0;
+
+    return {
+      id: entityData.id,
+      entityType: entityType,
+      vehicleType: vehicleType,
+      fraction: fraction,
+      gameX: posX,
+      gameY: posY,
+      // Добавляем остальные свойства из данных
+      ...entityData,
+    };
   }
 
   /**
-     * Проверяет, выбрана ли база игрока
-     * @returns {boolean} true, если выбрана база игрока
-     */
-  isPlayerBaseSelected () {
-    for (const entityId of this.gameDemo.selectedEntityIds) {
-      const entity = this.gameDemo.entities.get(entityId)
-      if (entity && entity.entityType === 'base' && entity.fraction === 'Player') {
-        return true
+   * Поиск базы игрока
+   */
+  findPlayerBase() {
+    const entitiesState = this.gameDemo.stateManager.getEntityState();
+
+    for (const [id, entity] of entitiesState.entities) {
+      if (entity.entityType === "base" && entity.fraction === "Player") {
+        return entity;
       }
     }
-    return false
+    return null;
   }
 
   /**
-     * Находит сущность по типу и фракции
-     * @param {string} entityType - Тип сущности
-     * @param {string} faction - Фракция сущности
-     * @returns {Array} Массив сущностей, соответствующих критериям
-     */
-  findEntitiesByTypeAndFaction (entityType, faction) {
-    const result = []
-    for (const [, entity] of this.gameDemo.entities) {
-      if (entity.entityType === entityType && entity.fraction === faction) {
-        result.push(entity)
+   * Проверка, выбрана ли база игрока
+   */
+  isPlayerBaseSelected() {
+    const selectionState = this.gameDemo.stateManager.getSelectionState();
+    const entitiesState = this.gameDemo.stateManager.getEntityState();
+
+    for (const entityId of selectionState.selectedEntityIds) {
+      const entity = entitiesState.entities.get(entityId);
+      if (
+        entity &&
+        entity.entityType === "base" &&
+        entity.fraction === "Player"
+      ) {
+        return true;
       }
     }
-    return result
+    return false;
   }
 
   /**
-     * Находит все подвижные юниты игрока
-     * @returns {Array} Массив сущностей подвижных юнитов игрока
-     */
-  findAllPlayerMovableUnits () {
-    const result = []
-    for (const [, entity] of this.gameDemo.entities) {
-      if (entity.fraction === 'Player' && entity.entityType === 'vehicle') {
-        result.push(entity)
+   * Получение сущностей по типу
+   */
+  getEntitiesByType(type) {
+    const entitiesState = this.gameDemo.stateManager.getEntityState();
+    const result = [];
+
+    for (const [id, entity] of entitiesState.entities) {
+      if (entity.entityType === type) {
+        result.push(entity);
       }
     }
-    return result
+
+    return result;
   }
 
   /**
-     * Находит сущности в радиусе от указанной позиции
-     * @param {number} x - Координата X центра
-     * @param {number} y - Координата Y центра
-     * @param {number} radius - Радиус поиска
-     * @param {function} filterFn - Функция фильтрации сущностей
-     * @returns {Array} Массив сущностей в радиусе
-     */
-  findEntitiesInRadius (x, y, radius, filterFn = null) {
-    const result = []
-    for (const [, entity] of this.gameDemo.entities) {
-      if (filterFn && !filterFn(entity)) continue
+   * Получение сущностей по фракции
+   */
+  getEntitiesByFraction(fraction) {
+    const entitiesState = this.gameDemo.stateManager.getEntityState();
+    const result = [];
 
-      const distance = calculateDistance(entity.gameX, entity.gameY, x, y)
-
-      if (distance <= radius) {
-        result.push(entity)
+    for (const [id, entity] of entitiesState.entities) {
+      if (entity.fraction === fraction) {
+        result.push(entity);
       }
     }
-    return result
+
+    return result;
   }
 
   /**
-     * Получает сущность по ID
-     * @param {number} entityId - ID сущности
-     * @returns {Object|null} Сущность или null, если не найдена
-     */
-  getEntityById (entityId) {
-    return this.gameDemo.entities.get(entityId) || null
-  }
-
-  /**
-     * Проверяет существование сущности
-     * @param {number} entityId - ID сущности
-     * @returns {boolean} true, если сущность существует
-     */
-  entityExists (entityId) {
-    return this.gameDemo.entities.has(entityId)
+   * Проверка существования сущности
+   */
+  entityExists(entityId) {
+    const entitiesState = this.gameDemo.stateManager.getEntityState();
+    return entitiesState.entities.has(entityId);
   }
 }

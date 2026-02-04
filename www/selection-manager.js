@@ -1,399 +1,565 @@
-import { select_entity, deselect_entity, clear_selection, handle_entity_selection } from './wasm-imports.js'
-import { GAME_CONFIG } from './game-config.js'
-import { SelectionIndicatorManager } from './selection-indicator.js'
-import { EntityService } from './entity-service.js'
-import { calculateDistance } from './utils.js'
+import {
+  select_entity,
+  deselect_entity,
+  clear_selection,
+  handle_entity_selection,
+} from "./wasm-imports.js";
+import { GAME_CONFIG } from "./game-config.js";
+import { SelectionIndicatorManager } from "./selection-indicator.js";
+import { EntityService } from "./entity-service.js";
+import { calculateDistance } from "./utils.js";
 
 /**
-     * Управляет выделением сущностей
-     */
+ * Управляет выделением сущностей
+ */
 export class SelectionManager {
-  constructor (gameDemo) {
-    this.gameDemo = gameDemo
-    this.isSelecting = false
-    this.selectionIndicatorManager = new SelectionIndicatorManager(gameDemo)
-    this.entityService = new EntityService(gameDemo)
+  constructor(gameDemo) {
+    this.gameDemo = gameDemo;
+    this.isSelecting = false;
+    this.selectionIndicatorManager = new SelectionIndicatorManager(gameDemo);
+    this.entityService = new EntityService(gameDemo);
   }
 
-  async handleEntityClick (entityId, isMultiSelect, event) {
-    const entity = this.gameDemo.entities.get(entityId)
-    if (!entity) return
+  async handleEntityClick(entityId, isMultiSelect, event) {
+    const entity = this.gameDemo.stateManager
+      .getEntityState()
+      .entities.get(entityId);
+    if (!entity) return;
 
-    if (this.isSelecting) return
-    this.isSelecting = true
+    if (this.isSelecting) return;
+    this.isSelecting = true;
 
     try {
-      const selectionResult = await this._performEntitySelection(entityId, isMultiSelect)
+      const selectionResult = await this._performEntitySelection(
+        entityId,
+        isMultiSelect,
+      );
 
       if (selectionResult.success) {
         // Обрабатываем различные действия
         switch (selectionResult.action) {
-          case 'EntitySelected':
-            this.gameDemo.displayEntityInfo(entityId)
-            break
-          case 'EntityDeselected':
+          case "EntitySelected":
+            this.gameDemo.displayEntityInfo(entityId);
+            break;
+          case "EntityDeselected":
             if (selectionResult.selected_entities.length === 1) {
-              this.gameDemo.displayEntityInfo(selectionResult.selected_entities[0])
+              this.gameDemo.displayEntityInfo(
+                selectionResult.selected_entities[0],
+              );
             } else {
-              this.gameDemo.updateEntityInfo(null)
+              this.gameDemo.updateEntityInfo(null);
             }
-            break
-          case 'GroupTargetAssigned':
+            break;
+          case "GroupTargetAssigned":
             if (selectionResult.target_assigned) {
-              this._showGroupTargetingIndicator(selectionResult.target_assigned)
+              this._showGroupTargetingIndicator(
+                selectionResult.target_assigned,
+              );
             }
-            break
-          case 'SelectionCleared':
-            this.gameDemo.updateEntityInfo(null)
-            break
+            break;
+          case "SelectionCleared":
+            this.gameDemo.updateEntityInfo(null);
+            break;
         }
 
         // Обновляем кнопки и статус
-        this.gameDemo.updateSpawnButtonState()
-        this.gameDemo.updateStatus(selectionResult.message)
+        this.gameDemo.updateSpawnButtonState();
+        this.gameDemo.updateStatus(selectionResult.message);
       } else {
-        this.gameDemo.updateStatus(`Ошибка выбора: ${selectionResult.message}`)
+        this.gameDemo.updateStatus(`Ошибка выбора: ${selectionResult.message}`);
       }
     } catch (error) {
-      console.error('Ошибка при выборе сущности:', error)
-      this.gameDemo.updateStatus('Ошибка при выборе сущности')
+      console.error("Ошибка при выборе сущности:", error);
+      this.gameDemo.updateStatus("Ошибка при выборе сущности");
     } finally {
-      this.isSelecting = false
+      this.isSelecting = false;
     }
   }
 
-  _updateLocalSelectionState (selectionResult) {
+  _updateLocalSelectionState(selectionResult) {
     // Синхронизируем локальное состояние с состоянием из Rust
-    const newSelectedIds = new Set(selectionResult.selected_entities)
+    const newSelectedIds = new Set(selectionResult.selected_entities);
 
     // Обновляем индикаторы выделения
-    this.selectionIndicatorManager.updateSelectionIndicators(newSelectedIds)
+    this.selectionIndicatorManager.updateSelectionIndicators(newSelectedIds);
 
-    // Обновляем множество выбранных ID
-    this.gameDemo.selectedEntityIds = newSelectedIds
+    // Обновляем множество выбранных ID через менеджер состояния
+    this.gameDemo.stateManager.updateSelectionState(
+      Array.from(newSelectedIds),
+      [],
+    );
   }
 
-  _showGroupTargetingIndicator (targetAssignment) {
-    const renderer = this.gameDemo.entityRenderer
+  _showGroupTargetingIndicator(targetAssignment) {
+    const renderer = this.gameDemo.entityRenderer;
     if (renderer.alertHighlight) {
-      this.gameDemo.app.stage.removeChild(renderer.alertHighlight)
-      renderer.alertHighlight = null
+      this.gameDemo.app.stage.removeChild(renderer.alertHighlight);
+      renderer.alertHighlight = null;
     }
 
-    renderer.showTargetIndicator(targetAssignment.target_x, targetAssignment.target_y)
+    renderer.showTargetIndicator(
+      targetAssignment.target_x,
+      targetAssignment.target_y,
+    );
 
-    const targetEntity = this.gameDemo.entities.get(targetAssignment.target_entity_id)
-    const targetType = targetEntity ? (targetEntity.vehicleType || targetEntity.entityType) : 'unknown'
-    const targetFaction = targetEntity ? (targetEntity.fraction || 'Unknown') : 'Unknown'
+    const targetEntity = this.gameDemo.stateManager
+      .getEntityState()
+      .entities.get(targetAssignment.target_entity_id);
+    const targetType = targetEntity
+      ? targetEntity.vehicleType || targetEntity.entityType
+      : "unknown";
+    const targetFaction = targetEntity
+      ? targetEntity.fraction || "Unknown"
+      : "Unknown";
 
-    this.gameDemo.updateStatus(`Группа атакует: ${targetType} (#${targetAssignment.target_entity_id}) ${targetFaction}`)
+    this.gameDemo.updateStatus(
+      `Группа атакует: ${targetType} (#${targetAssignment.target_entity_id}) ${targetFaction}`,
+    );
   }
 
   /**
-     * Выполняет выбор сущности через handle_entity_selection и обновляет локальное состояние
-     */
-  async _performEntitySelection (entityId, isMultiSelect) {
-    const currentSelectedIds = Array.from(this.gameDemo.selectedEntityIds)
-    const result = await handle_entity_selection(entityId, isMultiSelect, currentSelectedIds)
-    const selectionResult = JSON.parse(result)
+   * Выполняет выбор сущности через handle_entity_selection и обновляет локальное состояние
+   */
+  async _performEntitySelection(entityId, isMultiSelect) {
+    const selectionState = this.gameDemo.stateManager.getSelectionState();
+    const currentSelectedIds = Array.from(selectionState.selectedEntityIds);
+    const result = await handle_entity_selection(
+      entityId,
+      isMultiSelect,
+      currentSelectedIds,
+    );
+    const selectionResult = JSON.parse(result);
 
     if (selectionResult.success) {
       // Обновляем локальное состояние на основе результата из Rust
-      this._updateLocalSelectionState(selectionResult)
+      this._updateLocalSelectionState(selectionResult);
     }
 
-    return selectionResult
+    return selectionResult;
   }
 
-  selectEntity (entityId, bypassCheck = false, exclusive = true) {
-    if (!bypassCheck && this.isSelecting) return false
+  selectEntity(entityId, bypassCheck = false, exclusive = true) {
+    if (!bypassCheck && this.isSelecting) return false;
 
     // Clear target indicator when selecting a new entity
-    if (this.gameDemo.selectedEntityIds.size > 0 && !this.gameDemo.selectedEntityIds.has(entityId)) {
-      this.gameDemo.entityRenderer.clearTargetIndicator()
+    const selectionState = this.gameDemo.stateManager.getSelectionState();
+    if (
+      selectionState.selectedEntityIds.size > 0 &&
+      !selectionState.selectedEntityIds.has(entityId)
+    ) {
+      this.gameDemo.entityRenderer.clearTargetIndicator();
     }
 
-    if (this.gameDemo.selectedEntityIds.has(entityId)) return true
+    if (selectionState.selectedEntityIds.has(entityId)) return true;
 
-    if (this.gameDemo.selectedEntityIds.size >= GAME_CONFIG.LIMITS.maxGroupSize) {
-      return false
+    if (
+      selectionState.selectedEntityIds.size >= GAME_CONFIG.LIMITS.maxGroupSize
+    ) {
+      return false;
     }
 
     try {
-      const result = select_entity(entityId, exclusive)
-      const selectionResult = JSON.parse(result)
+      const result = select_entity(entityId, exclusive);
+      const selectionResult = JSON.parse(result);
       if (selectionResult.success) {
-        this.gameDemo.selectedEntityIds.add(entityId)
-        const entity = this.gameDemo.entities.get(entityId)
+        this.gameDemo.stateManager.updateSelectionState([entityId], []);
+        const entity = this.gameDemo.stateManager
+          .getEntityState()
+          .entities.get(entityId);
         if (entity) {
           // Все алерты подсвечиваются как враг
-          const isAlert = entity.entityType === 'alert'
-          const isEnemy = entity.fraction === 'Enemy' || entity.fraction === 'Wild' || isAlert
-          this.selectionIndicatorManager.createSelectionIndicator(entity, isEnemy)
+          const isAlert = entity.entityType === "alert";
+          const isEnemy =
+            entity.fraction === "Enemy" ||
+            entity.fraction === "Wild" ||
+            isAlert;
+          this.selectionIndicatorManager.createSelectionIndicator(
+            entity,
+            isEnemy,
+          );
         }
 
-        const count = this.gameDemo.selectedEntityIds.size
+        const count = selectionState.selectedEntityIds.size + 1;
         if (count > 1) {
-          this.gameDemo.updateStatus(`${count} юнитов выделено.`)
+          this.gameDemo.updateStatus(`${count} юнитов выделено.`);
         }
-        this.gameDemo.updateSpawnButtonState()
+        this.gameDemo.updateSpawnButtonState();
         // this.gameDemo.updateSelectedEntityInfo();
-        return true
+        return true;
       }
-      return false
+      return false;
     } catch {
-      return false
+      return false;
     }
   }
 
-  deselectEntity (entityId, bypassCheck = false) {
-    if (!bypassCheck && this.isSelecting) return
-    if (!this.gameDemo.selectedEntityIds.has(entityId)) return
+  deselectEntity(entityId, bypassCheck = false) {
+    if (!bypassCheck && this.isSelecting) return;
+    const selectionState = this.gameDemo.stateManager.getSelectionState();
+    if (!selectionState.selectedEntityIds.has(entityId)) return;
 
-    this.gameDemo.selectedEntityIds.delete(entityId)
-    const entity = this.gameDemo.entities.get(entityId)
+    this.gameDemo.stateManager.updateSelectionState([], [entityId]);
+    const entity = this.gameDemo.stateManager
+      .getEntityState()
+      .entities.get(entityId);
     if (entity && entity.selectionIndicator) {
-      this.selectionIndicatorManager.removeSelectionIndicator(entity)
+      this.selectionIndicatorManager.removeSelectionIndicator(entity);
     }
 
     // Note: We no longer call deselect_entity API here since entity removal
     // is now handled automatically by the selection cleanup system
     // and communicated via the game state update
 
-    this._updateSelectionStatus()
+    this._updateSelectionStatus();
     // this.gameDemo.updateSelectedEntityInfo();
   }
 
-  clearAllSelections (bypassCheck = false) {
-    if (!bypassCheck && this.isSelecting) return
+  clearAllSelections(bypassCheck = false) {
+    if (!bypassCheck && this.isSelecting) return;
 
     try {
-      const result = clear_selection()
-      const clearResult = JSON.parse(result)
+      const result = clear_selection();
+      const clearResult = JSON.parse(result);
       if (!clearResult.success) {
-        console.error('Не удалось очистить выделение на сервере:', clearResult.message)
+        console.error(
+          "Не удалось очистить выделение на сервере:",
+          clearResult.message,
+        );
       }
     } catch (error) {
-      console.error('Ошибка очистки выделения на сервере:', error)
+      console.error("Ошибка очистки выделения на сервере:", error);
     }
 
     // Используем централизованный метод для очистки состояния
-    // Получаем все текущие выделенные сущности и очищаем их
-    const allSelected = Array.from(this.gameDemo.selectedEntityIds)
-    this.gameDemo.updateSelectionState(allSelected)
+    const selectionState = this.gameDemo.stateManager.getSelectionState();
+    const allSelected = Array.from(selectionState.selectedEntityIds);
 
-    this.gameDemo.updateStatus('Выделение снято.')
-    this.gameDemo.updateEntityInfo(null)
-    this.gameDemo.updateSpawnButtonState()
+    // Обновляем состояние через менеджер
+    this.gameDemo.stateManager.updateSelectionState([], allSelected);
+
+    this.gameDemo.updateStatus("Выделение снято.");
+    this.gameDemo.updateEntityInfo(null);
+    this.gameDemo.updateSpawnButtonState();
   }
 
-  async selectEntitiesInRectangle (bounds) {
-    if (this.isSelecting) return
+  async selectEntitiesInRectangle(bounds) {
+    if (this.isSelecting) return;
 
-    this.isSelecting = true
+    this.isSelecting = true;
 
     try {
-      const entitiesInRectangle = this._findEntitiesInRectangle(bounds)
+      const entitiesInRectangle = this._findEntitiesInRectangle(bounds);
       if (entitiesInRectangle.length > 0) {
-        await this._processRectangleSelection(entitiesInRectangle)
+        await this._processRectangleSelection(entitiesInRectangle);
       }
     } finally {
-      this.isSelecting = false
+      this.isSelecting = false;
     }
   }
 
-  _findEntitiesInRectangle (bounds) {
-    const entities = []
-    for (const [id, entity] of this.gameDemo.entities) {
+  _findEntitiesInRectangle(bounds) {
+    const entities = [];
+    const entitiesState = this.gameDemo.stateManager.getEntityState();
+    for (const [id, entity] of entitiesState.entities) {
       if (this._isEntityInBounds(entity, bounds)) {
-        entities.push(id)
+        entities.push(id);
       }
     }
-    return entities
+    return entities;
   }
 
-  _isEntityInBounds (entity, bounds) {
-    return entity.container.x >= bounds.x &&
-               entity.container.x <= bounds.x + bounds.width &&
-               entity.container.y >= bounds.y &&
-               entity.container.y <= bounds.y + bounds.height
+  _isEntityInBounds(entity, bounds) {
+    return (
+      entity.container.x >= bounds.x &&
+      entity.container.x <= bounds.x + bounds.width &&
+      entity.container.y >= bounds.y &&
+      entity.container.y <= bounds.y + bounds.height
+    );
   }
 
-  async _processRectangleSelection (entitiesInRectangle) {
-    this._clearAlertSelections()
+  async _processRectangleSelection(entitiesInRectangle) {
+    this._clearAlertSelections();
 
-    const playerMovableUnits = entitiesInRectangle.filter(id => {
-      const entity = this.gameDemo.entities.get(id)
-      return entity &&
-                   entity.fraction === 'Player' &&
-                   entity.entityType === 'vehicle'
-    })
+    const playerMovableUnits = entitiesInRectangle.filter((id) => {
+      const entity = this.gameDemo.stateManager
+        .getEntityState()
+        .entities.get(id);
+      return (
+        entity &&
+        entity.fraction === "Player" &&
+        entity.entityType === "vehicle"
+      );
+    });
 
     if (playerMovableUnits.length === 0) {
-      this.gameDemo.updateStatus('Нет подвижных юнитов игрока в области выделения')
-      return
+      this.gameDemo.updateStatus(
+        "Нет подвижных юнитов игрока в области выделения",
+      );
+      return;
     }
 
-    this.clearAllSelections(true)
+    this.clearAllSelections(true);
 
-    const maxSize = GAME_CONFIG.LIMITS.maxGroupSize
-    const unitsToSelect = playerMovableUnits.slice(0, maxSize)
+    const maxSize = GAME_CONFIG.LIMITS.maxGroupSize;
+    const unitsToSelect = playerMovableUnits.slice(0, maxSize);
 
     // Используем handle_entity_selection для каждого юнита с isMultiSelect=true
     // чтобы получить правильное отображение группы
     for (const entityId of unitsToSelect) {
       try {
-        const selectionResult = await this._performEntitySelection(entityId, true)
+        const selectionResult = await this._performEntitySelection(
+          entityId,
+          true,
+        );
         if (selectionResult.success) {
           // Обрабатываем действия выбора для последнего выбранного юнита
-          if (selectionResult.action === 'EntitySelected') {
-            this.gameDemo.displayEntityInfo(entityId)
+          if (selectionResult.action === "EntitySelected") {
+            this.gameDemo.displayEntityInfo(entityId);
           }
         } else {
-          console.warn(`Не удалось выбрать юнит ${entityId}:`, selectionResult.message)
+          console.warn(
+            `Не удалось выбрать юнит ${entityId}:`,
+            selectionResult.message,
+          );
         }
       } catch (error) {
-        console.error('Ошибка при выборе сущности рамкой:', error)
+        console.error("Ошибка при выборе сущности рамкой:", error);
       }
     }
 
     // Если выбран только один юнит, показываем его информацию
-    if (this.gameDemo.selectedEntityIds.size === 1) {
-      const selectedEntityId = Array.from(this.gameDemo.selectedEntityIds)[0]
-      this.gameDemo.displayEntityInfo(selectedEntityId)
+    const selectionState = this.gameDemo.stateManager.getSelectionState();
+    if (selectionState.selectedEntityIds.size === 1) {
+      const selectedEntityId = Array.from(selectionState.selectedEntityIds)[0];
+      this.gameDemo.displayEntityInfo(selectedEntityId);
     }
   }
 
-  _clearAlertSelections () {
-    for (const entityId of this.gameDemo.selectedEntityIds) {
-      const entity = this.gameDemo.entities.get(entityId)
-      if (entity && entity.entityType === 'alert') {
-        this.deselectEntity(entityId, true)
+  _clearAlertSelections() {
+    const selectionState = this.gameDemo.stateManager.getSelectionState();
+    for (const entityId of selectionState.selectedEntityIds) {
+      const entity = this.gameDemo.stateManager
+        .getEntityState()
+        .entities.get(entityId);
+      if (entity && entity.entityType === "alert") {
+        this.deselectEntity(entityId, true);
       }
     }
   }
 
   // Метод оставлен для совместимости, но теперь использует SelectionIndicatorManager
-  _createSelectionIndicator (entity, isEnemy = false) {
-    this.selectionIndicatorManager.createSelectionIndicator(entity, isEnemy)
+  _createSelectionIndicator(entity, isEnemy = false) {
+    this.selectionIndicatorManager.createSelectionIndicator(entity, isEnemy);
   }
 
-  _updateSelectionStatus () {
-    const count = this.gameDemo.selectedEntityIds.size
+  _updateSelectionStatus() {
+    const selectionState = this.gameDemo.stateManager.getSelectionState();
+    const count = selectionState.selectedEntityIds.size;
     if (count === 0) {
-      this.gameDemo.updateStatus('Выделение снято.')
-      this.gameDemo.updateEntityInfo(null)
+      this.gameDemo.updateStatus("Выделение снято.");
+      this.gameDemo.updateEntityInfo(null);
     } else {
-      this.gameDemo.updateStatus(`${count} юнитов выделено.`)
+      this.gameDemo.updateStatus(`${count} юнитов выделено.`);
     }
-    this.gameDemo.updateSpawnButtonState()
+    this.gameDemo.updateSpawnButtonState();
   }
 
   /**
-     * Выбрать всех подвижных юнитов игрока (с новой логикой группы)
-     */
-  async selectAllPlayerUnits () {
-    this.clearAllSelections(true)
+   * Выбрать всех подвижных юнитов игрока (с новой логикой группы)
+   */
+  async selectAllPlayerUnits() {
+    this.clearAllSelections(true);
 
     // Собираем всех подвижных юнитов игрока
-    const playerMovableUnits = []
-    for (const [entityId, entity] of this.gameDemo.entities) {
-      if (entity.fraction === 'Player' && entity.entityType === 'vehicle') {
-        playerMovableUnits.push(entityId)
+    const entitiesState = this.gameDemo.stateManager.getEntityState();
+    const playerMovableUnits = [];
+    for (const [entityId, entity] of entitiesState.entities) {
+      if (entity.fraction === "Player" && entity.entityType === "vehicle") {
+        playerMovableUnits.push(entityId);
       }
     }
 
     if (playerMovableUnits.length === 0) {
-      this.gameDemo.updateStatus('Нет доступных юнитов игрока')
-      return
+      this.gameDemo.updateStatus("Нет доступных юнитов игрока");
+      return;
     }
 
-    const maxSize = GAME_CONFIG.LIMITS.maxGroupSize
-    const unitsToSelect = playerMovableUnits.slice(0, maxSize)
+    const maxSize = GAME_CONFIG.LIMITS.maxGroupSize;
+    const unitsToSelect = playerMovableUnits.slice(0, maxSize);
 
     // Используем handle_entity_selection для каждого юнита с isMultiSelect=true
     // чтобы получить правильное отображение группы
     for (const entityId of unitsToSelect) {
       try {
-        const selectionResult = await this._performEntitySelection(entityId, true)
+        const selectionResult = await this._performEntitySelection(
+          entityId,
+          true,
+        );
         if (!selectionResult.success) {
-          console.warn(`Не удалось выбрать юнит ${entityId}:`, selectionResult.message)
+          console.warn(
+            `Не удалось выбрать юнит ${entityId}:`,
+            selectionResult.message,
+          );
         }
       } catch (error) {
-        console.error('Ошибка при выборе всех юнитов:', error)
+        console.error("Ошибка при выборе всех юнитов:", error);
       }
     }
   }
 
   /**
-     * Выбрать все юниты того же типа
-     */
-  selectSameTypeUnits (entityId) {
-    const entity = this.gameDemo.entities.get(entityId)
-    if (!entity) return
+   * Выбрать все юниты того же типа
+   */
+  selectSameTypeUnits(entityId) {
+    const entity = this.gameDemo.stateManager
+      .getEntityState()
+      .entities.get(entityId);
+    if (!entity) return;
 
-    const targetType = entity.vehicleType || entity.entityType
-    const targetFaction = entity.fraction
+    const targetType = entity.vehicleType || entity.entityType;
+    const targetFaction = entity.fraction;
 
-    this.clearAllSelections(true)
+    this.clearAllSelections(true);
 
-    let addedCount = 0
-    const maxSize = GAME_CONFIG.LIMITS.maxGroupSize
+    let addedCount = 0;
+    const maxSize = GAME_CONFIG.LIMITS.maxGroupSize;
+    const entitiesState = this.gameDemo.stateManager.getEntityState();
 
-    for (const [id, ent] of this.gameDemo.entities) {
-      if (this.gameDemo.selectedEntityIds.size >= maxSize) break
-      const entityType = ent.vehicleType || ent.entityType
+    for (const [id, ent] of entitiesState.entities) {
+      if (
+        this.gameDemo.stateManager.getSelectionState().selectedEntityIds.size >=
+        maxSize
+      )
+        break;
+      const entityType = ent.vehicleType || ent.entityType;
       if (entityType === targetType && ent.fraction === targetFaction) {
         if (this.selectEntity(id, true, false)) {
-          addedCount++
+          addedCount++;
         }
       }
     }
 
-    this.gameDemo.updateStatus(`Выделено ${addedCount} юнитов типа ${targetType}`)
+    this.gameDemo.updateStatus(
+      `Выделено ${addedCount} юнитов типа ${targetType}`,
+    );
     // this.gameDemo.updateSelectedEntityInfo();
   }
 
   /**
-     * Выбрать всех подвижных юнитов игрока у базы
-     */
-  selectAllPlayerUnitsAtBase () {
+   * Выбрать всех подвижных юнитов игрока у базы
+   */
+  selectAllPlayerUnitsAtBase() {
     // Find player base first
-    const baseEntity = this.entityService.findPlayerBase()
+    const baseEntity = this.entityService.findPlayerBase();
 
     if (!baseEntity) {
-      this.gameDemo.updateStatus('База игрока не найдена')
-      return
+      this.gameDemo.updateStatus("База игрока не найдена");
+      return;
     }
 
-    this.clearAllSelections(true)
+    this.clearAllSelections(true);
 
     // Select the base first
-    for (const [entityId, entity] of this.gameDemo.entities) {
-      if (entity.fraction === 'Player' && entity.entityType === 'base' && entity.id === baseEntity.id) {
-        this.selectEntity(entityId, true, false)
-        break
+    const entitiesState = this.gameDemo.stateManager.getEntityState();
+    for (const [entityId, entity] of entitiesState.entities) {
+      if (
+        entity.fraction === "Player" &&
+        entity.entityType === "base" &&
+        entity.id === baseEntity.id
+      ) {
+        this.selectEntity(entityId, true, false);
+        break;
       }
     }
 
     // Then select all player vehicles
-    let addedCount = 1 // Base is already selected
-    const maxSize = GAME_CONFIG.LIMITS.maxGroupSize
-    const baseRange = 100 // Units within 100 units of base
+    let addedCount = 1; // Base is already selected
+    const maxSize = GAME_CONFIG.LIMITS.maxGroupSize;
+    const baseRange = 100; // Units within 100 units of base
 
-    for (const [entityId, entity] of this.gameDemo.entities) {
-      if (this.gameDemo.selectedEntityIds.size >= maxSize) break
-      if (entity.fraction === 'Player' && entity.entityType === 'vehicle') {
-        const distance = calculateDistance(entity.gameX, entity.gameY, baseEntity.gameX, baseEntity.gameY)
+    for (const [entityId, entity] of entitiesState.entities) {
+      if (
+        this.gameDemo.stateManager.getSelectionState().selectedEntityIds.size >=
+        maxSize
+      )
+        break;
+      if (entity.fraction === "Player" && entity.entityType === "vehicle") {
+        const distance = calculateDistance(
+          entity.gameX,
+          entity.gameY,
+          baseEntity.gameX,
+          baseEntity.gameY,
+        );
         if (distance <= baseRange) {
           if (this.selectEntity(entityId, true, false)) {
-            addedCount++
+            addedCount++;
           }
         }
       }
     }
 
-    this.gameDemo.updateStatus(`Выделено ${addedCount} юнитов у базы`)
+    this.gameDemo.updateStatus(`Выделено ${addedCount} юнитов у базы`);
     // this.gameDemo.updateSelectedEntityInfo();
+  }
+
+  /**
+   * Проверка, выбрана ли база игрока
+   */
+  isPlayerBaseSelected() {
+    const selectionState = this.gameDemo.stateManager.getSelectionState();
+    const entitiesState = this.gameDemo.stateManager.getEntityState();
+
+    for (const entityId of selectionState.selectedEntityIds) {
+      const entity = entitiesState.entities.get(entityId);
+      if (
+        entity &&
+        entity.entityType === "base" &&
+        entity.fraction === "Player"
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Отображение информации о сущности
+   */
+  async displayEntityInfo(entityId) {
+    try {
+      // Используем централизованный метод для отображения информации
+      const entitiesState = this.gameDemo.stateManager.getEntityState();
+      const entity = entitiesState.entities.get(entityId);
+
+      if (!entity) {
+        this.gameDemo.updateEntityInfo("Entity no longer exists");
+        return;
+      }
+
+      // Получаем информацию о сущности через WASM
+      const result = get_entity_info(entityId);
+      const entityInfo = JSON.parse(result);
+
+      // Используем централизованную логику создания текста информации
+      const infoText = this.gameDemo.createEntityInfoText(entityInfo, false);
+
+      // Обновляем отображение
+      this.gameDemo.updateEntityInfo(infoText);
+
+      // Добавляем индикатор информации
+      if (entity && !entity.selectionIndicator && !entity.infoIndicator) {
+        const infoGraphics = new PIXI.Graphics();
+        // Use blue color for info display (like alerts)
+        infoGraphics.lineStyle(3, 0x0080ff, 1);
+        infoGraphics.drawCircle(0, 0, 12);
+        entity.container.addChild(infoGraphics);
+        entity.infoIndicator = infoGraphics; // Store reference to remove later
+      }
+    } catch (error) {
+      console.error("Error getting entity info:", error);
+      this.gameDemo.updateEntityInfo(
+        `❌ Error loading entity info: ${error.message}`,
+      );
+    }
   }
 }
