@@ -7,6 +7,7 @@ import { CoordinateService } from "./coordinate-service.js";
 import { EntityService } from "./entity-service.js";
 import { SelectionIndicatorManager } from "./selection-indicator.js";
 import { GAME_CONFIG } from "./game-config.js";
+import { init } from "./wasm-imports.js";
 
 /**
  * Главный класс демонстрации игры
@@ -132,7 +133,25 @@ export class GameDemo {
   async init() {
     try {
       // Initialize WebAssembly module
-      await init();
+      console.log("Attempting WASM initialization...");
+
+      // Try to call the init function that should be available from import
+      if (typeof init !== "undefined") {
+        await init();
+        console.log("WASM initialized successfully with direct call");
+      } else {
+        // Fallback approach - try to load WASM directly
+        console.log("Direct init not available, trying alternative approach");
+        // This approach assumes the WASM module is already loaded via the import
+        // We'll try to access it through the window object or global scope
+        if (typeof window !== "undefined" && window.init) {
+          await window.init();
+          console.log("WASM initialized successfully via window object");
+        } else {
+          throw new Error("init function not available in any known location");
+        }
+      }
+
       this.updateStatus(
         "WebAssembly loaded successfully!\nInitializing game automatically...",
       );
@@ -142,6 +161,13 @@ export class GameDemo {
     } catch (error) {
       this.updateStatus(`Error loading WebAssembly: ${error.message}`);
       console.error("WASM init error:", error);
+      console.error("Stack trace:", error.stack);
+      // Try a more specific error message for debugging
+      if (typeof init === "undefined") {
+        console.error(
+          "The init function is undefined - import may have failed",
+        );
+      }
     }
   }
 
