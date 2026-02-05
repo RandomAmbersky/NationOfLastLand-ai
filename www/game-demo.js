@@ -35,6 +35,7 @@ export class GameDemo {
     this.isInitialized = false;
     this.lastUpdate = Date.now();
     this.bases = new Map();
+    this.entities = new Map();
 
     // Установка обработчиков событий
     this.setupEventListeners();
@@ -222,7 +223,14 @@ export class GameDemo {
 
     // Обновляем отображение
     if (entity) {
-      this.entityRenderer.renderEntity(entity);
+      this.entityRenderer.createEntitySprite(
+        entity.id,
+        entity.gameX,
+        entity.gameY,
+        entity.vehicleType,
+        entity.fraction,
+        entity.entityType,
+      );
     }
   }
 
