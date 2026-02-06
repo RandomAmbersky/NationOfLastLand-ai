@@ -171,6 +171,11 @@
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <script type="module" src="./game-demo.js"></script>
+    <script type="module">
+        // Create and initialize the game demo
+        import { GameDemo } from './game-demo.js';
+        const demo = new GameDemo();
+        demo.initializeDemo();
+    </script>
 </body>
 </html>
-
