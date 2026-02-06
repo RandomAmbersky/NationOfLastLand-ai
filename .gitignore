@@ -24,3 +24,4 @@ node_modules
 git-set-remotes.sh
 git-reset-author.sh
 git-set-local.sh
+coverage

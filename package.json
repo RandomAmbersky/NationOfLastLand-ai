@@ -30,7 +30,8 @@
     "dev": "npm run build && npm run serve",
     "clean": "rm -rf www/pkg target/pkg",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
