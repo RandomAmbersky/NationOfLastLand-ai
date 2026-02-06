@@ -213,6 +213,9 @@ export class GameDemo {
    * Синхронизация сущностей с игровым состоянием
    */
   syncEntitiesWithGameState(entities) {
+    // Множество ID сущностей, которые присутствуют в текущем состоянии
+    const currentEntityIds = new Set();
+
     // Обновляем состояние сущностей и синхронизируем отображение за один проход
     for (const entityData of entities) {
       // Форматируем данные сущности
@@ -245,6 +248,19 @@ export class GameDemo {
           entity.fraction,
           entity.entityType,
         );
+      }
+
+      currentEntityIds.add(entity.id);
+    }
+
+    // Удаляем сущности, которых больше нет в состоянии игры
+    for (const [id, existingEntity] of this.entities) {
+      if (!currentEntityIds.has(id)) {
+        // Удаляем визуальное представление сущности
+        if (existingEntity.container) {
+          this.app.stage.removeChild(existingEntity.container);
+        }
+        this.entities.delete(id);
       }
     }
   }
