@@ -4,15 +4,17 @@
  */
 
 // Mock document
-const mockGetElementById = jest.fn();
+import { GameStateManager } from './game-state-manager.js'
+
+const mockGetElementById = jest.fn()
 global.document = {
   getElementById: mockGetElementById,
   addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-};
+  removeEventListener: jest.fn()
+}
 
 // Mock wasm imports - use function to avoid hoisting issues
-jest.mock("./wasm-imports.js", () => ({
+jest.mock('./wasm-imports.js', () => ({
   gameInit: jest.fn(),
   create_vehicle: jest.fn(),
   update: jest.fn(),
@@ -20,35 +22,33 @@ jest.mock("./wasm-imports.js", () => ({
   create_base: jest.fn(),
   build_floor: jest.fn(),
   create_random_alert: jest.fn(),
-  clear_selection: jest.fn(),
-}));
+  clear_selection: jest.fn()
+}))
 
-import { GameStateManager } from "./game-state-manager.js";
-
-describe("GameStateManager", () => {
-  let gameDemo;
-  let gameStateManager;
+describe('GameStateManager', () => {
+  let gameDemo
+  let gameStateManager
 
   beforeAll(() => {
     // Setup document mocks
-    jest.spyOn(document, "getElementById").mockImplementation((id) => {
+    jest.spyOn(document, 'getElementById').mockImplementation((id) => {
       const elements = {
-        "vehicle-type": { value: "scout" },
-        "base-x": { value: "100" },
-        "base-y": { value: "200" },
-        "floor-type": { value: "storage" },
-      };
-      return elements[id] || null;
-    });
-  });
+        'vehicle-type': { value: 'scout' },
+        'base-x': { value: '100' },
+        'base-y': { value: '200' },
+        'floor-type': { value: 'storage' }
+      }
+      return elements[id] || null
+    })
+  })
 
   afterAll(() => {
-    jest.restoreAllMocks();
-  });
+    jest.restoreAllMocks()
+  })
 
   beforeEach(() => {
     // Reset mocks
-    jest.clearAllMocks();
+    jest.clearAllMocks()
 
     gameDemo = {
       isInitialized: false,
@@ -61,7 +61,7 @@ describe("GameStateManager", () => {
         updateEntityStateEntry: jest.fn(),
         getEntityState: jest.fn(() => ({ entities: new Map() })),
         updateDisplayState: jest.fn(),
-        getDisplayState: jest.fn(() => ({ statusMessage: "" })),
+        getDisplayState: jest.fn(() => ({ statusMessage: '' }))
       },
       entityRenderer: {
         showTargetIndicator: jest.fn(),
@@ -73,12 +73,12 @@ describe("GameStateManager", () => {
         createDestructionEffect: jest.fn(),
         setupGrid: jest.fn(),
         updateGrid: jest.fn(),
-        cleanupOrphanedGraphics: jest.fn(),
+        cleanupOrphanedGraphics: jest.fn()
       },
       app: {
         stage: {
-          removeChild: jest.fn(),
-        },
+          removeChild: jest.fn()
+        }
       },
       selectedEntityIds: new Set(),
       updateStatus: jest.fn(),
@@ -90,146 +90,146 @@ describe("GameStateManager", () => {
       updateSelectedEntityInfo: jest.fn(),
       setGroupTarget: jest.fn(),
       updateSelectionState: jest.fn(),
-      isGameLoopRunning: false,
-    };
+      isGameLoopRunning: false
+    }
 
-    gameStateManager = new GameStateManager(gameDemo);
-  });
+    gameStateManager = new GameStateManager(gameDemo)
+  })
 
-  describe("initializeGame", () => {
-    it("should initialize game and update state", async () => {
-      const { gameInit } = jest.requireMock("./wasm-imports.js");
+  describe('initializeGame', () => {
+    it('should initialize game and update state', async () => {
+      const { gameInit } = jest.requireMock('./wasm-imports.js')
       gameInit.mockReturnValue(
         JSON.stringify({
           time: 10,
           entities_count: 5,
           alerts_count: 2,
-          debug_messages: [],
-        }),
-      );
-      gameDemo.isInitialized = false;
+          debug_messages: []
+        })
+      )
+      gameDemo.isInitialized = false
 
-      await gameStateManager.initializeGame();
+      await gameStateManager.initializeGame()
 
-      expect(gameInit).toHaveBeenCalled();
+      expect(gameInit).toHaveBeenCalled()
       expect(gameDemo.stateManager.updateGameState).toHaveBeenCalledWith({
         isInitialized: true,
         autoUpdateEnabled: false,
         time: 10,
         entitiesCount: 5,
-        alertsCount: 2,
-      });
-      expect(gameDemo.updateStatus).toHaveBeenCalled();
-    });
+        alertsCount: 2
+      })
+      expect(gameDemo.updateStatus).toHaveBeenCalled()
+    })
 
-    it("should handle initialization error", async () => {
-      const { gameInit } = jest.requireMock("./wasm-imports.js");
+    it('should handle initialization error', async () => {
+      const { gameInit } = jest.requireMock('./wasm-imports.js')
       gameInit.mockImplementation(() => {
-        throw new Error("Init failed");
-      });
-      gameDemo.isInitialized = false;
+        throw new Error('Init failed')
+      })
+      gameDemo.isInitialized = false
 
-      await gameStateManager.initializeGame();
+      await gameStateManager.initializeGame()
 
       expect(gameDemo.updateStatus).toHaveBeenCalledWith(
-        "Game initialization failed: Init failed",
-      );
-    });
-  });
+        'Game initialization failed: Init failed'
+      )
+    })
+  })
 
-  describe("spawnVehicle", () => {
+  describe('spawnVehicle', () => {
     beforeEach(() => {
-      gameDemo.isInitialized = true;
+      gameDemo.isInitialized = true
       gameDemo.stateManager.getGameState = jest.fn(() => ({
         isInitialized: true,
-        autoUpdateEnabled: false,
-      }));
-    });
+        autoUpdateEnabled: false
+      }))
+    })
 
-    it("should not spawn if not initialized", async () => {
-      gameDemo.isInitialized = false;
+    it('should not spawn if not initialized', async () => {
+      gameDemo.isInitialized = false
 
-      await gameStateManager.spawnVehicle();
+      await gameStateManager.spawnVehicle()
 
       expect(gameDemo.updateStatus).toHaveBeenCalledWith(
-        "Please initialize the game first!",
-      );
-    });
+        'Please initialize the game first!'
+      )
+    })
 
-    it("should not spawn if player base not selected", async () => {
+    it('should not spawn if player base not selected', async () => {
       gameDemo.selectionManager = {
-        isPlayerBaseSelected: jest.fn(() => false),
-      };
+        isPlayerBaseSelected: jest.fn(() => false)
+      }
 
-      await gameStateManager.spawnVehicle();
+      await gameStateManager.spawnVehicle()
 
       expect(gameDemo.updateStatus).toHaveBeenCalledWith(
-        "Cannot spawn vehicle: Please select a player base first!",
-      );
-    });
+        'Cannot spawn vehicle: Please select a player base first!'
+      )
+    })
 
-    it("should spawn vehicle successfully", async () => {
+    it('should spawn vehicle successfully', async () => {
       gameDemo.selectionManager = {
         isPlayerBaseSelected: jest.fn(() => true),
-        selectEntity: jest.fn(),
-      };
+        selectEntity: jest.fn()
+      }
       gameDemo.stateManager.getSelectionState = jest.fn(() => ({
-        selectedEntityIds: new Set([1]),
-      }));
+        selectedEntityIds: new Set([1])
+      }))
       gameDemo.stateManager.getEntityState = jest.fn(() => ({
         entities: new Map([
-          [1, { entityType: "base", fraction: "Player", gameX: 100, gameY: 200 }],
-        ]),
-      }));
-      gameDemo.updateSpawnButtonState = jest.fn();
+          [1, { entityType: 'base', fraction: 'Player', gameX: 100, gameY: 200 }]
+        ])
+      }))
+      gameDemo.updateSpawnButtonState = jest.fn()
 
       // Mock document element for vehicle type
-      const mockVehicleType = { value: "scout" };
+      const mockVehicleType = { value: 'scout' }
       mockGetElementById.mockImplementation((id) => {
-        if (id === "vehicle-type") return mockVehicleType;
-        return null;
-      });
+        if (id === 'vehicle-type') return mockVehicleType
+        return null
+      })
 
-      const { create_vehicle } = jest.requireMock("./wasm-imports.js");
+      const { create_vehicle } = jest.requireMock('./wasm-imports.js')
       create_vehicle.mockReturnValue(
         JSON.stringify({
           success: true,
           id: 42,
-          message: "Vehicle created",
-        }),
-      );
+          message: 'Vehicle created'
+        })
+      )
 
-      await gameStateManager.spawnVehicle();
+      await gameStateManager.spawnVehicle()
 
-      expect(create_vehicle).toHaveBeenCalled();
+      expect(create_vehicle).toHaveBeenCalled()
       expect(gameDemo.selectionManager.selectEntity).toHaveBeenCalledWith(
         42,
         true,
-        true,
-      );
+        true
+      )
       expect(gameDemo.updateStatus).toHaveBeenCalledWith(
-        expect.stringContaining("Vehicle spawned"),
-      );
-    });
-  });
+        expect.stringContaining('Vehicle spawned')
+      )
+    })
+  })
 
-  describe("createBase", () => {
+  describe('createBase', () => {
     beforeEach(() => {
-      gameDemo.isInitialized = true;
-      gameDemo.bases = new Map();
-    });
+      gameDemo.isInitialized = true
+      gameDemo.bases = new Map()
+    })
 
-    it("should create base successfully", async () => {
+    it('should create base successfully', async () => {
       // Mock document elements for base coordinates
-      const mockBaseX = { value: "100" };
-      const mockBaseY = { value: "200" };
+      const mockBaseX = { value: '100' }
+      const mockBaseY = { value: '200' }
       mockGetElementById.mockImplementation((id) => {
-        if (id === "base-x") return mockBaseX;
-        if (id === "base-y") return mockBaseY;
-        return null;
-      });
+        if (id === 'base-x') return mockBaseX
+        if (id === 'base-y') return mockBaseY
+        return null
+      })
 
-      const { create_base } = jest.requireMock("./wasm-imports.js");
+      const { create_base } = jest.requireMock('./wasm-imports.js')
       create_base.mockReturnValue(
         JSON.stringify({
           id: 1,
@@ -237,87 +237,87 @@ describe("GameStateManager", () => {
           y: 200,
           floors: [],
           current_storage_usage: 0,
-          total_storage_capacity: 100,
-        }),
-      );
+          total_storage_capacity: 100
+        })
+      )
 
-      await gameStateManager.createBase();
+      await gameStateManager.createBase()
 
-      expect(create_base).toHaveBeenCalled();
-      expect(gameDemo.bases.get(1)).toBeDefined();
-      expect(gameDemo.updateStatus).toHaveBeenCalled();
-    });
-  });
+      expect(create_base).toHaveBeenCalled()
+      expect(gameDemo.bases.get(1)).toBeDefined()
+      expect(gameDemo.updateStatus).toHaveBeenCalled()
+    })
+  })
 
-  describe("buildFloor", () => {
+  describe('buildFloor', () => {
     beforeEach(() => {
-      gameDemo.isInitialized = true;
-      gameDemo.bases = new Map([[1, { id: 1, floors: [] }]]);
-    });
+      gameDemo.isInitialized = true
+      gameDemo.bases = new Map([[1, { id: 1, floors: [] }]])
+    })
 
-    it("should not build floor if no bases available", async () => {
-      gameDemo.bases = new Map();
+    it('should not build floor if no bases available', async () => {
+      gameDemo.bases = new Map()
 
-      await gameStateManager.buildFloor();
+      await gameStateManager.buildFloor()
 
       expect(gameDemo.updateStatus).toHaveBeenCalledWith(
-        "No bases available. Create a base first!",
-      );
-    });
+        'No bases available. Create a base first!'
+      )
+    })
 
-    it("should build floor successfully", async () => {
-      const { build_floor } = jest.requireMock("./wasm-imports.js");
+    it('should build floor successfully', async () => {
+      const { build_floor } = jest.requireMock('./wasm-imports.js')
       // Mock document element for floor type
-      const mockFloorType = { value: "storage" };
+      const mockFloorType = { value: 'storage' }
       mockGetElementById.mockImplementation((id) => {
-        if (id === "floor-type") return mockFloorType;
-        return null;
-      });
+        if (id === 'floor-type') return mockFloorType
+        return null
+      })
 
       build_floor.mockReturnValue(
         JSON.stringify({
           id: 1,
-          floors: [{ type: "storage" }],
-        }),
-      );
+          floors: [{ type: 'storage' }]
+        })
+      )
 
-      await gameStateManager.buildFloor();
+      await gameStateManager.buildFloor()
 
-      expect(build_floor).toHaveBeenCalled();
-      expect(gameDemo.bases.get(1).floors.length).toBe(1);
-      expect(gameDemo.updateStatus).toHaveBeenCalled();
-    });
-  });
+      expect(build_floor).toHaveBeenCalled()
+      expect(gameDemo.bases.get(1).floors.length).toBe(1)
+      expect(gameDemo.updateStatus).toHaveBeenCalled()
+    })
+  })
 
-  describe("startAutoUpdate", () => {
-    it("should enable auto update", () => {
-      gameStateManager.startAutoUpdate();
-
-      expect(gameDemo.stateManager.updateGameState).toHaveBeenCalledWith({
-        autoUpdateEnabled: true,
-      });
-      expect(gameDemo.updateStatus).toHaveBeenCalled();
-      expect(gameDemo.startGameLoop).toHaveBeenCalled();
-    });
-  });
-
-  describe("stopAutoUpdate", () => {
-    it("should disable auto update", () => {
-      gameStateManager.stopAutoUpdate();
+  describe('startAutoUpdate', () => {
+    it('should enable auto update', () => {
+      gameStateManager.startAutoUpdate()
 
       expect(gameDemo.stateManager.updateGameState).toHaveBeenCalledWith({
-        autoUpdateEnabled: false,
-      });
-      expect(gameDemo.updateStatus).toHaveBeenCalled();
-    });
-  });
+        autoUpdateEnabled: true
+      })
+      expect(gameDemo.updateStatus).toHaveBeenCalled()
+      expect(gameDemo.startGameLoop).toHaveBeenCalled()
+    })
+  })
 
-  describe("updateOnce", () => {
-    it("should update game state", () => {
-      const { update } = jest.requireMock("./wasm-imports.js");
-      gameDemo.isInitialized = true;
-      gameDemo.lastUpdate = Date.now() - 1000;
-      gameDemo.stateManager.updateGameState = jest.fn();
+  describe('stopAutoUpdate', () => {
+    it('should disable auto update', () => {
+      gameStateManager.stopAutoUpdate()
+
+      expect(gameDemo.stateManager.updateGameState).toHaveBeenCalledWith({
+        autoUpdateEnabled: false
+      })
+      expect(gameDemo.updateStatus).toHaveBeenCalled()
+    })
+  })
+
+  describe('updateOnce', () => {
+    it('should update game state', () => {
+      const { update } = jest.requireMock('./wasm-imports.js')
+      gameDemo.isInitialized = true
+      gameDemo.lastUpdate = Date.now() - 1000
+      gameDemo.stateManager.updateGameState = jest.fn()
 
       update.mockReturnValue(
         JSON.stringify({
@@ -325,85 +325,85 @@ describe("GameStateManager", () => {
           entities_count: 6,
           alerts_count: 3,
           removed_entities: [],
-          entities: [],
-        }),
-      );
+          entities: []
+        })
+      )
 
-      gameStateManager.updateOnce();
+      gameStateManager.updateOnce()
 
-      expect(update).toHaveBeenCalled();
+      expect(update).toHaveBeenCalled()
       expect(gameDemo.stateManager.updateGameState).toHaveBeenCalledWith({
         time: 15.5,
         entitiesCount: 6,
-        alertsCount: 3,
-      });
-    });
-  });
+        alertsCount: 3
+      })
+    })
+  })
 
-  describe("setGroupTarget", () => {
-    it("should set group target successfully", async () => {
-      const { set_group_target } = jest.requireMock("./wasm-imports.js");
+  describe('setGroupTarget', () => {
+    it('should set group target successfully', async () => {
+      const { set_group_target } = jest.requireMock('./wasm-imports.js')
       set_group_target.mockReturnValue(
         JSON.stringify({
           success: true,
-          message: "Target set",
-        }),
-      );
+          message: 'Target set'
+        })
+      )
 
-      await gameStateManager.setGroupTarget(100, 200);
+      await gameStateManager.setGroupTarget(100, 200)
 
-      expect(set_group_target).toHaveBeenCalledWith(100, 200);
+      expect(set_group_target).toHaveBeenCalledWith(100, 200)
       expect(gameDemo.updateStatus).toHaveBeenCalledWith(
-        "Group target set: Target set",
-      );
-    });
+        'Group target set: Target set'
+      )
+    })
 
-    it("should handle group target failure", async () => {
-      const { set_group_target } = jest.requireMock("./wasm-imports.js");
+    it('should handle group target failure', async () => {
+      const { set_group_target } = jest.requireMock('./wasm-imports.js')
       set_group_target.mockReturnValue(
         JSON.stringify({
           success: false,
-          message: "Invalid target",
-        }),
-      );
+          message: 'Invalid target'
+        })
+      )
 
-      await gameStateManager.setGroupTarget(100, 200);
+      await gameStateManager.setGroupTarget(100, 200)
 
       expect(gameDemo.updateStatus).toHaveBeenCalledWith(
-        "Failed to set group target: Invalid target",
-      );
-    });
-  });
+        'Failed to set group target: Invalid target'
+      )
+    })
+  })
 
-  describe("gameLoop", () => {
-    it("should call updateOnce when auto update enabled", () => {
-      gameDemo.isInitialized = true;
+  describe('gameLoop', () => {
+    it('should call updateOnce when auto update enabled', () => {
+      gameDemo.isInitialized = true
       gameDemo.stateManager.getGameState = jest.fn(() => ({
         isInitialized: true,
-        autoUpdateEnabled: true,
-      }));
+        autoUpdateEnabled: true
+      }))
 
       // Mock updateOnce to avoid actual implementation
-      gameStateManager.updateOnce = jest.fn();
+      gameStateManager.updateOnce = jest.fn()
 
-      gameStateManager.gameLoop();
+      gameStateManager.gameLoop()
 
-      expect(gameStateManager.updateOnce).toHaveBeenCalled();
-    });
+      expect(gameStateManager.updateOnce).toHaveBeenCalled()
+    })
 
-    it("should not call updateOnce when auto update disabled", () => {
-      gameDemo.isInitialized = true;
+    it('should not call updateOnce when auto update disabled', () => {
+      gameDemo.isInitialized = true
       gameDemo.stateManager.getGameState = jest.fn(() => ({
         isInitialized: true,
-        autoUpdateEnabled: false,
-      }));
+        autoUpdateEnabled: false
+      }))
 
       // Mock updateOnce to avoid actual implementation
-      gameStateManager.updateOnce = jest.fn();
+      gameStateManager.updateOnce = jest.fn()
 
-      gameStateManager.gameLoop();
+      gameStateManager.gameLoop()
 
-      expect(gameStateManager.updateOnce).not.toHaveBeenCalled();
-    });
-  });
-});
+      expect(gameStateManager.updateOnce).not.toHaveBeenCalled()
+    })
+  })
+})

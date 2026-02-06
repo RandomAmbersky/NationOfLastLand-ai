@@ -20,16 +20,16 @@ jest.mock('./__mocks__/PIXI.js', () => ({
     alpha: 1,
     x: 0,
     y: 0,
-    lineStyle() { return this },
-    drawCircle() { return this },
-    moveTo() { return this },
-    lineTo() { return this },
-    clear() { return this },
-    beginFill() { return this },
-    endFill() { return this },
-    addChild(child) { this.children.push(child); return child },
-    addChildAt(child, index) { this.children.splice(index, 0, child); return child },
-    removeChild(child) {
+    lineStyle () { return this },
+    drawCircle () { return this },
+    moveTo () { return this },
+    lineTo () { return this },
+    clear () { return this },
+    beginFill () { return this },
+    endFill () { return this },
+    addChild (child) { this.children.push(child); return child },
+    addChildAt (child, index) { this.children.splice(index, 0, child); return child },
+    removeChild (child) {
       const idx = this.children.indexOf(child)
       if (idx > -1) this.children.splice(idx, 1)
     }
@@ -51,8 +51,8 @@ describe('SelectionIndicatorManager', () => {
       app: {
         stage: {
           children: [],
-          addChild(child) { this.children.push(child) },
-          removeChild(child) {
+          addChild (child) { this.children.push(child) },
+          removeChild (child) {
             const idx = this.children.indexOf(child)
             if (idx > -1) this.children.splice(idx, 1)
           }

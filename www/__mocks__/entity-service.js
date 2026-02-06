@@ -1,13 +1,13 @@
 export const EntityService = class {
-  constructor() {
-    this.findPlayerBase = jest.fn(() => null);
+  constructor () {
+    this.findPlayerBase = jest.fn(() => null)
   }
-  
-  createEntity(entityData) {
-    return entityData;
+
+  createEntity (entityData) {
+    return entityData
   }
-  
-  findPlayerBase() {
-    return null;
+
+  findPlayerBase () {
+    return null
   }
-};
+}

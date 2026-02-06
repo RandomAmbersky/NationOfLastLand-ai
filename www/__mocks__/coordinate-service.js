@@ -1,26 +1,26 @@
 export class CoordinateService {
-  constructor(gameDemo) {
+  constructor (gameDemo) {
     this.gameDemo = gameDemo
     this._scaleCache = null
   }
 
-  getScale() {
+  getScale () {
     return { x: 1, y: 1 }
   }
 
-  invalidateScaleCache() {
+  invalidateScaleCache () {
     this._scaleCache = null
   }
 
-  screenToGame(x, y) {
-    return { x: x, y: y }
+  screenToGame (x, y) {
+    return { x, y }
   }
 
-  gameToScreen(x, y) {
-    return { x: x, y: y }
+  gameToScreen (x, y) {
+    return { x, y }
   }
 
-  getScreenCoords(gameX, gameY) {
+  getScreenCoords (gameX, gameY) {
     return { x: gameX, y: gameY }
   }
 }
