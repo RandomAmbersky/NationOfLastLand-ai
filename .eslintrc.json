@@ -1,0 +1,14 @@
+{
+  "extends": "standard",
+  "env": {
+    "node": true,
+    "jest": true
+  },
+  "globals": {
+    "describe": "readonly",
+    "it": "readonly",
+    "expect": "readonly",
+    "beforeEach": "readonly",
+    "jest": "readonly"
+  }
+}
