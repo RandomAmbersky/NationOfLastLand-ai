@@ -6,7 +6,7 @@ import {
   create_base,
   build_floor,
   create_random_alert,
-  _clear_selection
+  clear_selection as _clear_selection
 } from './wasm-imports.js'
 
 /**

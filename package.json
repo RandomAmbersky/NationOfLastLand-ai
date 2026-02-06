@@ -18,10 +18,7 @@
     ],
     "moduleNameMapper": {
       "^./wasm-imports\\.js$": "<rootDir>/www/__mocks__/wasm-imports.js"
-    },
-    "setupFilesAfterEnv": [
-      "<rootDir>/jest.setup.js"
-    ]
+    }
   },
   "scripts": {
     "build": "wasm-pack build --target web --out-dir www/pkg --dev",
