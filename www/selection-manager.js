@@ -238,6 +238,14 @@ export class SelectionManager {
     // Обновляем состояние через менеджер
     this.gameDemo.stateManager.updateSelectionState([], allSelected);
 
+    // Удаляем визуальные индикаторы для всех ранее выбранных сущностей
+    for (const entityId of allSelected) {
+      const entity = this.gameDemo.entities.get(entityId);
+      if (entity && entity.selectionIndicator) {
+        this.selectionIndicatorManager.removeSelectionIndicator(entity);
+      }
+    }
+
     this.gameDemo.updateStatus("Выделение снято.");
     this.gameDemo.updateEntityInfo(null);
     this.gameDemo.updateSpawnButtonState();
@@ -395,13 +403,16 @@ export class SelectionManager {
 
     // Используем handle_entity_selection для каждого юнита с isMultiSelect=true
     // чтобы получить правильное отображение группы
+    let successCount = 0;
     for (const entityId of unitsToSelect) {
       try {
         const selectionResult = await this._performEntitySelection(
           entityId,
           true,
         );
-        if (!selectionResult.success) {
+        if (selectionResult.success) {
+          successCount++;
+        } else {
           console.warn(
             `Не удалось выбрать юнит ${entityId}:`,
             selectionResult.message,
@@ -411,10 +422,19 @@ export class SelectionManager {
         console.error("Ошибка при выборе всех юнитов:", error);
       }
     }
+
+    // Обновляем статус после успешного выбора
+    if (successCount > 0) {
+      this.gameDemo.updateStatus(
+        `Выделено ${successCount} подвижных юнитов игрока`,
+      );
+    }
   }
 
   /**
    * Выбрать все юниты того же типа
+   * При двойном клике на юните игрока - выбираем всех подвижных юнитов игрока того же типа
+   * При двойном клике на юните не игрока - просто выбираем этот юнит (не группу)
    */
   selectSameTypeUnits(entityId) {
     const entity = this.gameDemo.stateManager
@@ -425,6 +445,21 @@ export class SelectionManager {
     const targetType = entity.vehicleType || entity.entityType;
     const targetFaction = entity.fraction;
 
+    // Проверяем, является ли юнит юнитом игрока
+    const isPlayerUnit = entity.fraction === "Player" || entity.fraction === "PlayerBase";
+
+    // Правило 4: при групповом выделении выбираются только юниты игрока
+    // Если кликнули на юните не игрока - просто выбираем этот юнит, а не группу
+    if (!isPlayerUnit) {
+      this.clearAllSelections(true);
+      this.selectEntity(entityId, true, true);
+      this.gameDemo.updateStatus(
+        `Выделен юнит ${targetType}`,
+      );
+      return;
+    }
+
+    // Юнит игрока - выбираем всех подвижных юнитов игрока того же типа
     this.clearAllSelections(true);
 
     let addedCount = 0;
@@ -437,17 +472,32 @@ export class SelectionManager {
         maxSize
       )
         break;
-      const entityType = ent.vehicleType || ent.entityType;
-      if (entityType === targetType && ent.fraction === targetFaction) {
+      // Правило 4: выбираем только юниты игрока (не enemy/wild/alert)
+      // Проверяем что это vehicle (подвижный юнит)
+      if (
+        ent.fraction === "Player" &&
+        ent.entityType === "vehicle"
+      ) {
         if (this.selectEntity(id, true, false)) {
           addedCount++;
         }
       }
     }
 
-    this.gameDemo.updateStatus(
-      `Выделено ${addedCount} юнитов типа ${targetType}`,
-    );
+    // Если не выбрано ни одного подвижного юнита (возможно кликнули на базу),
+    // то выбираем только её
+    const selectionState = this.gameDemo.stateManager.getSelectionState();
+    if (addedCount === 0) {
+      // Выбираем исходный юнит (базу)
+      this.selectEntity(entityId, true, true);
+      this.gameDemo.updateStatus(
+        `Выбрана база`,
+      );
+    } else {
+      this.gameDemo.updateStatus(
+        `Выделено ${addedCount} подвижных юнитов игрока`,
+      );
+    }
     // this.gameDemo.updateSelectedEntityInfo();
   }
 
