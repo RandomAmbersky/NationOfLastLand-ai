@@ -46,8 +46,15 @@ export class EntityService {
     }
 
     // Создаем объект сущности с координатами игры
-    const posX = entityData.position ? entityData.position.x : 0;
-    const posY = entityData.position ? entityData.position.y : 0;
+    // Rust serializes position tuple (f32, f32) as array [x, y]
+    const posX =
+      entityData.position && Array.isArray(entityData.position)
+        ? entityData.position[0]
+        : (entityData.position?.x ?? 0);
+    const posY =
+      entityData.position && Array.isArray(entityData.position)
+        ? entityData.position[1]
+        : (entityData.position?.y ?? 0);
 
     return {
       id: entityData.id,

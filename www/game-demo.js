@@ -438,28 +438,59 @@ export class GameDemo {
    * Создание текста информации о сущности
    */
   createEntityInfoText(entityInfo, isBase = false) {
+    // Helper function to get position string (handles both array and object formats)
+    const getPositionString = (pos) => {
+      if (!pos) return "(0.0, 0.0)";
+      // Rust serializes tuples as arrays [x, y]
+      if (Array.isArray(pos)) {
+        return `(${pos[0].toFixed(1)}, ${pos[1].toFixed(1)})`;
+      }
+      // Object format {x, y}
+      return `(${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})`;
+    };
+
+    // Helper function to get health string (handles both array and object formats)
+    const getHealthString = (health) => {
+      if (!health) return "";
+      // Rust serializes tuples as arrays [current, max]
+      if (Array.isArray(health)) {
+        return `Здоровье: ${health[0]}/${health[1]}\n`;
+      }
+      // Object format {current, max}
+      return `Здоровье: ${health.current}/${health.max}\n`;
+    };
+
     if (isBase) {
       let text = `🏢 БАЗА #${entityInfo.id}\n`;
-      text += `Позиция: (${entityInfo.position.x.toFixed(1)}, ${entityInfo.position.y.toFixed(1)})\n`;
+      text += `Позиция: ${getPositionString(entityInfo.position)}\n`;
       text += `Этажей: ${entityInfo.floors?.length || 0}\n`;
       if (entityInfo.floors) {
         const floorNames = entityInfo.floors.map((f) => f.type).join(", ");
         text += `Типы: ${floorNames}\n`;
       }
       if (entityInfo.storage) {
-        text += `Хранение: ${entityInfo.storage.current}/${entityInfo.storage.capacity}\n`;
+        // Handle storage as object {current, capacity}
+        const storageCurrent =
+          entityInfo.storage.current ?? entityInfo.storage[0] ?? 0;
+        const storageCapacity =
+          entityInfo.storage.capacity ?? entityInfo.storage[1] ?? 0;
+        text += `Хранение: ${storageCurrent}/${storageCapacity}\n`;
       }
       return text;
     } else {
       let text = `⚔️ ЮНИТ #${entityInfo.id}\n`;
       text += `Тип: ${entityInfo.vehicle_type || entityInfo.subtype || "Неизвестно"}\n`;
       text += `Фракция: ${entityInfo.fraction || "Нейтрал"}\n`;
-      text += `Позиция: (${entityInfo.position.x.toFixed(1)}, ${entityInfo.position.y.toFixed(1)})\n`;
+      text += `Позиция: ${getPositionString(entityInfo.position)}\n`;
       if (entityInfo.health) {
-        text += `Здоровье: ${entityInfo.health.current}/${entityInfo.health.max}\n`;
+        text += getHealthString(entityInfo.health);
       }
       if (entityInfo.combat) {
-        text += `Урон: ${entityInfo.combat.damage}\n`;
+        // Handle combat as object {damage, damage_type}
+        const damage = entityInfo.combat.damage ?? entityInfo.combat[0];
+        if (damage !== undefined) {
+          text += `Урон: ${damage}\n`;
+        }
       }
       return text;
     }

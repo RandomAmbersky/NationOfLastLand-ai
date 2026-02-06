@@ -260,8 +260,8 @@ export class SelectionManager {
 
   _findEntitiesInRectangle(bounds) {
     const entities = [];
-    const entitiesState = this.gameDemo.stateManager.getEntityState();
-    for (const [id, entity] of entitiesState.entities) {
+    // Use gameDemo.entities which has container data for rendering
+    for (const [id, entity] of this.gameDemo.entities) {
       if (this._isEntityInBounds(entity, bounds)) {
         entities.push(id);
       }
@@ -270,11 +270,16 @@ export class SelectionManager {
   }
 
   _isEntityInBounds(entity, bounds) {
+    // Get entity from gameDemo.entities to access container
+    const entityId = entity.id || entity.entityId;
+    const entityWithContainer = this.gameDemo.entities.get(entityId) || entity;
+
     return (
-      entity.container.x >= bounds.x &&
-      entity.container.x <= bounds.x + bounds.width &&
-      entity.container.y >= bounds.y &&
-      entity.container.y <= bounds.y + bounds.height
+      entityWithContainer.container &&
+      entityWithContainer.container.x >= bounds.x &&
+      entityWithContainer.container.x <= bounds.x + bounds.width &&
+      entityWithContainer.container.y >= bounds.y &&
+      entityWithContainer.container.y <= bounds.y + bounds.height
     );
   }
 
@@ -530,12 +535,16 @@ export class SelectionManager {
     try {
       // Используем централизованный метод для отображения информации
       const entitiesState = this.gameDemo.stateManager.getEntityState();
-      const entity = entitiesState.entities.get(entityId);
+      const entityData = entitiesState.entities.get(entityId);
 
-      if (!entity) {
+      if (!entityData) {
         this.gameDemo.updateEntityInfo("Entity no longer exists");
         return;
       }
+
+      // Ищем сущность в gameDemo.entities для получения container (данные рендеринга)
+      const entityFromMap = this.gameDemo.entities.get(entityId);
+      const entity = entityFromMap || entityData;
 
       // Получаем информацию о сущности через WASM
       const result = get_entity_info(entityId);
@@ -549,7 +558,12 @@ export class SelectionManager {
       this.gameDemo.updateEntityInfo(infoText);
 
       // Добавляем индикатор информации
-      if (entity && !entity.selectionIndicator && !entity.infoIndicator) {
+      if (
+        entity &&
+        entity.container &&
+        !entity.selectionIndicator &&
+        !entity.infoIndicator
+      ) {
         const infoGraphics = new PIXI.Graphics();
         // Use blue color for info display (like alerts)
         infoGraphics.lineStyle(3, 0x0080ff, 1);
