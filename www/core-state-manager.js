@@ -11,26 +11,26 @@ export class CoreStateManager {
       lastUpdate: Date.now(),
       time: 0,
       entitiesCount: 0,
-      alertsCount: 0
+      alertsCount: 0,
     };
 
     // Состояния выделения
     this.selectionState = {
       selectedEntityIds: new Set(),
-      selectedEntities: new Map()
+      selectedEntities: new Map(),
     };
 
     // Состояния сущностей
     this.entityState = {
       entities: new Map(),
-      bases: new Map()
+      bases: new Map(),
     };
 
     // Состояния отображения
     this.displayState = {
-      statusMessage: 'Ready to initialize...',
+      statusMessage: "Ready to initialize...",
       entityInfo: null,
-      targetIndicator: null
+      targetIndicator: null,
     };
 
     // Словарь обработчиков событий
@@ -39,8 +39,13 @@ export class CoreStateManager {
 
   // Обновление игрового состояния
   updateGameState(newState) {
+    console.log("updateGameState: setting newState =", newState);
     Object.assign(this.gameState, newState);
-    this.emit('gameStateUpdated', this.gameState);
+    console.log(
+      "updateGameState: after assign, autoUpdateEnabled =",
+      this.gameState.autoUpdateEnabled,
+    );
+    this.emit("gameStateUpdated", this.gameState);
   }
 
   // Обновление состояния выделения
@@ -56,7 +61,7 @@ export class CoreStateManager {
       this.selectionState.selectedEntityIds.add(id);
     }
 
-    this.emit('selectionUpdated', this.selectionState);
+    this.emit("selectionUpdated", this.selectionState);
   }
 
   // Обновление состояния сущностей
@@ -65,13 +70,13 @@ export class CoreStateManager {
     for (const entity of entities) {
       this.entityState.entities.set(entity.id, entity);
     }
-    this.emit('entitiesUpdated', this.entityState.entities);
+    this.emit("entitiesUpdated", this.entityState.entities);
   }
 
   // Обновление отображения
   updateDisplayState(newState) {
     Object.assign(this.displayState, newState);
-    this.emit('displayUpdated', this.displayState);
+    this.emit("displayUpdated", this.displayState);
   }
 
   // Получение состояния
@@ -82,7 +87,7 @@ export class CoreStateManager {
   getSelectionState() {
     return {
       ...this.selectionState,
-      selectedEntityIds: new Set(this.selectionState.selectedEntityIds)
+      selectedEntityIds: new Set(this.selectionState.selectedEntityIds),
     };
   }
 
@@ -90,7 +95,7 @@ export class CoreStateManager {
     return {
       ...this.entityState,
       entities: new Map(this.entityState.entities),
-      bases: new Map(this.entityState.bases)
+      bases: new Map(this.entityState.bases),
     };
   }
 
@@ -119,7 +124,7 @@ export class CoreStateManager {
   emit(event, data) {
     if (this.eventHandlers.has(event)) {
       const handlers = this.eventHandlers.get(event);
-      handlers.forEach(handler => handler(data));
+      handlers.forEach((handler) => handler(data));
     }
   }
 
@@ -131,25 +136,25 @@ export class CoreStateManager {
       lastUpdate: Date.now(),
       time: 0,
       entitiesCount: 0,
-      alertsCount: 0
+      alertsCount: 0,
     };
 
     this.selectionState = {
       selectedEntityIds: new Set(),
-      selectedEntities: new Map()
+      selectedEntities: new Map(),
     };
 
     this.entityState = {
       entities: new Map(),
-      bases: new Map()
+      bases: new Map(),
     };
 
     this.displayState = {
-      statusMessage: 'Ready to initialize...',
+      statusMessage: "Ready to initialize...",
       entityInfo: null,
-      targetIndicator: null
+      targetIndicator: null,
     };
 
-    this.emit('stateReset', {});
+    this.emit("stateReset", {});
   }
 }

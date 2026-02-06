@@ -33,6 +33,7 @@ export class GameDemo {
     // Инициализация состояния
     this.app = null;
     this.isInitialized = false;
+    this.isGameLoopRunning = false;
     this.lastUpdate = Date.now();
     this.bases = new Map();
     this.entities = new Map();
@@ -112,20 +113,38 @@ export class GameDemo {
       .addEventListener("click", () =>
         this.gameStateManager.createRandomAlert(),
       );
-    document
-      .getElementById("clear-selection-btn")
-      .addEventListener("click", () =>
+    const clearSelectionBtn = document.getElementById("clear-selection-btn");
+    if (clearSelectionBtn) {
+      clearSelectionBtn.addEventListener("click", () =>
         this.selectionManager.clearAllSelections(),
       );
-    document
-      .getElementById("start-auto-update-btn")
-      .addEventListener("click", () => this.gameStateManager.startAutoUpdate());
-    document
-      .getElementById("stop-auto-update-btn")
-      .addEventListener("click", () => this.gameStateManager.stopAutoUpdate());
-    document
-      .getElementById("update-once-btn")
-      .addEventListener("click", () => this.gameStateManager.updateOnce());
+    } else {
+      console.error("ERROR: clear-selection-btn NOT FOUND!");
+    }
+    const startAutoBtn = document.getElementById("start-auto-update-btn");
+    if (startAutoBtn) {
+      startAutoBtn.addEventListener("click", () =>
+        this.gameStateManager.startAutoUpdate(),
+      );
+    } else {
+      console.error("ERROR: start-auto-update-btn NOT FOUND!");
+    }
+    const stopAutoBtn = document.getElementById("stop-auto-update-btn");
+    if (stopAutoBtn) {
+      stopAutoBtn.addEventListener("click", () =>
+        this.gameStateManager.stopAutoUpdate(),
+      );
+    } else {
+      console.error("ERROR: stop-auto-update-btn NOT FOUND!");
+    }
+    const updateOnceBtn = document.getElementById("update-once-btn");
+    if (updateOnceBtn) {
+      updateOnceBtn.addEventListener("click", () =>
+        this.gameStateManager.updateOnce(),
+      );
+    } else {
+      console.error("ERROR: update-once-btn NOT FOUND!");
+    }
   }
 
   // Геттер для совместимости с selection-manager.js
@@ -158,9 +177,10 @@ export class GameDemo {
     } catch (error) {
       console.error("WASM init error:", error);
       console.error("Stack trace:", error.stack);
-      this.updateStatus(`Error loading WebAssembly: ${error.message}\n${error.stack}`);
+      this.updateStatus(
+        `Error loading WebAssembly: ${error.message}\n${error.stack}`,
+      );
       // Try a more specific error message for debugging
-
     }
   }
 
@@ -273,6 +293,7 @@ export class GameDemo {
    * Запуск игрового цикла
    */
   gameLoop() {
+    console.log("gameLoop: calling gameStateManager.gameLoop()");
     this.gameStateManager.gameLoop();
   }
 
@@ -351,6 +372,8 @@ export class GameDemo {
     await this.init();
     this.isInitialized = true;
 
+    // Запуск игрового цикла будет при нажатии "Start Auto Update"
+
     // Подписываемся на события
     this.stateManager.on("gameStateUpdated", (state) => {
       this.onGameStateUpdated(state);
@@ -367,6 +390,24 @@ export class GameDemo {
     this.stateManager.on("displayUpdated", (state) => {
       this.onDisplayUpdated(state);
     });
+  }
+
+  /**
+   * Запуск игрового цикла
+   */
+  startGameLoop() {
+    // Если цикл уже запущен, ничего не делаем
+    if (this.isGameLoopRunning) {
+      console.log("startGameLoop: game loop already running");
+      return;
+    }
+    console.log("startGameLoop: starting game loop...");
+    this.isGameLoopRunning = true;
+    const loop = () => {
+      this.gameLoop();
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
   }
 
   // Обработчики событий состояния
@@ -399,7 +440,7 @@ export class GameDemo {
       text += `Позиция: (${entityInfo.position.x.toFixed(1)}, ${entityInfo.position.y.toFixed(1)})\n`;
       text += `Этажей: ${entityInfo.floors?.length || 0}\n`;
       if (entityInfo.floors) {
-        const floorNames = entityInfo.floors.map(f => f.type).join(", ");
+        const floorNames = entityInfo.floors.map((f) => f.type).join(", ");
         text += `Типы: ${floorNames}\n`;
       }
       if (entityInfo.storage) {

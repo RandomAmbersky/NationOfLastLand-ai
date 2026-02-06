@@ -201,14 +201,21 @@ export class GameStateManager {
   }
 
   startAutoUpdate() {
+    console.log("startAutoUpdate: setting autoUpdateEnabled to true...");
     this.gameDemo.stateManager.updateGameState({ autoUpdateEnabled: true });
+    console.log(
+      "startAutoUpdate: autoUpdateEnabled =",
+      this.gameDemo.stateManager.getGameState().autoUpdateEnabled,
+    );
     this.gameDemo.updateStatus(
       "Auto update started - game will update automatically",
     );
+    this.gameDemo.startGameLoop();
   }
 
   stopAutoUpdate() {
     this.gameDemo.stateManager.updateGameState({ autoUpdateEnabled: false });
+    this.gameDemo.isGameLoopRunning = false;
     this.gameDemo.updateStatus(
       'Auto update stopped - use "Update Once" or "Start Auto Update" to continue',
     );
@@ -220,8 +227,12 @@ export class GameStateManager {
     this.gameDemo.lastUpdate = now;
 
     try {
+      console.log("updateOnce: calling wasm update with dt =", dt);
       const result = update(dt);
+      console.log("updateOnce: got result from wasm:", result);
       const gameState = JSON.parse(result);
+
+      console.log("updateOnce: gameState =", gameState);
 
       // Обновляем игровое состояние
       this.gameDemo.stateManager.updateGameState({
@@ -230,11 +241,10 @@ export class GameStateManager {
         alertsCount: gameState.alerts_count,
       });
 
-      if (Math.random() < 0.01) {
-        this.gameDemo.updateStatus(
-          `Running (Auto)...\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`,
-        );
-      }
+      // Always update status in auto update mode to show game is running
+      this.gameDemo.updateStatus(
+        `Running (Auto)...\nTime: ${gameState.time.toFixed(2)}s\nEntities: ${gameState.entities_count}\nAlerts: ${gameState.alerts_count}`,
+      );
 
       // Централизованное обновление состояния выделения с removed_entities
       this.gameDemo.updateSelectionState(gameState.removed_entities || []);
@@ -270,11 +280,17 @@ export class GameStateManager {
   }
 
   gameLoop() {
-    if (
-      this.gameDemo.isInitialized &&
-      this.gameDemo.stateManager.getGameState().autoUpdateEnabled
-    ) {
+    const state = this.gameDemo.stateManager.getGameState();
+    if (this.gameDemo.isInitialized && state.autoUpdateEnabled) {
+      console.log("gameLoop: calling updateOnce...");
       this.updateOnce();
+    } else {
+      console.log(
+        "gameLoop: conditions not met - isInitialized:",
+        this.gameDemo.isInitialized,
+        "autoUpdateEnabled:",
+        state.autoUpdateEnabled,
+      );
     }
   }
 }
