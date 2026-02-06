@@ -404,6 +404,9 @@ export class GameDemo {
     console.log("startGameLoop: starting game loop...");
     this.isGameLoopRunning = true;
     const loop = () => {
+      if (!this.isGameLoopRunning) {
+        return; // Stop the loop if flag is false
+      }
       this.gameLoop();
       requestAnimationFrame(loop);
     };
