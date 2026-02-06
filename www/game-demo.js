@@ -315,7 +315,7 @@ export class GameDemo {
   /**
    * Обновление информации о выделенных сущностях
    */
-  async updateSelectedEntityInfo (entities) {
+  async updateSelectedEntityInfo (_entities) {
     const selectionState = this.stateManager.getSelectionState()
     const selectedIds = Array.from(selectionState.selectedEntityIds)
 
@@ -452,7 +452,7 @@ export class GameDemo {
   }
 
   // Обработчики событий состояния
-  onGameStateUpdated (state) {
+  onGameStateUpdated (_state) {
     // Обработка изменений в игровом состоянии
     // console.log("Game state updated:", state);
   }
@@ -464,12 +464,12 @@ export class GameDemo {
     )
   }
 
-  onEntitiesUpdated (entities) {
+  onEntitiesUpdated (_entities) {
     // Обработка изменений в сущностях
     // console.log("Entities updated:", entities.size);
   }
 
-  onDisplayUpdated (state) {
+  onDisplayUpdated (_state) {
     // Обработка изменений в отображении
     // console.log("Display state updated:", state);
   }
@@ -538,4 +538,4 @@ export class GameDemo {
 }
 
 // Global demo instance for onclick handlers
-let demo
+let _demo

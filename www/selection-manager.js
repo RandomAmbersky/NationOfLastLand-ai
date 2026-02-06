@@ -1,6 +1,4 @@
 import {
-  select_entity,
-  deselect_entity,
   clear_selection,
   handle_entity_selection,
   get_entity_info
@@ -21,7 +19,7 @@ export class SelectionManager {
     this.entityService = new EntityService(gameDemo)
   }
 
-  async handleEntityClick (entityId, isMultiSelect, event) {
+  async handleEntityClick (entityId, isMultiSelect, _event) {
     const entity = this.gameDemo.stateManager
       .getEntityState()
       .entities.get(entityId)
@@ -479,7 +477,7 @@ export class SelectionManager {
     if (!entity) return
 
     const targetType = entity.vehicleType || entity.entityType
-    const targetFaction = entity.fraction
+    const _targetFaction = entity.fraction
 
     // Проверяем, является ли юнит юнитом игрока
     const isPlayerUnit =
@@ -517,7 +515,7 @@ export class SelectionManager {
 
     // Если не выбрано ни одного подвижного юнита (возможно кликнули на базу),
     // то выбираем только её
-    const selectionState = this.gameDemo.stateManager.getSelectionState()
+    const _selectionState = this.gameDemo.stateManager.getSelectionState()
     if (addedCount === 0) {
       // Выбираем исходный юнит (базу)
       this.selectEntity(entityId, true, true)

@@ -5,6 +5,7 @@
 // Mock PIXI before importing
 
 import { GameDemo } from './game-demo.js'
+// eslint-disable-next-line no-unused-vars
 import { initWasm } from './wasm-imports.js'
 
 global.PIXI = {
@@ -475,7 +476,7 @@ describe('GameDemo', () => {
         }
       }
     })
-    gameDemo.updateSelectedEntityInfo = jest.fn(async (entities) => {
+    gameDemo.updateSelectedEntityInfo = jest.fn(async (_entities) => {
       const selectionState = gameDemo.stateManager.getSelectionState()
       const selectedIds = Array.from(selectionState.selectedEntityIds)
       if (selectedIds.length > 0) {
@@ -549,8 +550,8 @@ describe('GameDemo', () => {
   describe('handleResize', () => {
     it('should update screen dimensions', () => {
       gameDemo.initPixi()
-      const originalWidth = gameDemo.app.screen.width
-      const originalHeight = gameDemo.app.screen.height
+      const _originalWidth = gameDemo.app.screen.width
+      const _originalHeight = gameDemo.app.screen.height
 
       gameDemo.app.view.getBoundingClientRect = () => ({
         left: 0,
@@ -1601,6 +1602,7 @@ document.getElementById = jest.fn().mockImplementation((id) => {
 })
 
 // Мокаем parentNode для canvas элемента
+// eslint-disable-next-line no-undef
 Object.defineProperty(HTMLCanvasElement.prototype, 'parentNode', {
   writable: true,
   value: {
