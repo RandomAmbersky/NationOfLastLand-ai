@@ -85,6 +85,26 @@ describe('GameDemo - Additional Tests', () => {
       expect(result).toContain('Урон: 10');
     });
 
+    test('должен создавать текст информации для юнита с object format', () => {
+      const entityInfo = {
+        id: 1,
+        vehicle_type: 'tank',
+        fraction: 'Enemy',
+        position: { x: 300, y: 400 },
+        health: { current: 75, max: 100 },
+        combat: { damage: 25 }
+      };
+
+      const result = gameDemo.createEntityInfoText(entityInfo, false);
+      
+      expect(result).toContain('⚔️ ЮНИТ #1');
+      expect(result).toContain('Тип: tank');
+      expect(result).toContain('Фракция: Enemy');
+      expect(result).toContain('Позиция: (300.0, 400.0)');
+      expect(result).toContain('Здоровье: 75/100');
+      expect(result).toContain('Урон: 25');
+    });
+
     test('должен создавать текст информации для базы', () => {
       const entityInfo = {
         id: 1,
@@ -103,6 +123,43 @@ describe('GameDemo - Additional Tests', () => {
       expect(result).toContain('Этажей: 2');
       expect(result).toContain('Типы: storage, defense');
       expect(result).toContain('Хранение: 500/1000');
+    });
+
+    test('должен создавать текст информации для базы с object storage format', () => {
+      const entityInfo = {
+        id: 1,
+        position: { x: 150, y: 250 },
+        floors: [
+          { type: 'command' }
+        ],
+        storage: { current: 300, capacity: 500 }
+      };
+
+      const result = gameDemo.createEntityInfoText(entityInfo, true);
+      
+      expect(result).toContain('🏢 БАЗА #1');
+      expect(result).toContain('Позиция: (150.0, 250.0)');
+      expect(result).toContain('Этажей: 1');
+      expect(result).toContain('Типы: command');
+      expect(result).toContain('Хранение: 300/500');
+    });
+
+    test('должен обрабатывать null/undefined значения', () => {
+      const entityInfo = {
+        id: 1,
+        vehicle_type: 'transport',
+        fraction: 'Neutral',
+        position: null,
+        health: null,
+        combat: null
+      };
+
+      const result = gameDemo.createEntityInfoText(entityInfo, false);
+      
+      expect(result).toContain('⚔️ ЮНИТ #1');
+      expect(result).toContain('Тип: transport');
+      expect(result).toContain('Фракция: Neutral');
+      expect(result).toContain('Позиция: (0.0, 0.0)');
     });
   });
 

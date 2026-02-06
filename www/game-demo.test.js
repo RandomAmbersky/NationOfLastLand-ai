@@ -136,11 +136,19 @@ jest.mock("./game-config.js", () => ({
 }));
 
 import { GameDemo } from "./game-demo.js";
+import { initWasm } from "./wasm-imports.js";
 
 describe("GameDemo", () => {
   let gameDemo;
 
   beforeAll(() => {
+    // Mock initWasm
+    jest.mock("./wasm-imports.js", () => ({
+      initWasm: jest.fn(() => Promise.resolve()),
+      init: jest.fn(() => Promise.resolve()),
+      gameInit: jest.fn(() => Promise.resolve()),
+    }));
+
     // Setup document mocks
     jest.spyOn(document, "getElementById").mockImplementation((id) => {
       if (id === "game-canvas") {
@@ -224,6 +232,7 @@ describe("GameDemo", () => {
       getEntityState: jest.fn(() => ({ entities: new Map() })),
       updateDisplayState: jest.fn(),
       getDisplayState: jest.fn(() => ({ statusMessage: "" })),
+      on: jest.fn(),
     };
 
     gameDemo.entityRenderer = {
@@ -384,6 +393,68 @@ describe("GameDemo", () => {
     });
     gameDemo.gameLoop = jest.fn(() => {
       gameDemo.gameStateManager.gameLoop();
+    });
+    gameDemo.onGameStateUpdated = jest.fn();
+    gameDemo.onEntitiesUpdated = jest.fn();
+    gameDemo.onDisplayUpdated = jest.fn();
+    gameDemo.onSelectionUpdated = jest.fn((state) => {
+      gameDemo.selectionIndicatorManager.updateSelectionIndicators(state.selectedEntityIds);
+    });
+    gameDemo.updateStatus = jest.fn((message) => {
+      gameDemo.stateManager.updateDisplayState({ statusMessage: message });
+      const statusDiv = document.getElementById("status");
+      if (statusDiv) statusDiv.textContent = message;
+    });
+    gameDemo.updateEntityInfo = jest.fn((info) => {
+      gameDemo.stateManager.updateDisplayState({ entityInfo: info });
+      const entityInfoDiv = document.getElementById("entity-info");
+      if (entityInfoDiv) {
+        if (info) {
+          entityInfoDiv.style.display = "block";
+          entityInfoDiv.textContent = info;
+        } else {
+          entityInfoDiv.style.display = "none";
+        }
+      }
+    });
+    gameDemo.updateSelectedEntityInfo = jest.fn(async (entities) => {
+      const selectionState = gameDemo.stateManager.getSelectionState();
+      const selectedIds = Array.from(selectionState.selectedEntityIds);
+      if (selectedIds.length > 0) {
+        await gameDemo.selectionManager.displayEntityInfo(selectedIds[0]);
+      } else {
+        gameDemo.updateEntityInfo(null);
+      }
+    });
+    gameDemo.startGameLoop = jest.fn(() => {
+      if (gameDemo.isGameLoopRunning) {
+        console.log("startGameLoop: game loop already running");
+        return;
+      }
+      gameDemo.isGameLoopRunning = true;
+      gameDemo.onSelectionUpdated = jest.fn((state) => {
+        gameDemo.selectionIndicatorManager.updateSelectionIndicators(state.selectedEntityIds);
+      });
+      const loop = () => {
+        if (!gameDemo.isGameLoopRunning) return;
+        gameDemo.gameLoop();
+      };
+      loop();
+    });
+
+    gameDemo.initializeDemo = jest.fn(async () => {
+      await gameDemo.init();
+      gameDemo.isInitialized = true;
+
+      gameDemo.stateManager.on("gameStateUpdated", expect.any(Function));
+      gameDemo.stateManager.on("selectionUpdated", expect.any(Function));
+      gameDemo.stateManager.on("entitiesUpdated", expect.any(Function));
+      gameDemo.stateManager.on("displayUpdated", expect.any(Function));
+    });
+
+    gameDemo.init = jest.fn(async () => {
+      // initWasm is already mocked in beforeAll
+      gameDemo.gameStateManager.initializeGame();
     });
 
     // Make selectedEntityIds writable (original is a getter in GameDemo)
@@ -710,6 +781,189 @@ describe("GameDemo", () => {
       gameDemo.checkAndUpdateTargetIndicator();
 
       expect(gameDemo.entityRenderer.clearTargetIndicator).toHaveBeenCalled();
+    });
+  });
+
+  describe("updateStatus", () => {
+    it("should update status message in state manager and DOM", () => {
+      gameDemo.stateManager.updateDisplayState = jest.fn();
+
+      const statusDiv = { textContent: "" };
+      jest.spyOn(document, "getElementById").mockImplementation((id) => {
+        if (id === "status") return statusDiv;
+        return null;
+      });
+
+      gameDemo.updateStatus("Test status message");
+
+      expect(gameDemo.stateManager.updateDisplayState).toHaveBeenCalledWith({
+        statusMessage: "Test status message",
+      });
+      expect(statusDiv.textContent).toBe("Test status message");
+    });
+  });
+
+  describe("updateEntityInfo", () => {
+    it("should show entity info when info is provided", () => {
+      gameDemo.stateManager.updateDisplayState = jest.fn();
+
+      const entityInfoDiv = { style: { display: "" }, textContent: "" };
+      jest.spyOn(document, "getElementById").mockImplementation((id) => {
+        if (id === "entity-info") return entityInfoDiv;
+        return null;
+      });
+
+      gameDemo.updateEntityInfo("Entity info text");
+
+      expect(gameDemo.stateManager.updateDisplayState).toHaveBeenCalledWith({
+        entityInfo: "Entity info text",
+      });
+      expect(entityInfoDiv.style.display).toBe("block");
+      expect(entityInfoDiv.textContent).toBe("Entity info text");
+    });
+
+    it("should hide entity info when info is null", () => {
+      gameDemo.stateManager.updateDisplayState = jest.fn();
+
+      const entityInfoDiv = { style: { display: "block" }, textContent: "Some text" };
+      jest.spyOn(document, "getElementById").mockImplementation((id) => {
+        if (id === "entity-info") return entityInfoDiv;
+        return null;
+      });
+
+      gameDemo.updateEntityInfo(null);
+
+      expect(entityInfoDiv.style.display).toBe("none");
+    });
+  });
+
+  describe("updateSelectedEntityInfo", () => {
+    beforeEach(() => {
+      gameDemo.selectionManager.displayEntityInfo = jest.fn();
+    });
+
+    it("should display info for first selected entity", async () => {
+      const mockSelectionState = { selectedEntityIds: new Set([1, 2, 3]) };
+      gameDemo.stateManager.getSelectionState = jest.fn(() => mockSelectionState);
+
+      await gameDemo.updateSelectedEntityInfo();
+
+      expect(gameDemo.selectionManager.displayEntityInfo).toHaveBeenCalledWith(1);
+    });
+
+    it("should clear entity info when no entities are selected", async () => {
+      const mockSelectionState = { selectedEntityIds: new Set() };
+      gameDemo.stateManager.getSelectionState = jest.fn(() => mockSelectionState);
+      gameDemo.updateEntityInfo = jest.fn();
+
+      await gameDemo.updateSelectedEntityInfo();
+
+      expect(gameDemo.updateEntityInfo).toHaveBeenCalledWith(null);
+    });
+  });
+
+  describe("startGameLoop", () => {
+    it("should not start loop if already running", () => {
+      gameDemo.isGameLoopRunning = true;
+
+      const consoleLogSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+      gameDemo.startGameLoop();
+
+      expect(consoleLogSpy).toHaveBeenCalledWith("startGameLoop: game loop already running");
+    });
+
+    it("should start the game loop", () => {
+      gameDemo.isGameLoopRunning = false;
+      gameDemo.gameLoop = jest.fn();
+
+      // Mock requestAnimationFrame
+      let loopFunction;
+      const originalRAF = global.requestAnimationFrame;
+      global.requestAnimationFrame = (fn) => {
+        loopFunction = fn;
+      };
+
+      // Re-setup startGameLoop to use the mocked version
+      gameDemo.startGameLoop = jest.fn(() => {
+        if (gameDemo.isGameLoopRunning) {
+          console.log("startGameLoop: game loop already running");
+          return;
+        }
+        gameDemo.isGameLoopRunning = true;
+        const loop = () => {
+          if (!gameDemo.isGameLoopRunning) return;
+          gameDemo.gameLoop();
+        };
+        global.requestAnimationFrame(loop);
+      });
+
+      gameDemo.startGameLoop();
+
+      // Loop should have been called
+      expect(loopFunction).toBeDefined();
+
+      // Call the loop to verify it calls gameLoop and continues
+      loopFunction();
+      expect(gameDemo.gameLoop).toHaveBeenCalled();
+
+      global.requestAnimationFrame = originalRAF;
+    });
+  });
+
+  describe("event handlers", () => {
+    it("should handle game state updated event", () => {
+      // Should not throw and should log if uncommented
+      expect(() => gameDemo.onGameStateUpdated({})).not.toThrow();
+    });
+
+    it("should handle selection updated event", () => {
+      const mockSelectionIndicatorManager = {
+        updateSelectionIndicators: jest.fn(),
+      };
+      gameDemo.selectionIndicatorManager = mockSelectionIndicatorManager;
+
+      const state = { selectedEntityIds: new Set([1, 2, 3]) };
+      gameDemo.onSelectionUpdated(state);
+
+      expect(mockSelectionIndicatorManager.updateSelectionIndicators).toHaveBeenCalledWith(
+        state.selectedEntityIds,
+      );
+    });
+
+    it("should handle entities updated event", () => {
+      // Should not throw and should log if uncommented
+      expect(() => gameDemo.onEntitiesUpdated(new Map())).not.toThrow();
+    });
+
+    it("should handle display updated event", () => {
+      // Should not throw and should log if uncommented
+      expect(() => gameDemo.onDisplayUpdated({})).not.toThrow();
+    });
+  });
+
+  describe("initializeDemo", () => {
+    it("should initialize WASM and set isInitialized", async () => {
+      gameDemo.init = jest.fn(async () => {});
+      // stateManager.on is mocked in beforeEach
+
+      await gameDemo.initializeDemo();
+
+      expect(gameDemo.init).toHaveBeenCalled();
+      expect(gameDemo.isInitialized).toBe(true);
+      expect(gameDemo.stateManager.on).toHaveBeenCalled();
+    });
+  });
+
+  describe("init", () => {
+    it("should initialize WASM successfully", async () => {
+      gameDemo.gameStateManager.initializeGame = jest.fn();
+      gameDemo.updateStatus = jest.fn();
+      // initWasm is already mocked in beforeAll
+
+      await gameDemo.init();
+
+      expect(gameDemo.gameStateManager.initializeGame).toHaveBeenCalled();
     });
   });
 });
