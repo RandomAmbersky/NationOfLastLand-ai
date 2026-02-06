@@ -61,7 +61,11 @@ export class CoreStateManager {
       this.selectionState.selectedEntityIds.add(id);
     }
 
-    this.emit("selectionUpdated", this.selectionState);
+    // Передаем копию состояния, чтобы избежать мутирующих изменений
+    this.emit("selectionUpdated", {
+      selectedEntityIds: new Set(this.selectionState.selectedEntityIds),
+      selectedEntities: new Map(this.selectionState.selectedEntities),
+    });
   }
 
   // Обновление состояния сущностей (старая версия для массивов)

@@ -442,8 +442,10 @@ export class GameDemo {
   }
 
   onSelectionUpdated(state) {
-    // Обработка изменений в состоянии выделения
-    // console.log("Selection state updated:", state);
+    // Обновление индикаторов выделения для всех сущностей
+    this.selectionIndicatorManager.updateSelectionIndicators(
+      state.selectedEntityIds,
+    );
   }
 
   onEntitiesUpdated(entities) {

@@ -81,14 +81,32 @@ export class SelectionManager {
     // Синхронизируем локальное состояние с состоянием из Rust
     const newSelectedIds = new Set(selectionResult.selected_entities);
 
+    // Получаем старые ID перед обновлением
+    const oldSelectedIds = new Set(
+      this.gameDemo.stateManager.getSelectionState().selectedEntityIds,
+    );
+
     // Обновляем индикаторы выделения
     this.selectionIndicatorManager.updateSelectionIndicators(newSelectedIds);
 
+    // Вычисляем удаленные ID (были выбраны, но теперь не выбраны)
+    const removedIds = [];
+    for (const id of oldSelectedIds) {
+      if (!newSelectedIds.has(id)) {
+        removedIds.push(id);
+      }
+    }
+
+    // Вычисляем новые ID (не были выбраны, но теперь выбраны)
+    const addedIds = [];
+    for (const id of newSelectedIds) {
+      if (!oldSelectedIds.has(id)) {
+        addedIds.push(id);
+      }
+    }
+
     // Обновляем множество выбранных ID через менеджер состояния
-    this.gameDemo.stateManager.updateSelectionState(
-      Array.from(newSelectedIds),
-      [],
-    );
+    this.gameDemo.stateManager.updateSelectionState(addedIds, removedIds);
   }
 
   _showGroupTargetingIndicator(targetAssignment) {
@@ -160,36 +178,25 @@ export class SelectionManager {
     }
 
     try {
-      const result = select_entity(entityId, exclusive);
+      // Используем handle_entity_selection вместо select_entity
+      // Это позволяет получить правильный список выделенных сущностей из Rust
+      const currentSelectedIds = Array.from(selectionState.selectedEntityIds);
+      const isMultiSelect = !exclusive;
+      const result = handle_entity_selection(
+        entityId,
+        isMultiSelect,
+        currentSelectedIds,
+      );
       const selectionResult = JSON.parse(result);
-      if (selectionResult.success) {
-        this.gameDemo.stateManager.updateSelectionState([entityId], []);
-        const entity = this.gameDemo.stateManager
-          .getEntityState()
-          .entities.get(entityId);
-        if (entity) {
-          // Все алерты подсвечиваются как враг
-          const isAlert = entity.entityType === "alert";
-          const isEnemy =
-            entity.fraction === "Enemy" ||
-            entity.fraction === "Wild" ||
-            isAlert;
-          this.selectionIndicatorManager.createSelectionIndicator(
-            entity,
-            isEnemy,
-          );
-        }
 
-        const count = selectionState.selectedEntityIds.size + 1;
-        if (count > 1) {
-          this.gameDemo.updateStatus(`${count} юнитов выделено.`);
-        }
-        this.gameDemo.updateSpawnButtonState();
-        // this.gameDemo.updateSelectedEntityInfo();
+      if (selectionResult.success) {
+        // Обновляем локальное состояние на основе результата из Rust
+        this._updateLocalSelectionState(selectionResult);
         return true;
       }
       return false;
-    } catch {
+    } catch (error) {
+      console.error("Ошибка при выборе сущности:", error);
       return false;
     }
   }
