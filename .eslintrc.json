@@ -12,5 +12,15 @@
     "jest": "readonly",
     "PIXI": "readonly",
     "requestAnimationFrame": "readonly"
+  },
+  "rules": {
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_"
+      }
+    ]
   }
 }
