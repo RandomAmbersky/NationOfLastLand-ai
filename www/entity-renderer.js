@@ -2,7 +2,7 @@ import { GAME_CONFIG } from './game-config.js'
 import { CoordinateService } from './coordinate-service.js'
 import { calculateDistance } from './utils.js'
 
-/**
+  /**
  * Управляет рендерингом сущностей и визуальными эффектами
  */
 export class EntityRenderer {
@@ -14,6 +14,29 @@ export class EntityRenderer {
     this.alertHighlightTimeout = null
     this.gridContainer = null
     this.coordinateService = new CoordinateService(gameDemo)
+  }
+
+  /**
+   * Обновление позиции существующей сущности
+   */
+  updateEntityPosition (id, gameX, gameY) {
+    const entity = this.gameDemo.entities.get(id)
+    
+    if (!entity || !entity.container) {
+      return
+    }
+
+    const scaleX = this.gameDemo.app.screen.width / GAME_CONFIG.WORLD_SIZE.width
+    const scaleY = this.gameDemo.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
+    const screenX = gameX * scaleX
+    const screenY = gameY * scaleY
+
+    entity.container.x = screenX
+    entity.container.y = screenY
+    entity.x = screenX
+    entity.y = screenY
+    entity.gameX = gameX
+    entity.gameY = gameY
   }
 
   setupGrid () {

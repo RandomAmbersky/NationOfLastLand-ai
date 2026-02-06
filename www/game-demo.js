@@ -218,14 +218,14 @@ export class GameDemo {
 
     // Синхронизируем сущности с отображением
     for (const entityData of entities) {
-      this.createEntityFromGameState(entityData);
+      this.updateOrCreateEntityFromGameState(entityData);
     }
   }
 
   /**
-   * Создание сущности из игрового состояния
+   * Обновление или создание сущности из игрового состояния
    */
-  createEntityFromGameState(entityData) {
+  updateOrCreateEntityFromGameState(entityData) {
     // Используем централизованную логику создания
     const entity = this.entityService.createEntity(entityData);
 
@@ -233,16 +233,28 @@ export class GameDemo {
       this.bases.set(entity.id, entity);
     }
 
-    // Обновляем отображение
-    if (entity) {
-      this.entityRenderer.createEntitySprite(
+    // Проверяем, существует ли уже спрайт для этой сущности
+    const existingEntity = this.entities.get(entity.id);
+    
+    if (existingEntity) {
+      // Обновляем позицию существующего спрайта
+      this.entityRenderer.updateEntityPosition(
         entity.id,
         entity.gameX,
-        entity.gameY,
-        entity.vehicleType,
-        entity.fraction,
-        entity.entityType,
+        entity.gameY
       );
+    } else {
+      // Создаем новый спрайт
+      if (entity) {
+        this.entityRenderer.createEntitySprite(
+          entity.id,
+          entity.gameX,
+          entity.gameY,
+          entity.vehicleType,
+          entity.fraction,
+          entity.entityType,
+        );
+      }
     }
   }
 
