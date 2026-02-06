@@ -6,7 +6,7 @@
 // Mock setTimeout globally before importing
 import { EntityRenderer } from './entity-renderer.js'
 
-global.setTimeout = jest.fn((cb) => 1)
+global.setTimeout = jest.fn((_cb) => 1)
 global.clearTimeout = jest.fn()
 
 jest.mock('./game-config.js', () => ({
