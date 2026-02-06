@@ -4,6 +4,22 @@
   "description": "WebAssembly demo for Nation of Last Land game with Pixi.js rendering",
   "main": "www/app.js",
   "type": "module",
+  "jest": {
+    "testEnvironment": "node",
+    "moduleFileExtensions": [
+      "js",
+      "json"
+    ],
+    "transform": {
+      "^.+\\.js$": "babel-jest"
+    },
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.js"
+    ],
+    "moduleNameMapper": {
+      "^./wasm-imports\\.js$": "<rootDir>/www/__mocks__/wasm-imports.js"
+    }
+  },
   "scripts": {
     "build": "wasm-pack build --target web --out-dir www/pkg --dev",
     "build-release": "wasm-pack build --target web --out-dir www/pkg --release",
