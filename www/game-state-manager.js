@@ -227,12 +227,12 @@ export class GameStateManager {
     this.gameDemo.lastUpdate = now;
 
     try {
-      console.log("updateOnce: calling wasm update with dt =", dt);
+      // console.log("updateOnce: calling wasm update with dt =", dt);
       const result = update(dt);
-      console.log("updateOnce: got result from wasm:", result);
+      // console.log("updateOnce: got result from wasm:", result);
       const gameState = JSON.parse(result);
 
-      console.log("updateOnce: gameState =", gameState);
+      // console.log("updateOnce: gameState =", gameState);
 
       // Обновляем игровое состояние
       this.gameDemo.stateManager.updateGameState({
@@ -282,7 +282,7 @@ export class GameStateManager {
   gameLoop() {
     const state = this.gameDemo.stateManager.getGameState();
     if (this.gameDemo.isInitialized && state.autoUpdateEnabled) {
-      console.log("gameLoop: calling updateOnce...");
+      // console.log("gameLoop: calling updateOnce...");
       this.updateOnce();
     } else {
       console.log(

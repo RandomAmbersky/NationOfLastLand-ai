@@ -293,7 +293,7 @@ export class GameDemo {
    * Запуск игрового цикла
    */
   gameLoop() {
-    console.log("gameLoop: calling gameStateManager.gameLoop()");
+    // console.log("gameLoop: calling gameStateManager.gameLoop()");
     this.gameStateManager.gameLoop();
   }
 
@@ -416,22 +416,22 @@ export class GameDemo {
   // Обработчики событий состояния
   onGameStateUpdated(state) {
     // Обработка изменений в игровом состоянии
-    console.log("Game state updated:", state);
+    // console.log("Game state updated:", state);
   }
 
   onSelectionUpdated(state) {
     // Обработка изменений в состоянии выделения
-    console.log("Selection state updated:", state);
+    // console.log("Selection state updated:", state);
   }
 
   onEntitiesUpdated(entities) {
     // Обработка изменений в сущностях
-    console.log("Entities updated:", entities.size);
+    // console.log("Entities updated:", entities.size);
   }
 
   onDisplayUpdated(state) {
     // Обработка изменений в отображении
-    console.log("Display state updated:", state);
+    // console.log("Display state updated:", state);
   }
 
   /**

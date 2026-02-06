@@ -39,12 +39,12 @@ export class CoreStateManager {
 
   // Обновление игрового состояния
   updateGameState(newState) {
-    console.log("updateGameState: setting newState =", newState);
+    // console.log("updateGameState: setting newState =", newState);
     Object.assign(this.gameState, newState);
-    console.log(
-      "updateGameState: after assign, autoUpdateEnabled =",
-      this.gameState.autoUpdateEnabled,
-    );
+    // console.log(
+    // "updateGameState: after assign, autoUpdateEnabled =",
+    // this.gameState.autoUpdateEnabled,
+    // );
     this.emit("gameStateUpdated", this.gameState);
   }
 
