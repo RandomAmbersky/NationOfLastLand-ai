@@ -6,7 +6,14 @@ global.PIXI = {
       this.alpha = 1
       this.x = 0
       this.y = 0
-      this.scale = { x: 1, y: 1 }
+      this.scale = { 
+        x: 1, 
+        y: 1,
+        set: jest.fn(function(scale) {
+          this.x = scale;
+          this.y = scale;
+        })
+      }
     }
     lineStyle() { return this }
     beginFill() { return this }
@@ -58,7 +65,11 @@ global.PIXI = {
       this.x = 0
       this.y = 0
       this.alpha = 1
-      this.anchor = { x: 0, y: 0 }
+      this.anchor = { 
+        x: 0, 
+        y: 0,
+        set: jest.fn()
+      }
     }
   },
   Application: class {
