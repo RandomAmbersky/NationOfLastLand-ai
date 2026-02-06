@@ -72,6 +72,9 @@ describe("EntityRenderer", () => {
           addChild(child) {
             this.children.push(child);
           },
+          addChildAt(child, index) {
+            this.children.splice(index, 0, child);
+          },
           removeChild(child) {
             const idx = this.children.indexOf(child);
             if (idx > -1) this.children.splice(idx, 1);

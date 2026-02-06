@@ -1028,11 +1028,38 @@ describe("GameDemo - Additional Tests", () => {
   let gameDemo;
 
   beforeEach(() => {
+    // Mock document elements before creating GameDemo
+    jest.spyOn(document, "getElementById").mockImplementation((id) => {
+      const buttons = {
+        "game-canvas": {
+          parentNode: {
+            replaceChild: jest.fn(),
+          },
+        },
+        "init-btn": { addEventListener: jest.fn() },
+        "spawn-btn": { addEventListener: jest.fn() },
+        "create-base-btn": { addEventListener: jest.fn() },
+        "build-floor-btn": { addEventListener: jest.fn() },
+        "create-alert-btn": { addEventListener: jest.fn() },
+        "clear-selection-btn": { addEventListener: jest.fn() },
+        "start-auto-update-btn": { addEventListener: jest.fn() },
+        "stop-auto-update-btn": { addEventListener: jest.fn() },
+        "update-once-btn": { addEventListener: jest.fn() },
+        "vehicle-type": { value: "scout" },
+        "base-x": { value: "100" },
+        "base-y": { value: "200" },
+        "floor-type": { value: "storage" },
+      };
+      return buttons[id] || null;
+    });
+    jest.spyOn(window, "addEventListener").mockImplementation(() => {});
+
     gameDemo = new GameDemo();
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   describe("createEntityInfoText", () => {
