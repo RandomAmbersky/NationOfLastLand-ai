@@ -213,48 +213,30 @@ export class GameDemo {
    * Синхронизация сущностей с игровым состоянием
    */
   syncEntitiesWithGameState(entities) {
-    console.log("=== DEBUG: syncEntitiesWithGameState ===");
-    console.log("Entities received count:", entities.length);
-    console.log("Entities received (first 3):", entities.slice(0, 3));
-    // Обновляем состояние сущностей через createEntity для правильного форматирования
+    // Обновляем состояние сущностей и синхронизируем отображение за один проход
     for (const entityData of entities) {
+      // Форматируем данные сущности
       const entity = this.entityService.createEntity(entityData);
-      console.log(
-        `  Created entity: id=${entity.id}, type=${entity.entityType}, fraction=${entity.fraction}`,
-      );
+
+      // Обновляем состояние
       this.stateManager.updateEntityStateEntry(entity);
-    }
 
-    // Синхронизируем сущности с отображением
-    for (const entityData of entities) {
-      this.updateOrCreateEntityFromGameState(entityData);
-    }
-  }
+      // Обновляем или создаем спрайт
+      if (entity && entity.entityType === "base") {
+        this.bases.set(entity.id, entity);
+      }
 
-  /**
-   * Обновление или создание сущности из игрового состояния
-   */
-  updateOrCreateEntityFromGameState(entityData) {
-    // Используем централизованную логику создания
-    const entity = this.entityService.createEntity(entityData);
+      const existingEntity = this.entities.get(entity.id);
 
-    if (entity && entity.entityType === "base") {
-      this.bases.set(entity.id, entity);
-    }
-
-    // Проверяем, существует ли уже спрайт для этой сущности
-    const existingEntity = this.entities.get(entity.id);
-
-    if (existingEntity) {
-      // Обновляем позицию существующего спрайта
-      this.entityRenderer.updateEntityPosition(
-        entity.id,
-        entity.gameX,
-        entity.gameY,
-      );
-    } else {
-      // Создаем новый спрайт
-      if (entity) {
+      if (existingEntity) {
+        // Обновляем позицию существующего спрайта
+        this.entityRenderer.updateEntityPosition(
+          entity.id,
+          entity.gameX,
+          entity.gameY,
+        );
+      } else {
+        // Создаем новый спрайт
         this.entityRenderer.createEntitySprite(
           entity.id,
           entity.gameX,
@@ -265,6 +247,25 @@ export class GameDemo {
         );
       }
     }
+  }
+
+  /**
+   * Обновление или создание сущности из игрового состояния
+   * (Оставлена для обратной совместимости, если нужна отдельная функция)
+   */
+  updateOrCreateEntityFromGameState(entityData) {
+    // Для обновления существующей сущности без дублирования createEntity
+    const entity = this.entities.get(entityData.id);
+
+    if (entity) {
+      // Сущность уже существует, обновляем только позицию
+      this.entityRenderer.updateEntityPosition(
+        entity.id,
+        entity.gameX,
+        entity.gameY,
+      );
+    }
+    // Если сущность не существует в this.entities, syncEntitiesWithGameState уже создаст её спрайт
   }
 
   /**

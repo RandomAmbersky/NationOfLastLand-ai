@@ -81,9 +81,6 @@ export class SelectionManager {
     // Синхронизируем локальное состояние с состоянием из Rust
     const newSelectedIds = new Set(selectionResult.selected_entities);
 
-    console.log("=== DEBUG: _updateLocalSelectionState ===");
-    console.log("New selected IDs:", Array.from(newSelectedIds));
-
     // Обновляем индикаторы выделения
     this.selectionIndicatorManager.updateSelectionIndicators(newSelectedIds);
 
@@ -127,17 +124,12 @@ export class SelectionManager {
   async _performEntitySelection(entityId, isMultiSelect) {
     const selectionState = this.gameDemo.stateManager.getSelectionState();
     const currentSelectedIds = Array.from(selectionState.selectedEntityIds);
-    console.log("=== DEBUG: _performEntitySelection ===");
-    console.log("Entity ID:", entityId);
-    console.log("Is multi-select:", isMultiSelect);
-    console.log("Current selected IDs:", currentSelectedIds);
     const result = await handle_entity_selection(
       entityId,
       isMultiSelect,
       currentSelectedIds,
     );
     const selectionResult = JSON.parse(result);
-    console.log("Selection result:", selectionResult);
 
     if (selectionResult.success) {
       // Обновляем локальное состояние на основе результата из Rust
@@ -175,9 +167,6 @@ export class SelectionManager {
         const entity = this.gameDemo.stateManager
           .getEntityState()
           .entities.get(entityId);
-        console.log("=== DEBUG: selectEntity result ===");
-        console.log("Entity ID:", entityId);
-        console.log("Entity data:", entity);
         if (entity) {
           // Все алерты подсвечиваются как враг
           const isAlert = entity.entityType === "alert";
@@ -185,7 +174,6 @@ export class SelectionManager {
             entity.fraction === "Enemy" ||
             entity.fraction === "Wild" ||
             isAlert;
-          console.log("Creating selection indicator: isEnemy =", isEnemy);
           this.selectionIndicatorManager.createSelectionIndicator(
             entity,
             isEnemy,
@@ -229,12 +217,6 @@ export class SelectionManager {
 
   clearAllSelections(bypassCheck = false) {
     if (!bypassCheck && this.isSelecting) return;
-    console.log("=== DEBUG: clearAllSelections ===");
-    const selectionStateBefore = this.gameDemo.stateManager.getSelectionState();
-    console.log(
-      "Selected entity IDs before clear:",
-      Array.from(selectionStateBefore.selectedEntityIds),
-    );
 
     try {
       const result = clear_selection();

@@ -14,22 +14,14 @@ export class SelectionIndicatorManager {
    * @param {boolean} isEnemy - Флаг, указывающий, является ли сущность врагом
    */
   createSelectionIndicator(entity, isEnemy = false) {
-    console.log("=== DEBUG: createSelectionIndicator ===");
-    console.log("Entity ID:", entity.id);
-    console.log("Entity fraction:", entity.fraction);
-    console.log("Entity entityType:", entity.entityType);
-    console.log("Entity container:", entity.container);
-    console.log("isEnemy:", isEnemy);
     const graphics = new PIXI.Graphics();
     const color = isEnemy
       ? GAME_CONFIG.COLORS.selection.enemy
       : GAME_CONFIG.COLORS.selection.player;
-    console.log("Selection color:", color.toString(16).padStart(6, "0"));
     graphics.lineStyle(3, color, 1);
     graphics.drawCircle(0, 0, 12);
     entity.container.addChild(graphics);
     entity.selectionIndicator = graphics;
-    console.log("Selection indicator created and added to container");
   }
 
   /**
@@ -48,9 +40,6 @@ export class SelectionIndicatorManager {
    * @param {Set} selectedEntityIds - Множество ID выбранных сущностей
    */
   updateSelectionIndicators(selectedEntityIds) {
-    console.log("=== DEBUG: updateSelectionIndicators ===");
-    console.log("Selected entity IDs:", selectedEntityIds);
-
     // Удаляем индикаторы для сущностей, которые больше не выбраны
     for (const [entityId, entity] of this.gameDemo.entities) {
       if (entity.selectionIndicator && !selectedEntityIds.has(entityId)) {
@@ -61,9 +50,6 @@ export class SelectionIndicatorManager {
     // Добавляем индикаторы для новых выбранных сущностей
     for (const entityId of selectedEntityIds) {
       const entity = this.gameDemo.entities.get(entityId);
-      console.log(
-        `Entity ${entityId}: entity=${!!entity}, hasIndicator=${!!entity?.selectionIndicator}, fraction=${entity?.fraction}, entityType=${entity?.entityType}`,
-      );
       if (entity && !entity.selectionIndicator) {
         const isEnemy =
           entity.fraction === "Enemy" ||
