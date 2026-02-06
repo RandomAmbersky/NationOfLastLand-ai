@@ -60,5 +60,55 @@ global.PIXI = {
       this.alpha = 1
       this.anchor = { x: 0, y: 0 }
     }
+  },
+  Application: class {
+    constructor(options = {}) {
+      this.screen = {
+        width: options.width || 800,
+        height: options.height || 600
+      }
+      this.view = options.view || {
+        getBoundingClientRect: () => ({ left: 0, top: 0 }),
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn()
+      }
+      this.stage = {
+        children: [],
+        addChild(child) { this.children.push(child) },
+        removeChild(child) {
+          const idx = this.children.indexOf(child)
+          if (idx > -1) this.children.splice(idx, 1)
+        }
+      }
+    }
+  },
+  Sprite: class {
+    constructor() {
+      this.x = 0
+      this.y = 0
+      this.alpha = 1
+      this.width = 0
+      this.height = 0
+      this.anchor = { x: 0.5, y: 0.5 }
+    }
+    setTexture() { return this }
+    destroy() {}
   }
+}
+
+// Mock setTimeout with jest.fn
+global.setTimeout = jest.fn((cb) => {
+  return 1
+})
+
+// Mock clearTimeout
+global.clearTimeout = jest.fn()
+
+// Mock console methods to reduce noise in tests
+global.console = {
+  ...console,
+  log: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn()
 }
