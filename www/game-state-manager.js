@@ -38,6 +38,11 @@ export class GameStateManager {
 
       this.gameDemo.updateStatus(status);
       this.gameDemo.updateSpawnButtonState();
+
+      // Отладка: логируем данные сущностей после инициализации
+      console.log("=== DEBUG: After initializeGame ===");
+      console.log("Entities count:", gameState.entities_count);
+      console.log("First 3 entities:", gameState.entities.slice(0, 3));
     } catch (error) {
       this.gameDemo.updateStatus(
         `Game initialization failed: ${error.message}`,
@@ -248,6 +253,11 @@ export class GameStateManager {
 
       // Централизованное обновление состояния выделения с removed_entities
       this.gameDemo.updateSelectionState(gameState.removed_entities || []);
+
+      // Отладка: логируем данные сущностей перед синхронизацией
+      console.log("=== DEBUG: updateOnce gameState.entities ===");
+      console.log("Entities count:", gameState.entities.length);
+      console.log("First 3 entities:", gameState.entities.slice(0, 3));
 
       // Синхронизируем сущности с игровым состоянием
       this.gameDemo.syncEntitiesWithGameState(gameState.entities);

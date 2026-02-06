@@ -17,6 +17,13 @@ export class EntityService {
     const entityType = entityData.entity_type || "vehicle";
     const fraction = entityData.fraction || null;
 
+    // Отладка: логируем входные данные
+    console.log("=== DEBUG: entityService.createEntity ===");
+    console.log("entityData:", entityData);
+    console.log("entityData.entity_type:", entityData?.entity_type);
+    console.log("entityData.entityType:", entityData?.entityType);
+    console.log("entityData.fraction:", entityData?.fraction);
+
     if (entityData.subtype) {
       // Проверяем, содержит ли subtype '_' - это указывает на алерт/развернутую единицу
       if (entityData.subtype.includes("_")) {

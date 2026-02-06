@@ -50,6 +50,9 @@ export class CoreStateManager {
 
   // Обновление состояния выделения
   updateSelectionState(selectedIds, removedIds = []) {
+    console.log("=== DEBUG: CoreStateManager.updateSelectionState ===");
+    console.log("Selected IDs:", selectedIds);
+    console.log("Removed IDs:", removedIds);
     // Удаление устаревших сущностей
     for (const id of removedIds) {
       this.selectionState.selectedEntityIds.delete(id);
@@ -60,16 +63,30 @@ export class CoreStateManager {
     for (const id of selectedIds) {
       this.selectionState.selectedEntityIds.add(id);
     }
+    console.log(
+      "Final selected IDs:",
+      Array.from(this.selectionState.selectedEntityIds),
+    );
 
     this.emit("selectionUpdated", this.selectionState);
   }
 
-  // Обновление состояния сущностей
+  // Обновление состояния сущностей (старая версия для массивов)
   updateEntityState(entities) {
     this.entityState.entities.clear();
     for (const entity of entities) {
       this.entityState.entities.set(entity.id, entity);
     }
+    this.emit("entitiesUpdated", this.entityState.entities);
+  }
+
+  // Обновление одной сущности (используется при создании через entityService)
+  updateEntityStateEntry(entity) {
+    console.log("=== DEBUG: CoreStateManager.updateEntityStateEntry ===");
+    console.log("Entity ID:", entity.id);
+    console.log("Entity fraction:", entity.fraction);
+    console.log("Entity entityType:", entity.entityType);
+    this.entityState.entities.set(entity.id, entity);
     this.emit("entitiesUpdated", this.entityState.entities);
   }
 
@@ -92,11 +109,23 @@ export class CoreStateManager {
   }
 
   getEntityState() {
-    return {
+    const result = {
       ...this.entityState,
       entities: new Map(this.entityState.entities),
       bases: new Map(this.entityState.bases),
     };
+    console.log("=== DEBUG: CoreStateManager.getEntityState ===");
+    console.log("Entity count:", result.entities.size);
+    let count = 0;
+    for (const [id, entity] of result.entities) {
+      if (count < 3) {
+        console.log(
+          `  Entity ${id}: entityType=${entity.entityType}, fraction=${entity.fraction}`,
+        );
+        count++;
+      }
+    }
+    return result;
   }
 
   getDisplayState() {

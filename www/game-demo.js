@@ -213,8 +213,17 @@ export class GameDemo {
    * Синхронизация сущностей с игровым состоянием
    */
   syncEntitiesWithGameState(entities) {
-    // Обновляем состояние сущностей
-    this.stateManager.updateEntityState(entities);
+    console.log("=== DEBUG: syncEntitiesWithGameState ===");
+    console.log("Entities received count:", entities.length);
+    console.log("Entities received (first 3):", entities.slice(0, 3));
+    // Обновляем состояние сущностей через createEntity для правильного форматирования
+    for (const entityData of entities) {
+      const entity = this.entityService.createEntity(entityData);
+      console.log(
+        `  Created entity: id=${entity.id}, type=${entity.entityType}, fraction=${entity.fraction}`,
+      );
+      this.stateManager.updateEntityStateEntry(entity);
+    }
 
     // Синхронизируем сущности с отображением
     for (const entityData of entities) {
@@ -235,13 +244,13 @@ export class GameDemo {
 
     // Проверяем, существует ли уже спрайт для этой сущности
     const existingEntity = this.entities.get(entity.id);
-    
+
     if (existingEntity) {
       // Обновляем позицию существующего спрайта
       this.entityRenderer.updateEntityPosition(
         entity.id,
         entity.gameX,
-        entity.gameY
+        entity.gameY,
       );
     } else {
       // Создаем новый спрайт

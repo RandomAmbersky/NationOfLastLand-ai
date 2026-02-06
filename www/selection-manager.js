@@ -81,6 +81,9 @@ export class SelectionManager {
     // Синхронизируем локальное состояние с состоянием из Rust
     const newSelectedIds = new Set(selectionResult.selected_entities);
 
+    console.log("=== DEBUG: _updateLocalSelectionState ===");
+    console.log("New selected IDs:", Array.from(newSelectedIds));
+
     // Обновляем индикаторы выделения
     this.selectionIndicatorManager.updateSelectionIndicators(newSelectedIds);
 
@@ -124,12 +127,17 @@ export class SelectionManager {
   async _performEntitySelection(entityId, isMultiSelect) {
     const selectionState = this.gameDemo.stateManager.getSelectionState();
     const currentSelectedIds = Array.from(selectionState.selectedEntityIds);
+    console.log("=== DEBUG: _performEntitySelection ===");
+    console.log("Entity ID:", entityId);
+    console.log("Is multi-select:", isMultiSelect);
+    console.log("Current selected IDs:", currentSelectedIds);
     const result = await handle_entity_selection(
       entityId,
       isMultiSelect,
       currentSelectedIds,
     );
     const selectionResult = JSON.parse(result);
+    console.log("Selection result:", selectionResult);
 
     if (selectionResult.success) {
       // Обновляем локальное состояние на основе результата из Rust
@@ -167,6 +175,9 @@ export class SelectionManager {
         const entity = this.gameDemo.stateManager
           .getEntityState()
           .entities.get(entityId);
+        console.log("=== DEBUG: selectEntity result ===");
+        console.log("Entity ID:", entityId);
+        console.log("Entity data:", entity);
         if (entity) {
           // Все алерты подсвечиваются как враг
           const isAlert = entity.entityType === "alert";
@@ -174,6 +185,7 @@ export class SelectionManager {
             entity.fraction === "Enemy" ||
             entity.fraction === "Wild" ||
             isAlert;
+          console.log("Creating selection indicator: isEnemy =", isEnemy);
           this.selectionIndicatorManager.createSelectionIndicator(
             entity,
             isEnemy,
@@ -217,6 +229,12 @@ export class SelectionManager {
 
   clearAllSelections(bypassCheck = false) {
     if (!bypassCheck && this.isSelecting) return;
+    console.log("=== DEBUG: clearAllSelections ===");
+    const selectionStateBefore = this.gameDemo.stateManager.getSelectionState();
+    console.log(
+      "Selected entity IDs before clear:",
+      Array.from(selectionStateBefore.selectedEntityIds),
+    );
 
     try {
       const result = clear_selection();
@@ -269,11 +287,18 @@ export class SelectionManager {
   _findEntitiesInRectangle(bounds) {
     const entities = [];
     // Use gameDemo.entities which has container data for rendering
+    console.log("=== DEBUG: Rectangle Selection ===");
+    console.log("Rectangle bounds:", bounds);
     for (const [id, entity] of this.gameDemo.entities) {
-      if (this._isEntityInBounds(entity, bounds)) {
+      const isInBounds = this._isEntityInBounds(entity, bounds);
+      console.log(
+        `Entity ${id} (${entity.vehicleType}, ${entity.fraction}): container.x=${entity.container?.x}, container.y=${entity.container?.y}, inBounds=${isInBounds}`,
+      );
+      if (isInBounds) {
         entities.push(id);
       }
     }
+    console.log("Entities in rectangle:", entities);
     return entities;
   }
 
@@ -294,16 +319,24 @@ export class SelectionManager {
   async _processRectangleSelection(entitiesInRectangle) {
     this._clearAlertSelections();
 
+    console.log("=== DEBUG: Processing Rectangle Selection ===");
+    console.log("Entities in rectangle (IDs):", entitiesInRectangle);
+
     const playerMovableUnits = entitiesInRectangle.filter((id) => {
       const entity = this.gameDemo.stateManager
         .getEntityState()
         .entities.get(id);
+      console.log(
+        `Entity ${id}: fraction=${entity?.fraction}, entityType=${entity?.entityType}, isPlayerUnit=${entity?.fraction === "Player" && entity?.entityType === "vehicle"}`,
+      );
       return (
         entity &&
         entity.fraction === "Player" &&
         entity.entityType === "vehicle"
       );
     });
+
+    console.log("Player movable units (IDs):", playerMovableUnits);
 
     if (playerMovableUnits.length === 0) {
       this.gameDemo.updateStatus(
@@ -313,6 +346,13 @@ export class SelectionManager {
     }
 
     this.clearAllSelections(true);
+    console.log("=== DEBUG: After clearAllSelections ===");
+    const selectionStateAfterClear =
+      this.gameDemo.stateManager.getSelectionState();
+    console.log(
+      "Selected entity IDs after clear:",
+      Array.from(selectionStateAfterClear.selectedEntityIds),
+    );
 
     const maxSize = GAME_CONFIG.LIMITS.maxGroupSize;
     const unitsToSelect = playerMovableUnits.slice(0, maxSize);
@@ -341,8 +381,15 @@ export class SelectionManager {
       }
     }
 
-    // Если выбран только один юнит, показываем его информацию
+    // Отладка: проверяем финальное состояние выбора
+    console.log("=== DEBUG: After Rectangle Selection ===");
     const selectionState = this.gameDemo.stateManager.getSelectionState();
+    console.log(
+      "Selected entity IDs:",
+      Array.from(selectionState.selectedEntityIds),
+    );
+
+    // Если выбран только один юнит, показываем его информацию
     if (selectionState.selectedEntityIds.size === 1) {
       const selectedEntityId = Array.from(selectionState.selectedEntityIds)[0];
       this.gameDemo.displayEntityInfo(selectedEntityId);
@@ -446,16 +493,15 @@ export class SelectionManager {
     const targetFaction = entity.fraction;
 
     // Проверяем, является ли юнит юнитом игрока
-    const isPlayerUnit = entity.fraction === "Player" || entity.fraction === "PlayerBase";
+    const isPlayerUnit =
+      entity.fraction === "Player" || entity.fraction === "PlayerBase";
 
     // Правило 4: при групповом выделении выбираются только юниты игрока
     // Если кликнули на юните не игрока - просто выбираем этот юнит, а не группу
     if (!isPlayerUnit) {
       this.clearAllSelections(true);
       this.selectEntity(entityId, true, true);
-      this.gameDemo.updateStatus(
-        `Выделен юнит ${targetType}`,
-      );
+      this.gameDemo.updateStatus(`Выделен юнит ${targetType}`);
       return;
     }
 
@@ -474,10 +520,7 @@ export class SelectionManager {
         break;
       // Правило 4: выбираем только юниты игрока (не enemy/wild/alert)
       // Проверяем что это vehicle (подвижный юнит)
-      if (
-        ent.fraction === "Player" &&
-        ent.entityType === "vehicle"
-      ) {
+      if (ent.fraction === "Player" && ent.entityType === "vehicle") {
         if (this.selectEntity(id, true, false)) {
           addedCount++;
         }
@@ -490,9 +533,7 @@ export class SelectionManager {
     if (addedCount === 0) {
       // Выбираем исходный юнит (базу)
       this.selectEntity(entityId, true, true);
-      this.gameDemo.updateStatus(
-        `Выбрана база`,
-      );
+      this.gameDemo.updateStatus(`Выбрана база`);
     } else {
       this.gameDemo.updateStatus(
         `Выделено ${addedCount} подвижных юнитов игрока`,
