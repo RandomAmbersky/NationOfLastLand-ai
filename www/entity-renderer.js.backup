@@ -2,7 +2,7 @@ import { GAME_CONFIG } from './game-config.js'
 import { CoordinateService } from './coordinate-service.js'
 import { calculateDistance } from './utils.js'
 
-/**
+  /**
  * Управляет рендерингом сущностей и визуальными эффектами
  */
 export class EntityRenderer {
@@ -21,7 +21,7 @@ export class EntityRenderer {
    */
   updateEntityPosition (id, gameX, gameY) {
     const entity = this.gameDemo.entities.get(id)
-
+    
     if (!entity || !entity.container) {
       return
     }
@@ -131,8 +131,7 @@ export class EntityRenderer {
           break
         default:
           if (vehicleType && vehicleType.includes('_')) {
-            // eslint-disable-next-line no-unused-vars
-            const [__, alertState] = vehicleType.split('_')
+            const [alertType, alertState] = vehicleType.split('_')
 
             if (alertState === 'Hidden') {
               color = GAME_CONFIG.COLORS.alert

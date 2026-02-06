@@ -9,6 +9,8 @@
     "it": "readonly",
     "expect": "readonly",
     "beforeEach": "readonly",
-    "jest": "readonly"
+    "jest": "readonly",
+    "PIXI": "readonly",
+    "requestAnimationFrame": "readonly"
   }
 }
