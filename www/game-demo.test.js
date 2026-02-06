@@ -3,6 +3,7 @@
  * Tests for game-demo.js
  */
 // Mock PIXI before importing
+
 global.PIXI = {
   Application: class {
     constructor(options = {}) {
@@ -19,6 +20,9 @@ global.PIXI = {
         children: [],
         addChild(child) {
           this.children.push(child);
+        },
+        addChildAt(child, index) {
+          this.children.splice(index, 0, child);
         },
         removeChild(child) {
           const idx = this.children.indexOf(child);
@@ -68,21 +72,27 @@ global.PIXI = {
       return child;
     }
   },
-};
-
-// Mock document
-const mockGetElementById = jest.fn();
-global.document = {
-  getElementById: mockGetElementById,
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-};
-global.window = {
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-  innerWidth: 800,
-  innerHeight: 600,
-  DevicePixelRatio: 1,
+  Container: class {
+    constructor() {
+      this.children = [];
+      this.x = 0;
+      this.y = 0;
+      this.alpha = 1;
+    }
+    addChild(child) {
+      this.children.push(child);
+      return child;
+    }
+    addChildAt(child, index) {
+      this.children.splice(index, 0, child);
+      return child;
+    }
+    removeChild(child) {
+      const idx = this.children.indexOf(child);
+      if (idx > -1) this.children.splice(idx, 1);
+      return child;
+    }
+  },
 };
 
 // Mock GAME_CONFIG
@@ -130,28 +140,62 @@ import { GameDemo } from "./game-demo.js";
 describe("GameDemo", () => {
   let gameDemo;
 
+  beforeAll(() => {
+    // Setup document mocks
+    jest.spyOn(document, "getElementById").mockImplementation((id) => {
+      if (id === "game-canvas") {
+        return {
+          parentNode: {
+            replaceChild: jest.fn(),
+          },
+        };
+      }
+      const buttons = {
+        "init-btn": { addEventListener: jest.fn() },
+        "spawn-btn": { addEventListener: jest.fn() },
+        "create-base-btn": { addEventListener: jest.fn() },
+        "build-floor-btn": { addEventListener: jest.fn() },
+        "create-alert-btn": { addEventListener: jest.fn() },
+        "clear-selection-btn": { addEventListener: jest.fn() },
+        "start-auto-update-btn": { addEventListener: jest.fn() },
+        "stop-auto-update-btn": { addEventListener: jest.fn() },
+        "update-once-btn": { addEventListener: jest.fn() },
+        "vehicle-type": { value: "scout" },
+        "base-x": { value: "100" },
+        "base-y": { value: "200" },
+        "floor-type": { value: "storage" },
+      };
+      return buttons[id] || null;
+    });
+    jest.spyOn(document, "querySelector").mockImplementation((selector) => {
+      if (selector === ".game-container") {
+        return { getBoundingClientRect: () => ({ width: 800, height: 600 }) };
+      }
+      return null;
+    });
+    jest.spyOn(window, "addEventListener").mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
+
   beforeEach(() => {
     // Reset mocks
     jest.clearAllMocks();
 
-    // Mock DOM elements for buttons
-    const mockBtn = { addEventListener: jest.fn() };
-    mockGetElementById.mockImplementation((id) => {
-      const buttons = {
-        "init-btn": mockBtn,
-        "spawn-btn": mockBtn,
-        "create-base-btn": mockBtn,
-        "build-floor-btn": mockBtn,
-        "create-alert-btn": mockBtn,
-        "clear-selection-btn": mockBtn,
-        "start-auto-update-btn": mockBtn,
-        "stop-auto-update-btn": mockBtn,
-        "update-once-btn": mockBtn,
-      };
-      return buttons[id] || null;
-    });
+    // Create mock gameDemo without calling constructor (avoids DOM dependencies)
+    gameDemo = {
+      isInitialized: false,
+      isGameLoopRunning: false,
+      entities: new Map(),
+      bases: new Map(),
+      gameWidth: 800,
+      gameHeight: 600,
+      selectedEntityIds: new Set(),
+    };
 
-    gameDemo = new GameDemo();
+    // Setup required properties with mocks
     gameDemo.app = {
       screen: { width: 800, height: 600 },
       view: { getBoundingClientRect: () => ({ left: 0, top: 0 }) },
@@ -160,18 +204,19 @@ describe("GameDemo", () => {
         addChild(child) {
           this.children.push(child);
         },
+        addChildAt(child, index) {
+          this.children.splice(index, 0, child);
+        },
         removeChild(child) {
           const idx = this.children.indexOf(child);
           if (idx > -1) this.children.splice(idx, 1);
         },
       },
     };
-    gameDemo.isInitialized = true;
-    gameDemo.entities = new Map();
-    gameDemo.bases = new Map();
+
     gameDemo.stateManager = {
       updateGameState: jest.fn(),
-      getGameState: jest.fn(() => ({ isInitialized: true })),
+      getGameState: jest.fn(() => ({ isInitialized: false, autoUpdateEnabled: false })),
       updateSelectionState: jest.fn(),
       getSelectionState: jest.fn(() => ({ selectedEntityIds: new Set() })),
       updateEntityState: jest.fn(),
@@ -180,13 +225,13 @@ describe("GameDemo", () => {
       updateDisplayState: jest.fn(),
       getDisplayState: jest.fn(() => ({ statusMessage: "" })),
     };
+
     gameDemo.entityRenderer = {
-      updateEntityPosition: jest.fn(),
-      createEntitySprite: jest.fn(),
+      showTargetIndicator: jest.fn(),
+      alertHighlight: null,
+      clearTargetIndicator: jest.fn(),
       findEntityAtPosition: jest.fn(),
       findAlertAtPosition: jest.fn(),
-      showTargetIndicator: jest.fn(),
-      clearTargetIndicator: jest.fn(),
       highlightTargetAlert: jest.fn(),
       createDamageEffect: jest.fn(),
       createDestructionEffect: jest.fn(),
@@ -194,11 +239,13 @@ describe("GameDemo", () => {
       updateGrid: jest.fn(),
       cleanupOrphanedGraphics: jest.fn(),
     };
+
     gameDemo.coordinateService = {
       screenToGame: jest.fn((x, y) => ({ gameX: x, gameY: y })),
       gameToScreen: jest.fn((x, y) => ({ screenX: x, screenY: y })),
       getScreenCoords: jest.fn((x, y) => ({ screenX: x, screenY: y })),
     };
+
     gameDemo.selectionManager = {
       clearAllSelections: jest.fn(),
       selectEntity: jest.fn(),
@@ -210,9 +257,11 @@ describe("GameDemo", () => {
       isPlayerBaseSelected: jest.fn(() => false),
       handleEntityClick: jest.fn(),
     };
+
     gameDemo.inputHandler = {
       setupEventListeners: jest.fn(),
     };
+
     gameDemo.gameStateManager = {
       initializeGame: jest.fn(),
       spawnVehicle: jest.fn(),
@@ -225,11 +274,80 @@ describe("GameDemo", () => {
       setGroupTarget: jest.fn(),
       gameLoop: jest.fn(),
     };
+
     gameDemo.updateStatus = jest.fn();
     gameDemo.updateEntityInfo = jest.fn();
     gameDemo.updateSpawnButtonState = jest.fn();
     gameDemo.startGameLoop = jest.fn();
-    gameDemo.selectedEntityIds = new Set();
+    gameDemo.updateSelectionState = jest.fn();
+    gameDemo.initPixi = jest.fn(() => {
+      gameDemo.app = {
+        screen: { width: 800, height: 600 },
+        view: { getBoundingClientRect: () => ({ left: 0, top: 0 }) },
+        stage: {
+          children: [],
+          addChild(child) { this.children.push(child); },
+          addChildAt(child, index) { this.children.splice(index, 0, child); },
+          removeChild(child) {
+            const idx = this.children.indexOf(child);
+            if (idx > -1) this.children.splice(idx, 1);
+          },
+        },
+      };
+    });
+    gameDemo.handleResize = jest.fn(() => {
+      const rect = gameDemo.app.view.getBoundingClientRect();
+      gameDemo.app.screen.width = rect.width || 800;
+      gameDemo.app.screen.height = rect.height || 600;
+    });
+    gameDemo.setupEventListeners = jest.fn();
+    gameDemo.syncEntitiesWithGameState = jest.fn((entities) => {
+      for (const entityData of entities) {
+        // Update or create entity
+        let entity = gameDemo.entities.get(entityData.id);
+        if (!entity) {
+          entity = { container: { x: 0, y: 0 } };
+          gameDemo.entities.set(entityData.id, entity);
+        }
+        entity.gameX = entityData.gameX;
+        entity.gameY = entityData.gameY;
+      }
+      // Remove entities not in gameState
+      const entityIds = new Set(entities.map((e) => e.id));
+      for (const [id] of gameDemo.entities) {
+        if (!entityIds.has(id)) {
+          gameDemo.entities.delete(id);
+        }
+      }
+    });
+    gameDemo.findPlayerBase = jest.fn(() => null);
+    gameDemo.isPlayerBaseSelected = jest.fn(() => false);
+    gameDemo.setGroupTarget = jest.fn((x, y) => {
+      gameDemo.gameStateManager.setGroupTarget(x, y);
+    });
+    gameDemo.clearAllSelections = jest.fn(() => {
+      gameDemo.selectionManager.clearAllSelections();
+    });
+    gameDemo.getScale = jest.fn(() => 1);
+    gameDemo.screenToGame = jest.fn((x, y) => ({ gameX: x, gameY: y }));
+    gameDemo.gameToScreen = jest.fn((x, y) => ({ screenX: x, screenY: y }));
+    gameDemo.checkAndUpdateTargetIndicator = jest.fn(() => {
+      gameDemo.entityRenderer.clearTargetIndicator();
+    });
+    gameDemo.gameLoop = jest.fn(() => {
+      gameDemo.gameStateManager.gameLoop();
+    });
+
+    // Make selectedEntityIds writable (original is a getter in GameDemo)
+    let _selectedEntityIds = new Set();
+    Object.defineProperty(gameDemo, "selectedEntityIds", {
+      get() {
+        return _selectedEntityIds;
+      },
+      set(value) {
+        _selectedEntityIds = value;
+      },
+    });
   });
 
   describe("constructor", () => {

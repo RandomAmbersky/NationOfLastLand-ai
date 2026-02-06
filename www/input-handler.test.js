@@ -3,6 +3,30 @@
  * Tests for input-handler.js
  */
 // Mock PIXI
+
+// Mock document before importing
+const mockAddEventListener = jest.fn();
+const mockRemoveEventListener = jest.fn();
+global.document = {
+  addEventListener: mockAddEventListener,
+  removeEventListener: mockRemoveEventListener,
+};
+global.window = {
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+};
+global.Event = class Event {
+  constructor(type, options = {}) {
+    this.type = type;
+    this.clientX = options.clientX || 0;
+    this.clientY = options.clientY || 0;
+    this.button = options.button || 0;
+    this.key = options.key || "";
+    this.shiftKey = options.shiftKey || false;
+    this.ctrlKey = options.ctrlKey || false;
+  }
+};
+
 global.PIXI = {
   Graphics: class {
     constructor() {
@@ -91,34 +115,24 @@ jest.mock("./game-config.js", () => ({
   },
 }));
 
-// Mock document
-const mockAddEventListener = jest.fn();
-const mockRemoveEventListener = jest.fn();
-global.document = {
-  addEventListener: mockAddEventListener,
-  removeEventListener: mockRemoveEventListener,
-};
-global.window = {
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-};
-global.Event = class Event {
-  constructor(type, options = {}) {
-    this.type = type;
-    this.clientX = options.clientX || 0;
-    this.clientY = options.clientY || 0;
-    this.button = options.button || 0;
-    this.key = options.key || "";
-    this.shiftKey = options.shiftKey || false;
-    this.ctrlKey = options.ctrlKey || false;
-  }
-};
-
 import { InputHandler } from "./input-handler.js";
 
 describe("InputHandler", () => {
   let gameDemo;
   let inputHandler;
+
+  beforeAll(() => {
+    // Setup document keydown listener mock
+    jest.spyOn(document, "addEventListener").mockImplementation((event, cb) => {
+      if (event === "keydown") {
+        global.keydownHandler = cb;
+      }
+    });
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
 
   beforeEach(() => {
     gameDemo = {
@@ -202,7 +216,7 @@ describe("InputHandler", () => {
 
     it("should add keydown event listener to document", () => {
       inputHandler.setupEventListeners();
-      expect(global.document.addEventListener).toHaveBeenCalledWith(
+      expect(document.addEventListener).toHaveBeenCalledWith(
         "keydown",
         expect.any(Function),
       );

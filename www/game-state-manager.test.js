@@ -11,25 +11,16 @@ global.document = {
   removeEventListener: jest.fn(),
 };
 
-// Mock wasm imports
-const mockGameInit = jest.fn();
-const mockCreateVehicle = jest.fn();
-const mockUpdate = jest.fn();
-const mockSetGroupTarget = jest.fn();
-const mockCreateBase = jest.fn();
-const mockBuildFloor = jest.fn();
-const mockCreateRandomAlert = jest.fn();
-const mockClearSelection = jest.fn();
-
+// Mock wasm imports - use function to avoid hoisting issues
 jest.mock("./wasm-imports.js", () => ({
-  gameInit: mockGameInit,
-  create_vehicle: mockCreateVehicle,
-  update: mockUpdate,
-  set_group_target: mockSetGroupTarget,
-  create_base: mockCreateBase,
-  build_floor: mockBuildFloor,
-  create_random_alert: mockCreateRandomAlert,
-  clear_selection: mockClearSelection,
+  gameInit: jest.fn(),
+  create_vehicle: jest.fn(),
+  update: jest.fn(),
+  set_group_target: jest.fn(),
+  create_base: jest.fn(),
+  build_floor: jest.fn(),
+  create_random_alert: jest.fn(),
+  clear_selection: jest.fn(),
 }));
 
 import { GameStateManager } from "./game-state-manager.js";
@@ -37,6 +28,23 @@ import { GameStateManager } from "./game-state-manager.js";
 describe("GameStateManager", () => {
   let gameDemo;
   let gameStateManager;
+
+  beforeAll(() => {
+    // Setup document mocks
+    jest.spyOn(document, "getElementById").mockImplementation((id) => {
+      const elements = {
+        "vehicle-type": { value: "scout" },
+        "base-x": { value: "100" },
+        "base-y": { value: "200" },
+        "floor-type": { value: "storage" },
+      };
+      return elements[id] || null;
+    });
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
 
   beforeEach(() => {
     // Reset mocks
@@ -59,6 +67,13 @@ describe("GameStateManager", () => {
         showTargetIndicator: jest.fn(),
         alertHighlight: null,
         clearTargetIndicator: jest.fn(),
+        findEntityAtPosition: jest.fn(),
+        highlightTargetAlert: jest.fn(),
+        createDamageEffect: jest.fn(),
+        createDestructionEffect: jest.fn(),
+        setupGrid: jest.fn(),
+        updateGrid: jest.fn(),
+        cleanupOrphanedGraphics: jest.fn(),
       },
       app: {
         stage: {
@@ -69,6 +84,7 @@ describe("GameStateManager", () => {
       updateStatus: jest.fn(),
       updateSpawnButtonState: jest.fn(),
       startGameLoop: jest.fn(),
+      displayEntityInfo: jest.fn(),
       entities: new Map(),
       syncEntitiesWithGameState: jest.fn(),
       updateSelectedEntityInfo: jest.fn(),
@@ -82,7 +98,8 @@ describe("GameStateManager", () => {
 
   describe("initializeGame", () => {
     it("should initialize game and update state", async () => {
-      mockGameInit.mockReturnValue(
+      const { gameInit } = jest.requireMock("./wasm-imports.js");
+      gameInit.mockReturnValue(
         JSON.stringify({
           time: 10,
           entities_count: 5,
@@ -94,7 +111,7 @@ describe("GameStateManager", () => {
 
       await gameStateManager.initializeGame();
 
-      expect(mockGameInit).toHaveBeenCalled();
+      expect(gameInit).toHaveBeenCalled();
       expect(gameDemo.stateManager.updateGameState).toHaveBeenCalledWith({
         isInitialized: true,
         autoUpdateEnabled: false,
@@ -106,7 +123,8 @@ describe("GameStateManager", () => {
     });
 
     it("should handle initialization error", async () => {
-      mockGameInit.mockImplementation(() => {
+      const { gameInit } = jest.requireMock("./wasm-imports.js");
+      gameInit.mockImplementation(() => {
         throw new Error("Init failed");
       });
       gameDemo.isInitialized = false;
@@ -172,7 +190,8 @@ describe("GameStateManager", () => {
         return null;
       });
 
-      mockCreateVehicle.mockReturnValue(
+      const { create_vehicle } = jest.requireMock("./wasm-imports.js");
+      create_vehicle.mockReturnValue(
         JSON.stringify({
           success: true,
           id: 42,
@@ -182,7 +201,7 @@ describe("GameStateManager", () => {
 
       await gameStateManager.spawnVehicle();
 
-      expect(mockCreateVehicle).toHaveBeenCalled();
+      expect(create_vehicle).toHaveBeenCalled();
       expect(gameDemo.selectionManager.selectEntity).toHaveBeenCalledWith(
         42,
         true,
@@ -210,7 +229,8 @@ describe("GameStateManager", () => {
         return null;
       });
 
-      mockCreateBase.mockReturnValue(
+      const { create_base } = jest.requireMock("./wasm-imports.js");
+      create_base.mockReturnValue(
         JSON.stringify({
           id: 1,
           x: 100,
@@ -223,7 +243,7 @@ describe("GameStateManager", () => {
 
       await gameStateManager.createBase();
 
-      expect(mockCreateBase).toHaveBeenCalled();
+      expect(create_base).toHaveBeenCalled();
       expect(gameDemo.bases.get(1)).toBeDefined();
       expect(gameDemo.updateStatus).toHaveBeenCalled();
     });
@@ -246,6 +266,7 @@ describe("GameStateManager", () => {
     });
 
     it("should build floor successfully", async () => {
+      const { build_floor } = jest.requireMock("./wasm-imports.js");
       // Mock document element for floor type
       const mockFloorType = { value: "storage" };
       mockGetElementById.mockImplementation((id) => {
@@ -253,7 +274,7 @@ describe("GameStateManager", () => {
         return null;
       });
 
-      mockBuildFloor.mockReturnValue(
+      build_floor.mockReturnValue(
         JSON.stringify({
           id: 1,
           floors: [{ type: "storage" }],
@@ -262,7 +283,7 @@ describe("GameStateManager", () => {
 
       await gameStateManager.buildFloor();
 
-      expect(mockBuildFloor).toHaveBeenCalled();
+      expect(build_floor).toHaveBeenCalled();
       expect(gameDemo.bases.get(1).floors.length).toBe(1);
       expect(gameDemo.updateStatus).toHaveBeenCalled();
     });
@@ -293,11 +314,12 @@ describe("GameStateManager", () => {
 
   describe("updateOnce", () => {
     it("should update game state", () => {
+      const { update } = jest.requireMock("./wasm-imports.js");
       gameDemo.isInitialized = true;
       gameDemo.lastUpdate = Date.now() - 1000;
       gameDemo.stateManager.updateGameState = jest.fn();
 
-      mockUpdate.mockReturnValue(
+      update.mockReturnValue(
         JSON.stringify({
           time: 15.5,
           entities_count: 6,
@@ -309,7 +331,7 @@ describe("GameStateManager", () => {
 
       gameStateManager.updateOnce();
 
-      expect(mockUpdate).toHaveBeenCalled();
+      expect(update).toHaveBeenCalled();
       expect(gameDemo.stateManager.updateGameState).toHaveBeenCalledWith({
         time: 15.5,
         entitiesCount: 6,
@@ -320,7 +342,8 @@ describe("GameStateManager", () => {
 
   describe("setGroupTarget", () => {
     it("should set group target successfully", async () => {
-      mockSetGroupTarget.mockReturnValue(
+      const { set_group_target } = jest.requireMock("./wasm-imports.js");
+      set_group_target.mockReturnValue(
         JSON.stringify({
           success: true,
           message: "Target set",
@@ -329,14 +352,15 @@ describe("GameStateManager", () => {
 
       await gameStateManager.setGroupTarget(100, 200);
 
-      expect(mockSetGroupTarget).toHaveBeenCalledWith(100, 200);
+      expect(set_group_target).toHaveBeenCalledWith(100, 200);
       expect(gameDemo.updateStatus).toHaveBeenCalledWith(
         "Group target set: Target set",
       );
     });
 
     it("should handle group target failure", async () => {
-      mockSetGroupTarget.mockReturnValue(
+      const { set_group_target } = jest.requireMock("./wasm-imports.js");
+      set_group_target.mockReturnValue(
         JSON.stringify({
           success: false,
           message: "Invalid target",
@@ -383,4 +407,3 @@ describe("GameStateManager", () => {
     });
   });
 });
-})
