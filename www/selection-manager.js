@@ -3,6 +3,7 @@ import {
   deselect_entity,
   clear_selection,
   handle_entity_selection,
+  get_entity_info,
 } from "./wasm-imports.js";
 import { GAME_CONFIG } from "./game-config.js";
 import { SelectionIndicatorManager } from "./selection-indicator.js";
@@ -541,7 +542,8 @@ export class SelectionManager {
       const entityInfo = JSON.parse(result);
 
       // Используем централизованную логику создания текста информации
-      const infoText = this.gameDemo.createEntityInfoText(entityInfo, false);
+      const isBase = entity && entity.entityType === "base";
+      const infoText = this.gameDemo.createEntityInfoText(entityInfo, isBase);
 
       // Обновляем отображение
       this.gameDemo.updateEntityInfo(infoText);

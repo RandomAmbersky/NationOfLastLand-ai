@@ -128,6 +128,11 @@ export class GameDemo {
       .addEventListener("click", () => this.gameStateManager.updateOnce());
   }
 
+  // Геттер для совместимости с selection-manager.js
+  get selectedEntityIds() {
+    return this.stateManager.getSelectionState().selectedEntityIds;
+  }
+
   /**
    * Инициализация игры
    */
@@ -317,7 +322,7 @@ export class GameDemo {
    */
   updateSpawnButtonState() {
     const spawnBtn = document.getElementById("spawn-btn");
-    const isBaseSelected = this.isPlayerBaseSelected();
+    const isBaseSelected = this.selectionManager.isPlayerBaseSelected();
 
     if (spawnBtn) {
       spawnBtn.disabled = !isBaseSelected || !this.isInitialized;
@@ -329,6 +334,20 @@ export class GameDemo {
    */
   clearAllSelections() {
     this.selectionManager.clearAllSelections();
+  }
+
+  /**
+   * Установка цели для группы
+   */
+  setGroupTarget(x, y) {
+    this.gameStateManager.setGroupTarget(x, y);
+  }
+
+  /**
+   * Отображение информации о сущности
+   */
+  displayEntityInfo(entityId) {
+    this.selectionManager.displayEntityInfo(entityId);
   }
 
   /**
@@ -383,14 +402,38 @@ export class GameDemo {
     // Обработка изменений в отображении
     console.log("Display state updated:", state);
   }
+
+  /**
+   * Создание текста информации о сущности
+   */
+  createEntityInfoText(entityInfo, isBase = false) {
+    if (isBase) {
+      let text = `🏢 БАЗА #${entityInfo.id}\n`;
+      text += `Позиция: (${entityInfo.position.x.toFixed(1)}, ${entityInfo.position.y.toFixed(1)})\n`;
+      text += `Этажей: ${entityInfo.floors?.length || 0}\n`;
+      if (entityInfo.floors) {
+        const floorNames = entityInfo.floors.map(f => f.type).join(", ");
+        text += `Типы: ${floorNames}\n`;
+      }
+      if (entityInfo.storage) {
+        text += `Хранение: ${entityInfo.storage.current}/${entityInfo.storage.capacity}\n`;
+      }
+      return text;
+    } else {
+      let text = `⚔️ ЮНИТ #${entityInfo.id}\n`;
+      text += `Тип: ${entityInfo.vehicle_type || entityInfo.subtype || "Неизвестно"}\n`;
+      text += `Фракция: ${entityInfo.fraction || "Нейтрал"}\n`;
+      text += `Позиция: (${entityInfo.position.x.toFixed(1)}, ${entityInfo.position.y.toFixed(1)})\n`;
+      if (entityInfo.health) {
+        text += `Здоровье: ${entityInfo.health.current}/${entityInfo.health.max}\n`;
+      }
+      if (entityInfo.combat) {
+        text += `Урон: ${entityInfo.combat.damage}\n`;
+      }
+      return text;
+    }
+  }
 }
 
 // Global demo instance for onclick handlers
 let demo;
-
-// Initialize the demo when the page loads
-document.addEventListener("DOMContentLoaded", () => {
-  demo = new GameDemo();
-  window.demo = demo; // Make demo globally accessible
-  demo.initializeDemo();
-});

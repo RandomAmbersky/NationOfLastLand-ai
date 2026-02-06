@@ -70,7 +70,7 @@ export class GameStateManager {
   async spawnVehicle() {
     if (!this._checkInitialized()) return;
 
-    if (!this.gameDemo.isPlayerBaseSelected()) {
+    if (!this.gameDemo.selectionManager.isPlayerBaseSelected()) {
       this.gameDemo.updateStatus(
         "Cannot spawn vehicle: Please select a player base first!",
       );
