@@ -66,4 +66,43 @@ export class SelectionIndicatorManager {
     }
     this.gameDemo = null
   }
+
+  validateAndFixSelectionState () {
+    const { selectedEntityIds } = this.gameDemo.stateManager.getSelectionState()
+    let hadFixes = false
+
+    // Check entities that have indicators but are not in selection
+    for (const [entityId, entity] of this.gameDemo.entities) {
+      if (entity.selectionIndicator && !selectedEntityIds.has(entityId)) {
+        console.warn(`Entity ${entityId} has indicator but not in selection - removing`)
+        this.removeSelectionIndicator(entity)
+        hadFixes = true
+      }
+    }
+
+    // Check entities in selection but missing indicators
+    for (const entityId of selectedEntityIds) {
+      const entity = this.gameDemo.entities.get(entityId)
+      if (entity && !entity.selectionIndicator) {
+        console.warn(`Entity ${entityId} is selected but missing indicator - adding`)
+        const isEnemy =
+          entity.fraction === "Enemy" ||
+          entity.fraction === "Wild" ||
+          entity.entityType === "alert"
+        this.createSelectionIndicator(entity, isEnemy)
+        hadFixes = true
+      }
+    }
+
+    // Check selection for entities that no longer exist
+    for (const entityId of selectedEntityIds) {
+      if (!this.gameDemo.entities.has(entityId)) {
+        console.warn(`Entity ${entityId} in selection but no longer exists - removing from selection`)
+        selectedEntityIds.delete(entityId)
+        hadFixes = true
+      }
+    }
+
+    return !hadFixes
+  }
 }

@@ -14,7 +14,7 @@
       "^.+\\.js$": "babel-jest"
     },
     "setupFilesAfterEnv": [
-      "<rootDir>/www/jest.setup.js"
+      "<rootDir>/jest.setup.js"
     ],
     "moduleNameMapper": {
       "^./wasm-imports\\.js$": "<rootDir>/www/__mocks__/wasm-imports.js"

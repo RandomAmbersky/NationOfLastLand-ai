@@ -170,7 +170,8 @@ describe('EntityRenderer', () => {
       const indicator = {
         children: [],
         addChild: jest.fn(),
-        removeChild: jest.fn()
+        removeChild: jest.fn(),
+        destroy: jest.fn()
       }
       entityRenderer.targetIndicator = indicator
       gameDemo.app.stage.addChild(indicator)
@@ -179,6 +180,7 @@ describe('EntityRenderer', () => {
 
       expect(entityRenderer.targetIndicator).toBeNull()
       expect(gameDemo.app.stage.children.includes(indicator)).toBe(false)
+      expect(indicator.destroy).toHaveBeenCalled()
     })
   })
 
