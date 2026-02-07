@@ -7,6 +7,7 @@ export class InputHandler {
   constructor (gameDemo) {
     this.gameDemo = gameDemo
     this._dragState = this._createDragState()
+    this.isDestroyed = false
   }
 
   _createDragState () {
@@ -363,5 +364,19 @@ export class InputHandler {
         (screenY / this.gameDemo.app.screen.height) *
         GAME_CONFIG.WORLD_SIZE.height
     }
+  }
+
+  /**
+   * Cleanup метод для очистки ресурсов
+   */
+  destroy () {
+    if (this.isDestroyed) return
+    this.isDestroyed = true
+
+    // Очистка state
+    this._dragState = this._createDragState()
+
+    // Очистка ссылок
+    this.gameDemo = null
   }
 }

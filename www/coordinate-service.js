@@ -7,6 +7,21 @@ export class CoordinateService {
   constructor (gameDemo) {
     this.gameDemo = gameDemo
     this._scaleCache = null
+    this.isDestroyed = false
+  }
+
+  /**
+   * Cleanup метод для очистки ресурсов
+   */
+  destroy () {
+    if (this.isDestroyed) return
+    this.isDestroyed = true
+
+    // Очистка кэша
+    this._scaleCache = null
+
+    // Очистка ссылок
+    this.gameDemo = null
   }
 
   /**

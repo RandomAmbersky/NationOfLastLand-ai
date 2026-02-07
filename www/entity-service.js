@@ -6,6 +6,18 @@
 export class EntityService {
   constructor (gameDemo) {
     this.gameDemo = gameDemo
+    this.isDestroyed = false
+  }
+
+  /**
+   * Cleanup метод для очистки ресурсов
+   */
+  destroy () {
+    if (this.isDestroyed) return
+    this.isDestroyed = true
+
+    // Очистка ссылок
+    this.gameDemo = null
   }
 
   /**

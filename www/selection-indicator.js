@@ -1,18 +1,11 @@
-import { GAME_CONFIG } from './game-config.js'
+import { GAME_CONFIG } from "./game-config.js"
 
-/**
- * Управляет созданием и управлением индикаторов выделения сущностей
- */
 export class SelectionIndicatorManager {
   constructor (gameDemo) {
     this.gameDemo = gameDemo
+    this.isDestroyed = false
   }
 
-  /**
-   * Создает индикатор выделения для сущности
-   * @param {Object} entity - Сущность, для которой нужно создать индикатор
-   * @param {boolean} isEnemy - Флаг, указывающий, является ли сущность врагом
-   */
   createSelectionIndicator (entity, isEnemy = false) {
     const graphics = new PIXI.Graphics()
     const color = isEnemy
@@ -24,10 +17,6 @@ export class SelectionIndicatorManager {
     entity.selectionIndicator = graphics
   }
 
-  /**
-   * Удаляет индикатор выделения с сущности
-   * @param {Object} entity - Сущность, с которой нужно удалить индикатор
-   */
   removeSelectionIndicator (entity) {
     if (entity && entity.selectionIndicator) {
       entity.container.removeChild(entity.selectionIndicator)
@@ -35,71 +24,46 @@ export class SelectionIndicatorManager {
     }
   }
 
-  /**
-   * Обновляет состояние индикаторов выделения для всех сущностей
-   * @param {Set} selectedEntityIds - Множество ID выбранных сущностей
-   */
+  removeInfoIndicator (entity) {
+    if (entity && entity.infoIndicator) {
+      entity.container.removeChild(entity.infoIndicator)
+      if (entity.infoIndicator.destroy) {
+        entity.infoIndicator.destroy({ children: true, texture: true, baseTexture: true })
+      }
+      entity.infoIndicator = null
+    }
+  }
+
   updateSelectionIndicators (selectedEntityIds) {
-    // Удаляем индикаторы для сущностей, которые больше не выбраны
     for (const [entityId, entity] of this.gameDemo.entities) {
       if (entity.selectionIndicator && !selectedEntityIds.has(entityId)) {
         this.removeSelectionIndicator(entity)
       }
     }
-
-    // Добавляем индикаторы для новых выбранных сущностей
     for (const entityId of selectedEntityIds) {
       const entity = this.gameDemo.entities.get(entityId)
       if (entity && !entity.selectionIndicator) {
         const isEnemy =
-          entity.fraction === 'Enemy' ||
-          entity.fraction === 'Wild' ||
-          entity.entityType === 'alert'
-        console.log(
-          `Creating indicator for entity ${entityId}, isEnemy=${isEnemy}`
-        )
+          entity.fraction === "Enemy" ||
+          entity.fraction === "Wild" ||
+          entity.entityType === "alert"
+        console.log("Creating indicator for entity " + entityId + ", isEnemy=" + isEnemy)
         this.createSelectionIndicator(entity, isEnemy)
       }
     }
   }
 
-  /**
-   * Проверяет и исправляет несогласованности в состоянии выделения
-   */
-  validateAndFixSelectionState () {
-    const inconsistencies = []
-    const selectedEntityIds =
-      this.gameDemo.stateManager.getSelectionState().selectedEntityIds
-
-    // Проверяем, что все выбранные сущности имеют индикаторы
-    for (const entityId of selectedEntityIds) {
-      const entity = this.gameDemo.entities.get(entityId)
-      if (!entity) {
-        inconsistencies.push(
-          `Entity ${entityId} in selection but not in entities map`
-        )
-      } else if (!entity.selectionIndicator) {
-        inconsistencies.push(
-          `Entity ${entityId} selected but has no visual indicator`
-        )
-      }
-    }
-
-    // Проверяем, что все индикаторы соответствуют выделению
+  destroy () {
+    if (this.isDestroyed) return
+    this.isDestroyed = true
     for (const [entityId, entity] of this.gameDemo.entities) {
-      if (entity.selectionIndicator && !selectedEntityIds.has(entityId)) {
-        inconsistencies.push(
-          `Entity ${entityId} has indicator but not in selection`
-        )
+      if (entity && entity.selectionIndicator) {
+        this.removeSelectionIndicator(entity)
+      }
+      if (entity && entity.infoIndicator) {
+        this.removeInfoIndicator(entity)
       }
     }
-
-    if (inconsistencies.length > 0) {
-      console.warn(
-        'Selection state inconsistencies detected:',
-        inconsistencies
-      )
-      this.updateSelectionIndicators(selectedEntityIds)
-    }
+    this.gameDemo = null
   }
 }

@@ -121,6 +121,12 @@ export class GameDemo {
     } else {
       console.error('ERROR: clear-selection-btn NOT FOUND!')
     }
+    const cleanupBtn = document.getElementById('cleanup-btn')
+    if (cleanupBtn) {
+      cleanupBtn.addEventListener('click', () => this.destroy())
+    } else {
+      console.error('ERROR: cleanup-btn NOT FOUND!')
+    }
     const startAutoBtn = document.getElementById('start-auto-update-btn')
     if (startAutoBtn) {
       startAutoBtn.addEventListener('click', () =>
@@ -534,6 +540,71 @@ export class GameDemo {
       }
       return text
     }
+  }
+
+  /**
+   * Cleanup метод для очистки всех ресурсов при завершении работы
+   */
+  destroy () {
+    if (this.isDestroyed) return
+    this.isDestroyed = true
+
+    console.log('GameDemo: Starting cleanup...')
+
+    // Остановка игрового цикла
+    this.stopGameLoop()
+
+    // Очистка state manager
+    if (this.stateManager) {
+      this.stateManager.destroy()
+    }
+
+    // Очистка input handler (удаление event listeners)
+    if (this.inputHandler && this.inputHandler.setupEventListeners) {
+      // Event listeners будут удалены при уничтожении Pixi app
+    }
+
+    // Очистка entity renderer (удаление всех спрайтов)
+    if (this.entityRenderer) {
+      this.entityRenderer.cleanupAllEntities()
+      this.entityRenderer.destroy()
+    }
+
+    // Очистка Pixi.js app
+    if (this.app) {
+      this.app.destroy(true, { children: true, texture: true, baseTexture: true })
+      this.app = null
+    }
+
+    // Очистка ссылок на подсистемы
+    this.coordinateService = null
+    this.entityService = null
+    this.selectionIndicatorManager = null
+    this.inputHandler = null
+    this.selectionManager = null
+    this.gameStateManager = null
+
+    // Очистка карт
+    this.bases.clear()
+    this.entities.clear()
+
+    console.log('GameDemo: Cleanup completed')
+  }
+
+  /**
+   * Остановка игрового цикла
+   */
+  stopGameLoop () {
+    if (!this.isGameLoopRunning) return
+    this.isGameLoopRunning = false
+    console.log('GameDemo: Game loop stopped')
+  }
+
+  /**
+   * Проверка, разрушена ли игра
+   */
+  get isDestroyed () {
+    return !this.app
   }
 }
 

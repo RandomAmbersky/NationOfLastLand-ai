@@ -168,4 +168,35 @@ export class CoreStateManager {
 
     this.emit('stateReset', {})
   }
+
+  // Cleanup метод для очистки ресурсов
+  destroy () {
+    this.gameState = {
+      isInitialized: false,
+      autoUpdateEnabled: false,
+      lastUpdate: Date.now(),
+      time: 0,
+      entitiesCount: 0,
+      alertsCount: 0
+    }
+
+    this.selectionState = {
+      selectedEntityIds: new Set(),
+      selectedEntities: new Map()
+    }
+
+    this.entityState = {
+      entities: new Map(),
+      bases: new Map()
+    }
+
+    this.displayState = {
+      statusMessage: 'Ready to initialize...',
+      entityInfo: null,
+      targetIndicator: null
+    }
+
+    // Очистка обработчиков событий
+    this.eventHandlers.clear()
+  }
 }

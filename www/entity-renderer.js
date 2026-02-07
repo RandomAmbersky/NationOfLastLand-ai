@@ -13,7 +13,51 @@ export class EntityRenderer {
     this.alertHighlight = null
     this.alertHighlightTimeout = null
     this.gridContainer = null
+    this.isDestroyed = false
     this.coordinateService = new CoordinateService(gameDemo)
+  }
+
+  /**
+   * Cleanup метод для очистки ресурсов
+   */
+  destroy () {
+    if (this.isDestroyed) return
+    this.isDestroyed = true
+
+    // Очистка таймеров
+    if (this.targetIndicatorTimeout) {
+      clearTimeout(this.targetIndicatorTimeout)
+      this.targetIndicatorTimeout = null
+    }
+    if (this.alertHighlightTimeout) {
+      clearTimeout(this.alertHighlightTimeout)
+      this.alertHighlightTimeout = null
+    }
+
+    // Удаление target indicator
+    if (this.targetIndicator) {
+      this.gameDemo.app.stage.removeChild(this.targetIndicator)
+      this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
+      this.targetIndicator = null
+    }
+
+    // Удаление alert highlight
+    if (this.alertHighlight) {
+      this.gameDemo.app.stage.removeChild(this.alertHighlight)
+      this.alertHighlight.destroy({ children: true, texture: true, baseTexture: true })
+      this.alertHighlight = null
+    }
+
+    // Удаление grid container
+    if (this.gridContainer) {
+      this.gameDemo.app.stage.removeChild(this.gridContainer)
+      this.gridContainer.destroy({ children: true, texture: true, baseTexture: true })
+      this.gridContainer = null
+    }
+
+    // Очистка reference на gameDemo
+    this.gameDemo = null
+    this.coordinateService = null
   }
 
   /**
@@ -239,6 +283,8 @@ export class EntityRenderer {
   }
 
   showTargetIndicator (gameX, gameY) {
+    if (this.isDestroyed) return
+
     // Clear any existing timeout to prevent memory leaks
     if (this.targetIndicatorTimeout) {
       clearTimeout(this.targetIndicatorTimeout)
@@ -247,6 +293,7 @@ export class EntityRenderer {
 
     if (this.targetIndicator) {
       this.gameDemo.app.stage.removeChild(this.targetIndicator)
+      this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
       this.targetIndicator = null
     }
 
@@ -265,14 +312,18 @@ export class EntityRenderer {
     this.targetIndicator = graphics
 
     this.targetIndicatorTimeout = setTimeout(() => {
-      if (this.targetIndicator) {
+      if (!this.isDestroyed && this.targetIndicator) {
         this.gameDemo.app.stage.removeChild(this.targetIndicator)
+        this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
         this.targetIndicator = null
       }
+      this.targetIndicatorTimeout = null
     }, GAME_CONFIG.TIMEOUTS.targetIndicator)
   }
 
   clearTargetIndicator () {
+    if (this.isDestroyed) return
+
     // Clear timeout first to prevent memory leaks
     if (this.targetIndicatorTimeout) {
       clearTimeout(this.targetIndicatorTimeout)
@@ -282,14 +333,17 @@ export class EntityRenderer {
     // Remove indicator from stage
     if (this.targetIndicator) {
       this.gameDemo.app.stage.removeChild(this.targetIndicator)
+      this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
       this.targetIndicator = null
     }
   }
 
   highlightTargetAlert (alert) {
+    if (this.isDestroyed) return
+
     if (this.alertHighlight) {
       this.gameDemo.app.stage.removeChild(this.alertHighlight)
-      this.alertHighlight = null
+      this.alertHighlight.destroy({ children: true, texture: true, baseTexture: true })
     }
 
     const screenCoords = this.getScreenCoords(alert.x, alert.y)
@@ -302,6 +356,15 @@ export class EntityRenderer {
 
     this.gameDemo.app.stage.addChild(graphics)
     this.alertHighlight = graphics
+
+    this.alertHighlightTimeout = setTimeout(() => {
+      if (!this.isDestroyed && this.alertHighlight) {
+        this.gameDemo.app.stage.removeChild(this.alertHighlight)
+        this.alertHighlight.destroy({ children: true, texture: true, baseTexture: true })
+        this.alertHighlight = null
+      }
+      this.alertHighlightTimeout = null
+    }, GAME_CONFIG.TIMEOUTS.alertHighlight)
   }
 
   createDamageEffect (attackerId, targetId, damage) {
@@ -372,6 +435,8 @@ export class EntityRenderer {
   }
 
   createDestructionEffect (entityId) {
+    if (this.isDestroyed) return
+
     const entity = this.gameDemo.entities.get(entityId)
     if (!entity) return
 
@@ -394,34 +459,77 @@ export class EntityRenderer {
       particle.vx = (Math.random() - 0.5) * 200
       particle.vy = (Math.random() - 0.5) * 200
       this.gameDemo.app.stage.addChild(particle)
-      particles.push(particle)
+      particles.push({ particle, vx: particle.vx, vy: particle.vy })
     }
 
     let scale = 1.0
     let particleAlpha = 1.0
     const animate = () => {
+      if (this.isDestroyed) {
+        // Cleanup on destroy during animation
+        this.gameDemo.app.stage.removeChild(explosionGraphics)
+        particles.forEach(p => p.particle.destroy({ children: true, texture: true, baseTexture: true }))
+        return
+      }
+
       scale += 0.1
       explosionGraphics.scale.set(scale)
       explosionGraphics.alpha = Math.max(0, 1.0 - scale * 0.2)
 
       particleAlpha -= 0.02
-      for (const particle of particles) {
-        particle.x += particle.vx * 0.016
-        particle.y += particle.vy * 0.016
-        particle.alpha = particleAlpha
-        particle.vx *= 0.98
-        particle.vy *= 0.98
+      for (const p of particles) {
+        p.particle.x += p.vx * 0.016
+        p.particle.y += p.vy * 0.016
+        p.particle.alpha = particleAlpha
+        p.vx *= 0.98
+        p.vy *= 0.98
       }
 
       if (scale < 3.0) {
         requestAnimationFrame(animate)
       } else {
         this.gameDemo.app.stage.removeChild(explosionGraphics)
-        for (const particle of particles) {
-          this.gameDemo.app.stage.removeChild(particle)
-        }
+        particles.forEach(p => {
+          this.gameDemo.app.stage.removeChild(p.particle)
+          p.particle.destroy({ children: true, texture: true, baseTexture: true })
+        })
       }
     }
-    animate()
+    requestAnimationFrame(animate)
+  }
+
+  /**
+   * Cleanup сущности при её удалении
+   * @param {number|string} entityId - ID сущности для удаления
+   */
+  removeEntity (entityId) {
+    if (this.isDestroyed) return
+
+    const entity = this.gameDemo.entities.get(entityId)
+    if (!entity) return
+
+    // Удаляем container с stage
+    if (entity.container) {
+      this.gameDemo.app.stage.removeChild(entity.container)
+      entity.container.destroy({ children: true, texture: true, baseTexture: true })
+    }
+
+    // Удаляем из entities map
+    this.gameDemo.entities.delete(entityId)
+  }
+
+  /**
+   * Cleanup всех сущностей
+   */
+  cleanupAllEntities () {
+    if (this.isDestroyed) return
+
+    for (const [id, entity] of this.gameDemo.entities) {
+      if (entity.container) {
+        this.gameDemo.app.stage.removeChild(entity.container)
+        entity.container.destroy({ children: true, texture: true, baseTexture: true })
+      }
+    }
+    this.gameDemo.entities.clear()
   }
 }

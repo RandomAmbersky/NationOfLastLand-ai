@@ -15,8 +15,27 @@ export class SelectionManager {
   constructor (gameDemo) {
     this.gameDemo = gameDemo
     this.isSelecting = false
+    this.isDestroyed = false
     this.selectionIndicatorManager = new SelectionIndicatorManager(gameDemo)
     this.entityService = new EntityService(gameDemo)
+  }
+
+  /**
+   * Cleanup метод для очистки ресурсов
+   */
+  destroy () {
+    if (this.isDestroyed) return
+    this.isDestroyed = true
+
+    // Очистка selection indicator manager
+    if (this.selectionIndicatorManager) {
+      this.selectionIndicatorManager.destroy()
+    }
+
+    // Очистка ссылок
+    this.gameDemo = null
+    this.selectionIndicatorManager = null
+    this.entityService = null
   }
 
   async handleEntityClick (entityId, isMultiSelect, _event) {
