@@ -1,4 +1,4 @@
-import { GAME_CONFIG } from "./game-config.js"
+import { GAME_CONFIG } from './game-config.js'
 
 export class SelectionIndicatorManager {
   constructor (gameDemo) {
@@ -44,10 +44,10 @@ export class SelectionIndicatorManager {
       const entity = this.gameDemo.entities.get(entityId)
       if (entity && !entity.selectionIndicator) {
         const isEnemy =
-          entity.fraction === "Enemy" ||
-          entity.fraction === "Wild" ||
-          entity.entityType === "alert"
-        console.log("Creating indicator for entity " + entityId + ", isEnemy=" + isEnemy)
+          entity.fraction === 'Enemy' ||
+          entity.fraction === 'Wild' ||
+          entity.entityType === 'alert'
+        console.log('Creating indicator for entity ' + entityId + ', isEnemy=' + isEnemy)
         this.createSelectionIndicator(entity, isEnemy)
       }
     }
@@ -56,7 +56,7 @@ export class SelectionIndicatorManager {
   destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
-    for (const [entityId, entity] of this.gameDemo.entities) {
+    for (const [_entityId, entity] of this.gameDemo.entities) {
       if (entity && entity.selectionIndicator) {
         this.removeSelectionIndicator(entity)
       }
@@ -86,9 +86,9 @@ export class SelectionIndicatorManager {
       if (entity && !entity.selectionIndicator) {
         console.warn(`Entity ${entityId} is selected but missing indicator - adding`)
         const isEnemy =
-          entity.fraction === "Enemy" ||
-          entity.fraction === "Wild" ||
-          entity.entityType === "alert"
+          entity.fraction === 'Enemy' ||
+          entity.fraction === 'Wild' ||
+          entity.entityType === 'alert'
         this.createSelectionIndicator(entity, isEnemy)
         hadFixes = true
       }

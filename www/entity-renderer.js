@@ -524,7 +524,7 @@ export class EntityRenderer {
   cleanupAllEntities () {
     if (this.isDestroyed) return
 
-    for (const [id, entity] of this.gameDemo.entities) {
+    for (const [_id, entity] of this.gameDemo.entities) {
       if (entity.container) {
         this.gameDemo.app.stage.removeChild(entity.container)
         entity.container.destroy({ children: true, texture: true, baseTexture: true })
