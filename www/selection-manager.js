@@ -10,6 +10,7 @@ import { calculateDistance } from './utils.js'
 
 /**
  * Управляет выделением сущностей
+ * Merged functionality from BatchSelectionHelper and RectangleSelectionProcessor
  */
 export class SelectionManager {
   constructor (gameDemo) {
@@ -275,24 +276,105 @@ export class SelectionManager {
     this.gameDemo.updateSpawnButtonState()
   }
 
-  async selectEntitiesInRectangle (bounds) {
-    if (this.isSelecting) return
-
-    this.isSelecting = true
-
+  /**
+   * Отображение информации о сущности
+   */
+  async displayEntityInfo (entityId) {
     try {
-      const entitiesInRectangle = this._findEntitiesInRectangle(bounds)
-      if (entitiesInRectangle.length > 0) {
-        await this._processRectangleSelection(entitiesInRectangle)
+      // Используем централизованный метод для отображения информации
+      const entitiesState = this.gameDemo.stateManager.getEntityState()
+      const entityData = entitiesState.entities.get(entityId)
+
+      if (!entityData) {
+        this.gameDemo.updateEntityInfo('Entity no longer exists')
+        return
       }
-    } finally {
-      this.isSelecting = false
+
+      // Ищем сущность в gameDemo.entities для получения container (данные рендеринга)
+      const entityFromMap = this.gameDemo.entities.get(entityId)
+      const entity = entityFromMap || entityData
+
+      // Получаем информацию о сущности через WASM
+      const result = get_entity_info(entityId)
+      const entityInfo = JSON.parse(result)
+
+      // Используем централизованную логику создания текста информации
+      const isBase = entity && entity.entityType === 'base'
+      const infoText = this.gameDemo.createEntityInfoText(entityInfo, isBase)
+
+      // Обновляем отображение
+      this.gameDemo.updateEntityInfo(infoText)
+
+      // Добавляем индикатор информации
+      if (
+        entity &&
+        entity.container &&
+        !entity.selectionIndicator &&
+        !entity.infoIndicator
+      ) {
+        const infoGraphics = new PIXI.Graphics()
+        // Use blue color for info display (like alerts)
+        infoGraphics.lineStyle(3, 0x0080ff, 1)
+        infoGraphics.drawCircle(0, 0, 12)
+        entity.container.addChild(infoGraphics)
+        entity.infoIndicator = infoGraphics // Store reference to remove later
+      }
+    } catch (error) {
+      console.error('Error getting entity info:', error)
+      this.gameDemo.updateEntityInfo(
+        `❌ Error loading entity info: ${error.message}`
+      )
     }
   }
 
+  // ========== Merged from BatchSelectionHelper ==========
+
+  /**
+   * Выбрать всех подвижных юнитов игрока
+   */
+  async selectAllPlayerUnits () {
+    this.clearAllSelections(true)
+
+    const entitiesState = this.gameDemo.stateManager.getEntityState()
+    const playerMovableUnits = []
+    for (const [entityId, entity] of entitiesState.entities) {
+      if (entity.fraction === 'Player' && entity.entityType === 'vehicle') {
+        playerMovableUnits.push(entityId)
+      }
+    }
+
+    if (playerMovableUnits.length === 0) {
+      this.gameDemo.updateStatus('Нет доступных юнитов игрока')
+      return
+    }
+
+    const maxSize = GAME_CONFIG.LIMITS.maxGroupSize
+    const unitsToSelect = playerMovableUnits.slice(0, maxSize)
+    let successCount = 0
+
+    for (const entityId of unitsToSelect) {
+      try {
+        const selectionResult = await this._performEntitySelection(entityId, true)
+        if (selectionResult.success) {
+          successCount++
+        }
+      } catch (error) {
+        console.error('Ошибка при выборе юнита:', error)
+      }
+    }
+
+    if (successCount > 0) {
+      this.gameDemo.updateStatus(`Выделено ${successCount} подвижных юнитов игрока`)
+    }
+  }
+
+  // ========== Merged from RectangleSelectionProcessor ==========
+
+  /**
+   * Найти сущности в прямоугольной области
+   */
   _findEntitiesInRectangle (bounds) {
     const entities = []
-    // Use gameDemo.entities which has container data for rendering
     console.log('=== DEBUG: Rectangle Selection ===')
     console.log('Rectangle bounds:', bounds)
     for (const [id, entity] of this.gameDemo.entities) {
@@ -308,8 +390,10 @@ export class SelectionManager {
     return entities
   }
 
+  /**
+   * Проверить, находится ли сущность в границах
+   */
   _isEntityInBounds (entity, bounds) {
-    // Get entity from gameDemo.entities to access container
     const entityId = entity.id || entity.entityId
     const entityWithContainer = this.gameDemo.entities.get(entityId) || entity
 
@@ -322,6 +406,9 @@ export class SelectionManager {
     )
   }
 
+  /**
+   * Обработать выделение прямоугольной областью
+   */
   async _processRectangleSelection (entitiesInRectangle) {
     this._clearAlertSelections()
 
@@ -345,78 +432,54 @@ export class SelectionManager {
     console.log('Player movable units (IDs):', playerMovableUnits)
 
     if (playerMovableUnits.length === 0) {
-      this.gameDemo.updateStatus(
-        'Нет подвижных юнитов игрока в области выделения'
-      )
+      this.gameDemo.updateStatus('Нет подвижных юнитов игрока в области выделения')
       return
     }
 
     this.clearAllSelections(true)
     console.log('=== DEBUG: After clearAllSelections ===')
-    const selectionStateAfterClear =
-      this.gameDemo.stateManager.getSelectionState()
-    console.log(
-      'Selected entity IDs after clear:',
-      Array.from(selectionStateAfterClear.selectedEntityIds)
-    )
+    const selectionStateAfterClear = this.gameDemo.stateManager.getSelectionState()
+    console.log('Selected entity IDs after clear:', Array.from(selectionStateAfterClear.selectedEntityIds))
 
     const maxSize = GAME_CONFIG.LIMITS.maxGroupSize
     const unitsToSelect = playerMovableUnits.slice(0, maxSize)
 
-    // Используем handle_entity_selection для каждого юнита с isMultiSelect=true
-    // чтобы получить правильное отображение группы
     for (const entityId of unitsToSelect) {
       try {
-        const selectionResult = await this._performEntitySelection(
-          entityId,
-          true
-        )
+        const selectionResult = await this._performEntitySelection(entityId, true)
         if (selectionResult.success) {
-          // Обрабатываем действия выбора для последнего выбранного юнита
           if (selectionResult.action === 'EntitySelected') {
             this.gameDemo.displayEntityInfo(entityId)
           }
         } else {
-          console.warn(
-            `Не удалось выбрать юнит ${entityId}:`,
-            selectionResult.message
-          )
+          console.warn(`Не удалось выбрать юнит ${entityId}:`, selectionResult.message)
         }
       } catch (error) {
         console.error('Ошибка при выборе сущности рамкой:', error)
       }
     }
 
-    // Отладка: проверяем финальное состояние выбора
     console.log('=== DEBUG: After Rectangle Selection ===')
     const selectionState = this.gameDemo.stateManager.getSelectionState()
-    console.log(
-      'Selected entity IDs:',
-      Array.from(selectionState.selectedEntityIds)
-    )
+    console.log('Selected entity IDs:', Array.from(selectionState.selectedEntityIds))
 
-    // Если выбран только один юнит, показываем его информацию
     if (selectionState.selectedEntityIds.size === 1) {
       const selectedEntityId = Array.from(selectionState.selectedEntityIds)[0]
       this.gameDemo.displayEntityInfo(selectedEntityId)
     }
   }
 
+  /**
+   * Очистить выделение алертов
+   */
   _clearAlertSelections () {
     const selectionState = this.gameDemo.stateManager.getSelectionState()
     for (const entityId of selectionState.selectedEntityIds) {
-      const entity = this.gameDemo.stateManager
-        .getEntityState()
-        .entities.get(entityId)
+      const entity = this.gameDemo.stateManager.getEntityState().entities.get(entityId)
       if (entity && entity.entityType === 'alert') {
         this.deselectEntity(entityId, true)
       }
     }
-  }
-
-  // Метод оставлен для совместимости, но теперь использует SelectionIndicatorManager
-  _createSelectionIndicator (entity, isEnemy = false) {
-    this.selectionIndicatorManager.createSelectionIndicator(entity, isEnemy)
   }
 
   _updateSelectionStatus () {
@@ -432,119 +495,23 @@ export class SelectionManager {
   }
 
   /**
-   * Выбрать всех подвижных юнитов игрока (с новой логикой группы)
+   * Проверка, выбрана ли база игрока
    */
-  async selectAllPlayerUnits () {
-    this.clearAllSelections(true)
-
-    // Собираем всех подвижных юнитов игрока
-    const entitiesState = this.gameDemo.stateManager.getEntityState()
-    const playerMovableUnits = []
-    for (const [entityId, entity] of entitiesState.entities) {
-      if (entity.fraction === 'Player' && entity.entityType === 'vehicle') {
-        playerMovableUnits.push(entityId)
-      }
-    }
-
-    if (playerMovableUnits.length === 0) {
-      this.gameDemo.updateStatus('Нет доступных юнитов игрока')
-      return
-    }
-
-    const maxSize = GAME_CONFIG.LIMITS.maxGroupSize
-    const unitsToSelect = playerMovableUnits.slice(0, maxSize)
-
-    // Используем handle_entity_selection для каждого юнита с isMultiSelect=true
-    // чтобы получить правильное отображение группы
-    let successCount = 0
-    for (const entityId of unitsToSelect) {
-      try {
-        const selectionResult = await this._performEntitySelection(
-          entityId,
-          true
-        )
-        if (selectionResult.success) {
-          successCount++
-        } else {
-          console.warn(
-            `Не удалось выбрать юнит ${entityId}:`,
-            selectionResult.message
-          )
-        }
-      } catch (error) {
-        console.error('Ошибка при выборе всех юнитов:', error)
-      }
-    }
-
-    // Обновляем статус после успешного выбора
-    if (successCount > 0) {
-      this.gameDemo.updateStatus(
-        `Выделено ${successCount} подвижных юнитов игрока`
-      )
-    }
-  }
-
-  /**
-   * Выбрать все юниты того же типа
-   * При двойном клике на юните игрока - выбираем всех подвижных юнитов игрока того же типа
-   * При двойном клике на юните не игрока - просто выбираем этот юнит (не группу)
-   */
-  selectSameTypeUnits (entityId) {
-    const entity = this.gameDemo.stateManager
-      .getEntityState()
-      .entities.get(entityId)
-    if (!entity) return
-
-    const targetType = entity.vehicleType || entity.entityType
-    const _targetFaction = entity.fraction
-
-    // Проверяем, является ли юнит юнитом игрока
-    const isPlayerUnit =
-      entity.fraction === 'Player' || entity.fraction === 'PlayerBase'
-
-    // Правило 4: при групповом выделении выбираются только юниты игрока
-    // Если кликнули на юните не игрока - просто выбираем этот юнит, а не группу
-    if (!isPlayerUnit) {
-      this.clearAllSelections(true)
-      this.selectEntity(entityId, true, true)
-      this.gameDemo.updateStatus(`Выделен юнит ${targetType}`)
-      return
-    }
-
-    // Юнит игрока - выбираем всех подвижных юнитов игрока того же типа
-    this.clearAllSelections(true)
-
-    let addedCount = 0
-    const maxSize = GAME_CONFIG.LIMITS.maxGroupSize
+  isPlayerBaseSelected () {
+    const selectionState = this.gameDemo.stateManager.getSelectionState()
     const entitiesState = this.gameDemo.stateManager.getEntityState()
 
-    for (const [id, ent] of entitiesState.entities) {
+    for (const entityId of selectionState.selectedEntityIds) {
+      const entity = entitiesState.entities.get(entityId)
       if (
-        this.gameDemo.stateManager.getSelectionState().selectedEntityIds.size >=
-        maxSize
-      ) { break }
-      // Правило 4: выбираем только юниты игрока (не enemy/wild/alert)
-      // Проверяем что это vehicle (подвижный юнит)
-      if (ent.fraction === 'Player' && ent.entityType === 'vehicle') {
-        if (this.selectEntity(id, true, false)) {
-          addedCount++
-        }
+        entity &&
+        entity.entityType === 'base' &&
+        entity.fraction === 'Player'
+      ) {
+        return true
       }
     }
-
-    // Если не выбрано ни одного подвижного юнита (возможно кликнули на базу),
-    // то выбираем только её
-    const _selectionState = this.gameDemo.stateManager.getSelectionState()
-    if (addedCount === 0) {
-      // Выбираем исходный юнит (базу)
-      this.selectEntity(entityId, true, true)
-      this.gameDemo.updateStatus('Выбрана база')
-    } else {
-      this.gameDemo.updateStatus(
-        `Выделено ${addedCount} подвижных юнитов игрока`
-      )
-    }
-    // this.gameDemo.updateSelectedEntityInfo();
+    return false
   }
 
   /**
@@ -600,76 +567,64 @@ export class SelectionManager {
     }
 
     this.gameDemo.updateStatus(`Выделено ${addedCount} юнитов у базы`)
-    // this.gameDemo.updateSelectedEntityInfo();
   }
 
   /**
-   * Проверка, выбрана ли база игрока
+   * Выбрать все юниты того же типа
    */
-  isPlayerBaseSelected () {
-    const selectionState = this.gameDemo.stateManager.getSelectionState()
+  selectSameTypeUnits (entityId) {
+    const entity = this.gameDemo.stateManager
+      .getEntityState()
+      .entities.get(entityId)
+    if (!entity) return
+
+    const targetType = entity.vehicleType || entity.entityType
+    const targetFaction = entity.fraction
+
+    // Проверяем, является ли юнит юнитом игрока
+    const isPlayerUnit =
+      entity.fraction === 'Player' || entity.fraction === 'PlayerBase'
+
+    // Правило: при групповом выделении выбираются только юниты игрока
+    // Если кликнули на юните не игрока - просто выбираем этот юнит, а не группу
+    if (!isPlayerUnit) {
+      this.clearAllSelections(true)
+      this.selectEntity(entityId, true, true)
+      this.gameDemo.updateStatus(`Выделен юнит ${targetType}`)
+      return
+    }
+
+    // Юнит игрока - выбираем всех подвижных юнитов игрока того же типа
+    this.clearAllSelections(true)
+
+    let addedCount = 0
+    const maxSize = GAME_CONFIG.LIMITS.maxGroupSize
     const entitiesState = this.gameDemo.stateManager.getEntityState()
 
-    for (const entityId of selectionState.selectedEntityIds) {
-      const entity = entitiesState.entities.get(entityId)
+    for (const [id, ent] of entitiesState.entities) {
       if (
-        entity &&
-        entity.entityType === 'base' &&
-        entity.fraction === 'Player'
-      ) {
-        return true
+        this.gameDemo.stateManager.getSelectionState().selectedEntityIds.size >=
+        maxSize
+      ) { break }
+      // Выбираем только юниты игрока (не enemy/wild/alert)
+      // Проверяем что это vehicle (подвижный юнит)
+      if (ent.fraction === 'Player' && ent.entityType === 'vehicle') {
+        if (this.selectEntity(id, true, false)) {
+          addedCount++
+        }
       }
     }
-    return false
-  }
 
-  /**
-   * Отображение информации о сущности
-   */
-  async displayEntityInfo (entityId) {
-    try {
-      // Используем централизованный метод для отображения информации
-      const entitiesState = this.gameDemo.stateManager.getEntityState()
-      const entityData = entitiesState.entities.get(entityId)
-
-      if (!entityData) {
-        this.gameDemo.updateEntityInfo('Entity no longer exists')
-        return
-      }
-
-      // Ищем сущность в gameDemo.entities для получения container (данные рендеринга)
-      const entityFromMap = this.gameDemo.entities.get(entityId)
-      const entity = entityFromMap || entityData
-
-      // Получаем информацию о сущности через WASM
-      const result = get_entity_info(entityId)
-      const entityInfo = JSON.parse(result)
-
-      // Используем централизованную логику создания текста информации
-      const isBase = entity && entity.entityType === 'base'
-      const infoText = this.gameDemo.createEntityInfoText(entityInfo, isBase)
-
-      // Обновляем отображение
-      this.gameDemo.updateEntityInfo(infoText)
-
-      // Добавляем индикатор информации
-      if (
-        entity &&
-        entity.container &&
-        !entity.selectionIndicator &&
-        !entity.infoIndicator
-      ) {
-        const infoGraphics = new PIXI.Graphics()
-        // Use blue color for info display (like alerts)
-        infoGraphics.lineStyle(3, 0x0080ff, 1)
-        infoGraphics.drawCircle(0, 0, 12)
-        entity.container.addChild(infoGraphics)
-        entity.infoIndicator = infoGraphics // Store reference to remove later
-      }
-    } catch (error) {
-      console.error('Error getting entity info:', error)
-      this.gameDemo.updateEntityInfo(
-        `❌ Error loading entity info: ${error.message}`
+    // Если не выбрано ни одного подвижного юнита (возможно кликнули на базу),
+    // то выбираем только её
+    const selectionState = this.gameDemo.stateManager.getSelectionState()
+    if (addedCount === 0) {
+      // Выбираем исходный юнит (базу)
+      this.selectEntity(entityId, true, true)
+      this.gameDemo.updateStatus('Выбрана база')
+    } else {
+      this.gameDemo.updateStatus(
+        `Выделено ${addedCount} подвижных юнитов игрока`
       )
     }
   }
