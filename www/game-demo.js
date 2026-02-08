@@ -7,7 +7,7 @@ import { CoordinateService } from './coordinate-service.js'
 import { EntityService } from './entity-service.js'
 import { SelectionIndicatorManager } from './selection-indicator.js'
 import { GAME_CONFIG } from './game-config.js'
-import { initWasm } from './wasm-imports.js'
+import { initWasm, get_entity_info } from './wasm-imports.js'
 
 /**
  * Главный класс демонстрации игры
@@ -325,12 +325,48 @@ export class GameDemo {
     const selectionState = this.stateManager.getSelectionState()
     const selectedIds = Array.from(selectionState.selectedEntityIds)
 
-    if (selectedIds.length > 0) {
-      const firstSelectedId = selectedIds[0]
-      await this.selectionManager.displayEntityInfo(firstSelectedId)
-    } else {
+    if (selectedIds.length === 0) {
       this.updateEntityInfo(null)
+      return
     }
+
+    // Если выбран только один юнит - используем старую логику
+    if (selectedIds.length === 1) {
+      await this.selectionManager.displayEntityInfo(selectedIds[0])
+      return
+    }
+
+    // Если выбрано несколько юнитов - собираем информацию по всем
+    const entityState = this.stateManager.getEntityState()
+    let multiInfoText = `👥 Выбрано юнитов: ${selectedIds.length}\n\n`
+
+    for (let i = 0; i < selectedIds.length; i++) {
+      const entityId = selectedIds[i]
+      const entityData = entityState.entities.get(entityId)
+
+      if (entityData) {
+        try {
+          const result = get_entity_info(entityId)
+          const entityInfo = JSON.parse(result)
+          const isBase = entityData.entityType === 'base'
+          const individualText = this.createEntityInfoText(entityInfo, isBase)
+
+          multiInfoText += `--- ЮНИТ #${entityId} ---\n`
+          multiInfoText += individualText
+          multiInfoText += '\n'
+        } catch (error) {
+          console.error(`Error getting info for entity ${entityId}:`, error)
+          multiInfoText += `--- ЮНИТ #${entityId} - Ошибка загрузки ---\n`
+          multiInfoText += `ID: ${entityId}\n`
+          multiInfoText += `Тип: ${entityData.entityType || 'Неизвестно'}\n`
+          multiInfoText += '\n'
+        }
+      } else {
+        multiInfoText += `--- ЮНИТ #${entityId} - Не найден ---\n\n`
+      }
+    }
+
+    this.updateEntityInfo(multiInfoText.trim())
   }
 
   /**

@@ -8,6 +8,24 @@ import { GameDemo } from './game-demo.js'
 // eslint-disable-next-line no-unused-vars
 import { initWasm } from './wasm-imports.js'
 
+// Mock get_entity_info at the module level
+jest.mock('./wasm-imports.js', () => {
+  const actual = jest.requireActual('./wasm-imports.js')
+  return {
+    ...actual,
+    get_entity_info: jest.fn((entityId) => {
+      return JSON.stringify({
+        id: entityId,
+        entity_type: 'vehicle',
+        vehicle_type: 'scout',
+        fraction: 'Player',
+        position: [100, 200],
+        health: [50, 100]
+      })
+    })
+  }
+})
+
 global.PIXI = {
   Application: class {
     constructor (options = {}) {
@@ -910,19 +928,25 @@ describe('GameDemo', () => {
   describe('updateSelectedEntityInfo', () => {
     beforeEach(() => {
       gameDemo.selectionManager.displayEntityInfo = jest.fn()
+      gameDemo.updateEntityInfo = jest.fn()
+
+      // get_entity_info is mocked at the module level
     })
 
-    it('should display info for first selected entity', async () => {
-      const mockSelectionState = { selectedEntityIds: new Set([1, 2, 3]) }
+    it('should display info for single selected entity', async () => {
+      const mockSelectionState = { selectedEntityIds: new Set([1]) }
       gameDemo.stateManager.getSelectionState = jest.fn(
         () => mockSelectionState
       )
+      gameDemo.stateManager.getEntityState = jest.fn(() => ({
+        entities: new Map([
+          [1, { id: 1, entityType: 'vehicle' }]
+        ])
+      }))
 
       await gameDemo.updateSelectedEntityInfo()
 
-      expect(gameDemo.selectionManager.displayEntityInfo).toHaveBeenCalledWith(
-        1
-      )
+      expect(gameDemo.selectionManager.displayEntityInfo).toHaveBeenCalledWith(1)
     })
 
     it('should clear entity info when no entities are selected', async () => {
@@ -930,7 +954,6 @@ describe('GameDemo', () => {
       gameDemo.stateManager.getSelectionState = jest.fn(
         () => mockSelectionState
       )
-      gameDemo.updateEntityInfo = jest.fn()
 
       await gameDemo.updateSelectedEntityInfo()
 

@@ -305,13 +305,9 @@ export class SelectionManager {
       // Обновляем отображение
       this.gameDemo.updateEntityInfo(infoText)
 
-      // Добавляем индикатор информации
-      if (
-        entity &&
-        entity.container &&
-        !entity.selectionIndicator &&
-        !entity.infoIndicator
-      ) {
+      // Добавляем индикатор информации (синий круг)
+      // Создаем всегда при одиночном выборе, даже если уже есть selectionIndicator
+      if (entity && entity.container && !entity.infoIndicator) {
         const infoGraphics = new PIXI.Graphics()
         // Use blue color for info display (like alerts)
         infoGraphics.lineStyle(3, 0x0080ff, 1)
@@ -579,7 +575,7 @@ export class SelectionManager {
     if (!entity) return
 
     const targetType = entity.vehicleType || entity.entityType
-    const targetFaction = entity.fraction
+    // targetFaction - reserved for future use
 
     // Проверяем, является ли юнит юнитом игрока
     const isPlayerUnit =
@@ -617,7 +613,6 @@ export class SelectionManager {
 
     // Если не выбрано ни одного подвижного юнита (возможно кликнули на базу),
     // то выбираем только её
-    const selectionState = this.gameDemo.stateManager.getSelectionState()
     if (addedCount === 0) {
       // Выбираем исходный юнит (базу)
       this.selectEntity(entityId, true, true)

@@ -35,6 +35,14 @@ export class SelectionIndicatorManager {
   }
 
   updateSelectionIndicators (selectedEntityIds) {
+    // Удаляем infoIndicator у всех сущностей при обновлении выборки
+    // infoIndicator будет создан только для одиночного выбора через displayEntityInfo
+    for (const [, entity] of this.gameDemo.entities) {
+      if (entity.infoIndicator) {
+        this.removeInfoIndicator(entity)
+      }
+    }
+
     for (const [entityId, entity] of this.gameDemo.entities) {
       if (entity.selectionIndicator && !selectedEntityIds.has(entityId)) {
         this.removeSelectionIndicator(entity)
