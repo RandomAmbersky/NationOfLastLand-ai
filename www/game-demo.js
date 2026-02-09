@@ -224,6 +224,14 @@ export class GameDemo {
 
     // Обновляем состояние сущностей и синхронизируем отображение за один проход
     for (const entityData of entities) {
+      // Пропускаем мёртвые сущности (health.current <= 0)
+      if (entityData.health) {
+        const [currentHealth] = entityData.health
+        if (currentHealth <= 0) {
+          continue
+        }
+      }
+
       // Форматируем данные сущности
       const entity = this.entityService.createEntity(entityData)
 
@@ -267,6 +275,14 @@ export class GameDemo {
           this.app.stage.removeChild(existingEntity.container)
         }
         this.entities.delete(id)
+      }
+    }
+
+    // Удаляем уничтоженные сущности из entityState
+    for (const [id] of this.stateManager.getEntityState().entities) {
+      if (!currentEntityIds.has(id)) {
+        // Удаляем уничтоженную сущность из состояния
+        this.stateManager.removeEntityStateEntry(id)
       }
     }
   }
@@ -367,6 +383,18 @@ export class GameDemo {
     }
 
     this.updateEntityInfo(multiInfoText.trim())
+
+    // Очищаем selection state для уничтоженных юнитов
+    const destroyedEntityIds = []
+    for (const entityId of selectedIds) {
+      const entityData = entityState.entities.get(entityId)
+      if (!entityData) {
+        destroyedEntityIds.push(entityId)
+      }
+    }
+    if (destroyedEntityIds.length > 0) {
+      this.updateSelectionState(destroyedEntityIds)
+    }
   }
 
   /**

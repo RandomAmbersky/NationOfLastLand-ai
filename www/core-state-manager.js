@@ -83,6 +83,12 @@ export class CoreStateManager {
     this.emit('entitiesUpdated', this.entityState.entities)
   }
 
+  // Удаление сущности из состояния
+  removeEntityStateEntry (entityId) {
+    this.entityState.entities.delete(entityId)
+    this.emit('entitiesUpdated', this.entityState.entities)
+  }
+
   // Обновление отображения
   updateDisplayState (newState) {
     Object.assign(this.displayState, newState)
