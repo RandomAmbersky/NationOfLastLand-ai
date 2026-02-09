@@ -463,7 +463,16 @@ export class SelectionManager {
 
   _updateSelectionStatus () {
     const selectionState = this.gameDemo.stateManager.getSelectionState()
-    const count = selectionState.selectedEntityIds.size
+    const entityState = this.gameDemo.stateManager.getEntityState()
+
+    // Count only alive units (those that exist in entityState)
+    let count = 0
+    for (const entityId of selectionState.selectedEntityIds) {
+      if (entityState.entities.has(entityId)) {
+        count++
+      }
+    }
+
     if (count === 0) {
       this.gameDemo.updateStatus('Выделение снято.')
       this.gameDemo.updateEntityInfo(null)

@@ -369,7 +369,7 @@ export class GameDemo {
           const individualText = this.createEntityInfoText(entityInfo, isBase)
 
           if (liveEntityCount === 0) {
-            multiInfoText = `👥 Выбрано юнитов: ${selectedIds.length}\n\n`
+            multiInfoText = `👥 Выбрано юнитов: ${liveEntityCount}\n\n`
           }
           multiInfoText += `--- ЮНИТ #${entityId} ---\n`
           multiInfoText += individualText
@@ -538,6 +538,8 @@ export class GameDemo {
     this.selectionIndicatorManager.updateSelectionIndicators(
       state.selectedEntityIds
     )
+    // Update selection status to show correct count
+    this.selectionManager._updateSelectionStatus()
   }
 
   onEntitiesUpdated (_entities) {
