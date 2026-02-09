@@ -157,10 +157,10 @@ export class SelectionManager {
   /**
    * Выполняет выбор сущности через handle_entity_selection и обновляет локальное состояние
    */
-  async _performEntitySelection (entityId, isMultiSelect) {
+  _performEntitySelection (entityId, isMultiSelect) {
     const selectionState = this.gameDemo.stateManager.getSelectionState()
     const currentSelectedIds = Array.from(selectionState.selectedEntityIds)
-    const result = await handle_entity_selection(
+    const result = handle_entity_selection(
       entityId,
       isMultiSelect,
       currentSelectedIds
@@ -328,7 +328,7 @@ export class SelectionManager {
   /**
    * Выбрать всех подвижных юнитов игрока
    */
-  async selectAllPlayerUnits () {
+  selectAllPlayerUnits () {
     this.clearAllSelections(true)
 
     const entitiesState = this.gameDemo.stateManager.getEntityState()
@@ -350,7 +350,7 @@ export class SelectionManager {
 
     for (const entityId of unitsToSelect) {
       try {
-        const selectionResult = await this._performEntitySelection(entityId, true)
+        const selectionResult = this._performEntitySelection(entityId, true)
         if (selectionResult.success) {
           successCount++
         }
@@ -371,18 +371,12 @@ export class SelectionManager {
    */
   _findEntitiesInRectangle (bounds) {
     const entities = []
-    console.log('=== DEBUG: Rectangle Selection ===')
-    console.log('Rectangle bounds:', bounds)
     for (const [id, entity] of this.gameDemo.entities) {
       const isInBounds = this._isEntityInBounds(entity, bounds)
-      console.log(
-        `Entity ${id} (${entity.vehicleType}, ${entity.fraction}): container.x=${entity.container?.x}, container.y=${entity.container?.y}, inBounds=${isInBounds}`
-      )
       if (isInBounds) {
         entities.push(id)
       }
     }
-    console.log('Entities in rectangle:', entities)
     return entities
   }
 
@@ -405,19 +399,13 @@ export class SelectionManager {
   /**
    * Обработать выделение прямоугольной областью
    */
-  async _processRectangleSelection (entitiesInRectangle) {
+  _processRectangleSelection (entitiesInRectangle) {
     this._clearAlertSelections()
-
-    console.log('=== DEBUG: Processing Rectangle Selection ===')
-    console.log('Entities in rectangle (IDs):', entitiesInRectangle)
 
     const playerMovableUnits = entitiesInRectangle.filter((id) => {
       const entity = this.gameDemo.stateManager
         .getEntityState()
         .entities.get(id)
-      console.log(
-        `Entity ${id}: fraction=${entity?.fraction}, entityType=${entity?.entityType}, isPlayerUnit=${entity?.fraction === 'Player' && entity?.entityType === 'vehicle'}`
-      )
       return (
         entity &&
         entity.fraction === 'Player' &&
@@ -425,24 +413,19 @@ export class SelectionManager {
       )
     })
 
-    console.log('Player movable units (IDs):', playerMovableUnits)
-
     if (playerMovableUnits.length === 0) {
       this.gameDemo.updateStatus('Нет подвижных юнитов игрока в области выделения')
       return
     }
 
     this.clearAllSelections(true)
-    console.log('=== DEBUG: After clearAllSelections ===')
-    const selectionStateAfterClear = this.gameDemo.stateManager.getSelectionState()
-    console.log('Selected entity IDs after clear:', Array.from(selectionStateAfterClear.selectedEntityIds))
 
     const maxSize = GAME_CONFIG.LIMITS.maxGroupSize
     const unitsToSelect = playerMovableUnits.slice(0, maxSize)
 
     for (const entityId of unitsToSelect) {
       try {
-        const selectionResult = await this._performEntitySelection(entityId, true)
+        const selectionResult = this._performEntitySelection(entityId, true)
         if (selectionResult.success) {
           if (selectionResult.action === 'EntitySelected') {
             this.gameDemo.displayEntityInfo(entityId)
@@ -455,9 +438,7 @@ export class SelectionManager {
       }
     }
 
-    console.log('=== DEBUG: After Rectangle Selection ===')
     const selectionState = this.gameDemo.stateManager.getSelectionState()
-    console.log('Selected entity IDs:', Array.from(selectionState.selectedEntityIds))
 
     if (selectionState.selectedEntityIds.size === 1) {
       const selectedEntityId = Array.from(selectionState.selectedEntityIds)[0]
@@ -563,6 +544,14 @@ export class SelectionManager {
     }
 
     this.gameDemo.updateStatus(`Выделено ${addedCount} юнитов у базы`)
+  }
+
+  /**
+   * Выбрать все юниты в прямоугольной области
+   */
+  selectEntitiesInRectangle (bounds) {
+    const entitiesInRectangle = this._findEntitiesInRectangle(bounds)
+    this._processRectangleSelection(entitiesInRectangle)
   }
 
   /**

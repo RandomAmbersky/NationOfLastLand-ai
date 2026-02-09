@@ -92,6 +92,12 @@ export class InputHandler {
 
     if (wasDragging) {
       this._processDragSelection()
+    } else {
+      // Удаляем графику, если выделение не было завершено (например, клик без движения)
+      if (drag.graphics) {
+        this.gameDemo.app.stage.removeChild(drag.graphics)
+        drag.graphics = null
+      }
     }
   }
 
