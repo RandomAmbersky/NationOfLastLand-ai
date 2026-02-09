@@ -287,6 +287,8 @@ export class SelectionManager {
 
       if (!entityData) {
         this.gameDemo.updateEntityInfo('Entity no longer exists')
+        // Очищаем выделение для уничтоженной сущности
+        this.gameDemo.selectionManager.deselectEntity(entityId)
         return
       }
 
