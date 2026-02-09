@@ -352,9 +352,10 @@ export class GameDemo {
       return
     }
 
-    // Если выбрано несколько юнитов - собираем информацию по всем
+    // Если выбрано несколько юнитов - собираем информацию только по живым юнитам
     const entityState = this.stateManager.getEntityState()
-    let multiInfoText = `👥 Выбрано юнитов: ${selectedIds.length}\n\n`
+    let liveEntityCount = 0
+    let multiInfoText = ''
 
     for (let i = 0; i < selectedIds.length; i++) {
       const entityId = selectedIds[i]
@@ -367,19 +368,24 @@ export class GameDemo {
           const isBase = entityData.entityType === 'base'
           const individualText = this.createEntityInfoText(entityInfo, isBase)
 
+          if (liveEntityCount === 0) {
+            multiInfoText = `👥 Выбрано юнитов: ${selectedIds.length}\n\n`
+          }
           multiInfoText += `--- ЮНИТ #${entityId} ---\n`
           multiInfoText += individualText
           multiInfoText += '\n'
+          liveEntityCount++
         } catch (error) {
           console.error(`Error getting info for entity ${entityId}:`, error)
-          multiInfoText += `--- ЮНИТ #${entityId} - Ошибка загрузки ---\n`
-          multiInfoText += `ID: ${entityId}\n`
-          multiInfoText += `Тип: ${entityData.entityType || 'Неизвестно'}\n`
-          multiInfoText += '\n'
+          // Пропускаем мёртвых юнитов, не показываем их в списке
         }
-      } else {
-        multiInfoText += `--- ЮНИТ #${entityId} - Не найден ---\n\n`
       }
+      // Если entityData не найден, пропускаем юнита (он мёртв)
+    }
+
+    if (liveEntityCount === 0) {
+      this.updateEntityInfo(null)
+      return
     }
 
     this.updateEntityInfo(multiInfoText.trim())
