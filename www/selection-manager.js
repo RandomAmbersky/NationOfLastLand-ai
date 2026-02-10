@@ -96,35 +96,16 @@ export class SelectionManager {
   }
 
   _updateLocalSelectionState (selectionResult) {
-    // Синхронизируем локальное состояние с состоянием из Rust
-    const newSelectedIds = new Set(selectionResult.selected_entities)
-
-    // Получаем старые ID перед обновлением
-    const oldSelectedIds = new Set(
-      this.gameDemo.stateManager.getSelectionState().selectedEntityIds
-    )
+    // Просто используем список юнитов, который пришёл из Rust
+    const newSelectedIds = selectionResult.selected_entities
 
     // Обновляем индикаторы выделения
     this.selectionIndicatorManager.updateSelectionIndicators(newSelectedIds)
 
-    // Вычисляем удаленные ID (были выбраны, но теперь не выбраны)
-    const removedIds = []
-    for (const id of oldSelectedIds) {
-      if (!newSelectedIds.has(id)) {
-        removedIds.push(id)
-      }
+    // Просто обновляем selectedEntityIds тем, что пришло из Rust
+    if (newSelectedIds.length > 0) {
+      this.gameDemo.stateManager.updateSelectionState(newSelectedIds, [])
     }
-
-    // Вычисляем новые ID (не были выбраны, но теперь выбраны)
-    const addedIds = []
-    for (const id of newSelectedIds) {
-      if (!oldSelectedIds.has(id)) {
-        addedIds.push(id)
-      }
-    }
-
-    // Обновляем множество выбранных ID через менеджер состояния
-    this.gameDemo.stateManager.updateSelectionState(addedIds, removedIds)
   }
 
   _showGroupTargetingIndicator (targetAssignment) {
@@ -463,15 +444,9 @@ export class SelectionManager {
 
   _updateSelectionStatus () {
     const selectionState = this.gameDemo.stateManager.getSelectionState()
-    const entityState = this.gameDemo.stateManager.getEntityState()
 
-    // Count only alive units (those that exist in entityState)
-    let count = 0
-    for (const entityId of selectionState.selectedEntityIds) {
-      if (entityState.entities.has(entityId)) {
-        count++
-      }
-    }
+    // Показываем актуальное число юнитов, которое пришло из Rust
+    const count = selectionState.selectedEntityIds.size
 
     if (count === 0) {
       this.gameDemo.updateStatus('Выделение снято.')
