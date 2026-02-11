@@ -1,0 +1,163 @@
+/**
+ * GameState System - Handles game state management and WASM communication
+ * Extracted from original GameStateManager for better separation of concerns
+ */
+
+import {
+  gameInit,
+  create_vehicle,
+  update,
+  set_group_target,
+  create_base,
+  build_floor,
+  create_random_alert,
+  clear_selection as _clearSelection
+} from '../wasm-imports.js'
+
+export class GameStateSystem {
+  constructor (gameEngine) {
+    this.gameEngine = gameEngine
+    this.isDestroyed = false
+  }
+
+  async initializeGame () {
+    try {
+      const result = gameInit()
+      const gameState = JSON.parse(result)
+
+      this.gameEngine.state.merge({
+        isRunning: false,
+        lastUpdate: Date.now(),
+        time: gameState.time,
+        entitiesCount: gameState.entities_count,
+        alertsCount: gameState.alerts_count
+      }, 'gameInitialized')
+
+      if (gameState.entities) {
+        const entitiesMap = new Map()
+        for (const entity of gameState.entities) {
+          entitiesMap.set(entity.id, entity)
+        }
+        this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
+      }
+
+      return { success: true, data: gameState }
+    } catch (error) {
+      console.error('Game initialization error:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  async spawnVehicle (vehicleType, baseEntity) {
+    if (!baseEntity) {
+      return { success: false, error: 'No base selected' }
+    }
+
+    const distance = 10 + Math.random() * 30
+    const angle = Math.random() * Math.PI * 2
+
+    const spawnX = baseEntity.gameX + Math.cos(angle) * distance
+    const spawnY = baseEntity.gameY + Math.sin(angle) * distance
+
+    try {
+      const result = create_vehicle(vehicleType, spawnX, spawnY)
+      const creationResult = JSON.parse(result)
+
+      if (creationResult.success) {
+        return { success: true, data: creationResult }
+      }
+      return { success: false, error: creationResult.message }
+    } catch (error) {
+      console.error('Vehicle creation error:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  async createBase (x, y) {
+    try {
+      const result = create_base(x, y)
+      const baseInfo = JSON.parse(result)
+      return { success: true, data: baseInfo }
+    } catch (error) {
+      console.error('Base creation error:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  async buildFloor (baseId, floorType) {
+    try {
+      const result = build_floor(baseId, floorType)
+      const updatedBase = JSON.parse(result)
+      return { success: true, data: updatedBase }
+    } catch (error) {
+      console.error('Floor building error:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  async createRandomAlert () {
+    try {
+      const result = create_random_alert()
+      const alertResult = JSON.parse(result)
+      return { success: true, data: alertResult }
+    } catch (error) {
+      console.error('Alert creation error:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  async setGroupTarget (x, y) {
+    try {
+      const result = set_group_target(x, y)
+      const groupResult = JSON.parse(result)
+      return { success: true, data: groupResult }
+    } catch (error) {
+      console.error('Group target setting error:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  updateGameLoop (dt) {
+    try {
+      const result = update(dt)
+      const gameState = JSON.parse(result)
+
+      this.gameEngine.state.merge({
+        time: gameState.time,
+        entitiesCount: gameState.entities_count,
+        alertsCount: gameState.alerts_count
+      }, 'gameStateUpdated')
+
+      if (gameState.entities) {
+        const entitiesMap = new Map()
+        for (const entity of gameState.entities) {
+          entitiesMap.set(entity.id, entity)
+        }
+        this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
+      }
+
+      if (gameState.removed_entities && gameState.removed_entities.length > 0) {
+        const selections = new Set(this.gameEngine.state.get('selections'))
+        for (const removedId of gameState.removed_entities) {
+          selections.delete(removedId)
+        }
+        this.gameEngine.state.merge({ selections }, 'selectionsChanged')
+      }
+
+      return { success: true, data: gameState }
+    } catch (error) {
+      console.error('Game update error:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  destroy () {
+    if (this.isDestroyed) return
+    this.isDestroyed = true
+    this.gameEngine = null
+  }
+}
+
+export function createGameStateSystem (gameEngine) {
+  return new GameStateSystem(gameEngine)
+}

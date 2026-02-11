@@ -1,0 +1,142 @@
+/**
+ * Game Engine - Central coordinator for game systems
+ * Manages system lifecycle, updates, and rendering
+ */
+
+import { StateContainer } from './StateContainer.js'
+
+export class System {
+  constructor (gameEngine) {
+    this.gameEngine = gameEngine
+    this.isDestroyed = false
+  }
+
+  update (dt) {}
+
+  render () {}
+
+  destroy () {
+    this.isDestroyed = true
+    this.gameEngine = null
+  }
+}
+
+export class GameEngine {
+  constructor (config = {}) {
+    this.config = config
+    this.state = new StateContainer({
+      isRunning: false,
+      lastUpdate: Date.now(),
+      deltaTime: 0,
+      time: 0,
+      entities: new Map(),
+      selections: new Set(),
+      bases: new Map()
+    })
+    
+    this.systems = []
+    this._loopId = null
+    this._lastFrameTime = 0
+  }
+
+  addSystem (system) {
+    if (!system || typeof system.update !== 'function') {
+      throw new Error('GameEngine: System must have update() method')
+    }
+    this.systems.push(system)
+    system.update = system.update.bind(system)
+    system.render = system.render.bind(system)
+  }
+
+  removeSystem (system) {
+    const index = this.systems.indexOf(system)
+    if (index > -1) {
+      this.systems.splice(index, 1)
+    }
+  }
+
+  start () {
+    if (this.state.get('isRunning')) return
+
+    this.state.merge({ isRunning: true }, 'engineStarted')
+    this._lastFrameTime = performance.now()
+    this._scheduleFrame()
+  }
+
+  stop () {
+    if (!this.state.get('isRunning')) return
+
+    this.state.merge({ isRunning: false }, 'engineStopped')
+    if (this._loopId) {
+      cancelAnimationFrame(this._loopId)
+      this._loopId = null
+    }
+  }
+
+  update (dt) {
+    this.state.merge({ deltaTime: dt, time: this.state.get('time') + dt })
+
+    for (const system of this.systems) {
+      if (!system.isDestroyed) {
+        try {
+          system.update(dt)
+        } catch (error) {
+          console.error('GameEngine: Error in system update:', error)
+        }
+      }
+    }
+  }
+
+  render () {
+    for (const system of this.systems) {
+      if (!system.isDestroyed) {
+        try {
+          system.render()
+        } catch (error) {
+          console.error('GameEngine: Error in system render:', error)
+        }
+      }
+    }
+  }
+
+  _loop (now) {
+    if (!this.state.get('isRunning')) return
+
+    const dt = (now - this._lastFrameTime) / 1000
+    this._lastFrameTime = now
+
+    const cappedDt = Math.min(dt, 0.1)
+
+    this.update(cappedDt)
+    this.render()
+
+    this._scheduleFrame()
+  }
+
+  _scheduleFrame () {
+    this._loopId = requestAnimationFrame((now) => this._loop(now))
+  }
+
+  destroy () {
+    this.stop()
+
+    for (const system of this.systems) {
+      try {
+        system.destroy()
+      } catch (error) {
+        console.error('GameEngine: Error in system destroy:', error)
+      }
+    }
+
+    this.systems = []
+    try {
+      this.state.destroy()
+    } catch (error) {
+      console.error('GameEngine: Error in state destroy:', error)
+    }
+  }
+}
+
+export function createEngine (config = {}) {
+  return new GameEngine(config)
+}

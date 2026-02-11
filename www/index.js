@@ -4,26 +4,36 @@
 
 // Core modules
 export { CoreStateManager } from './core-state-manager.js'
+export { StateContainer, createContainer } from './core/StateContainer.js'
+export { GameEngine, System, createEngine } from './core/GameEngine.js'
 
 // State managers
 export { GameStateManager } from './game-state-manager.js'
 
 // Game systems
-export { SelectionManager } from './selection-manager.js'
 export { EntityRenderer } from './entity-renderer.js'
 export { InputHandler } from './input-handler.js'
-export { EntityService } from './entity-service.js'
-export { SelectionIndicatorManager } from './selection-indicator.js'
+export { SelectionManager } from './selection-manager.js'
 export { CoordinateService } from './coordinate-service.js'
+export { EntityService } from './entity-service.js'
+
+// New system modules
+export { RendererSystem, createRenderer } from './systems/RendererSystem.js'
+export { InputSystem, createInputSystem } from './systems/InputSystem.js'
+export { SelectionSystem, createSelectionSystem } from './systems/SelectionSystem.js'
+export { GameStateSystem, createGameStateSystem } from './systems/GameStateSystem.js'
+
+// Service modules
+export { SelectionIndicator, createSelectionIndicator } from './services/SelectionIndicator.js'
 
 // Game demo
 export { GameDemo } from './game-demo.js'
 
 // Configuration
-export { GAME_CONFIG } from './game-config.js'
+export { GAME_CONFIG } from './config/game-config.js'
 
 // Utils
-export { calculateDistance, calculateDistanceBetween } from './utils.js'
+export { calculateDistance, calculateDistanceBetween, clamp, lerp } from './utils/math.js'
 
 // WASM imports
 export { initWasm, init, gameInit, create_vehicle, update, select_entity, deselect_entity, set_group_target, create_base, build_floor, get_entity_info, create_random_alert, clear_selection, handle_entity_selection, get_entities_data } from './wasm-imports.js'
