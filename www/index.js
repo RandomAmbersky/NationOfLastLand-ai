@@ -14,6 +14,7 @@ export { GameStateManager } from './game-state-manager.js'
 export { EntityRenderer } from './entity-renderer.js'
 export { InputHandler } from './input-handler.js'
 export { SelectionManager } from './selection-manager.js'
+export { SelectionIndicator, createSelectionIndicator } from './services/SelectionIndicator.js'
 export { CoordinateService } from './coordinate-service.js'
 export { EntityService } from './entity-service.js'
 
@@ -28,6 +29,7 @@ export { SelectionIndicator, createSelectionIndicator } from './services/Selecti
 
 // Game demo
 export { GameDemo } from './game-demo.js'
+export { GameEngineDemo, createGameEngineDemo } from './game-engine.js'
 
 // Configuration
 export { GAME_CONFIG } from './config/game-config.js'
