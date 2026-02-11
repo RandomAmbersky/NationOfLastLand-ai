@@ -33,12 +33,15 @@ export class GameEngineDemo {
     this.coordinateService = new CoordinateService(this)
     this.entityService = new EntityService(this)
 
-    // State
+    // State - legacy compatibility with CoreStateManager interface
     this.app = null
     this.isInitialized = false
     this.lastUpdate = Date.now()
     this.bases = new Map()
     this.entities = new Map()
+
+    // New state from GameEngine
+    this.stateManager = this.gameEngine.state
 
     // Event subscriptions
     this._setupEventSubscriptions()

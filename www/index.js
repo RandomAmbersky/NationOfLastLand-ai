@@ -3,29 +3,21 @@
  */
 
 // Core modules
-export { CoreStateManager } from './core-state-manager.js'
 export { StateContainer, createContainer } from './core/StateContainer.js'
 export { GameEngine, System, createEngine } from './core/GameEngine.js'
 
-// State managers
-export { GameStateManager } from './game-state-manager.js'
+// Selection service
+export { SelectionIndicator, createSelectionIndicator } from './services/SelectionIndicator.js'
 
 // Game systems
-export { EntityRenderer } from './entity-renderer.js'
-export { InputHandler } from './input-handler.js'
-export { SelectionManager } from './selection-manager.js'
-export { SelectionIndicator, createSelectionIndicator } from './services/SelectionIndicator.js'
-export { CoordinateService } from './coordinate-service.js'
-export { EntityService } from './entity-service.js'
-
-// New system modules
 export { RendererSystem, createRenderer } from './systems/RendererSystem.js'
 export { InputSystem, createInputSystem } from './systems/InputSystem.js'
 export { SelectionSystem, createSelectionSystem } from './systems/SelectionSystem.js'
 export { GameStateSystem, createGameStateSystem } from './systems/GameStateSystem.js'
 
 // Service modules
-export { SelectionIndicator, createSelectionIndicator } from './services/SelectionIndicator.js'
+export { CoordinateService } from './coordinate-service.js'
+export { EntityService } from './entity-service.js'
 
 // Game demo
 export { GameDemo } from './game-demo.js'

@@ -42,7 +42,34 @@ Then open http://localhost:3000 in your browser.
 
 ## Architecture
 
-- **Rust/WebAssembly**: Core game logic, entity management, movement systems
+### New System-Based Architecture
+
+- **GameEngine** (`core/GameEngine.js`): Central coordinator for game systems
+- **StateContainer** (`core/StateContainer.js`): Immutable state management with versioning
+- **RendererSystem** (`systems/RendererSystem.js`): Entity rendering and visual effects
+- **InputSystem** (`systems/InputSystem.js`): Mouse and keyboard input handling
+- **SelectionSystem** (`systems/SelectionSystem.js`): Entity selection and grouping
+- **GameStateSystem** (`systems/GameStateSystem.js`): WASM state management
+- **SelectionIndicator** (`services/SelectionIndicator.js`): Visual selection indicators
+
+### Legacy Modules (still supported for compatibility)
+
+- `core-state-manager.js` - Centralized game state management (legacy)
+- `game-state-manager.js` - Game state and WASM integration (legacy)
+- `entity-renderer.js` - Pixi.js rendering and cleanup (legacy)
+- `selection-manager.js` - Entity selection and grouping (legacy)
+- `input-handler.js` - Mouse and keyboard input handling (legacy)
+- `coordinate-service.js` - Coordinate conversion utilities
+- `entity-service.js` - Entity query and manipulation
+- `selection-indicator.js` - Visual selection indicators
+
+### Utility Modules
+
+- `utils/cleanup.js` - Cleanup utilities (TimerManager, EventManager, GraphicsCleanup)
+- `core/GameCleanup.js` - Main cleanup manager
+- `utils/math.js` - Mathematical utility functions
+
+## Files: Core game logic, entity management, movement systems
 - **JavaScript/Pixi.js**: Rendering engine, user interface, WebAssembly integration
 - **ECS Pattern**: Entity Component System for scalable game architecture
 - **Cleanup System**: Proper resource management with timer and event cleanup
