@@ -4,8 +4,8 @@
  * Сервис для работы с сущностями игры
  */
 export class EntityService {
-  constructor (gameDemo) {
-    this.gameDemo = gameDemo
+  constructor (gameEngine) {
+    this.gameEngine = gameEngine
     this.isDestroyed = false
   }
 
@@ -17,7 +17,7 @@ export class EntityService {
     this.isDestroyed = true
 
     // Очистка ссылок
-    this.gameDemo = null
+    this.gameEngine = null
   }
 
   /**
@@ -58,8 +58,18 @@ export class EntityService {
     }
 
      // Создаем объект сущности с координатами игры
-     // Rust Position struct serializes as { x, y } object
-     const { x: posX, y: posY } = this.gameDemo.coordinateService?.normalizeCoords(entityData.position) ?? { x: 0, y: 0 }
+     // Rust Position struct serializes as { x, y } object or array [x, y]
+     let posX = 0
+     let posY = 0
+     if (entityData.position) {
+       if (Array.isArray(entityData.position)) {
+         posX = entityData.position[0] ?? 0
+         posY = entityData.position[1] ?? 0
+       } else {
+         posX = entityData.position.x ?? 0
+         posY = entityData.position.y ?? 0
+       }
+     }
 
     return {
       id: entityData.id,
@@ -77,9 +87,9 @@ export class EntityService {
    * Поиск базы игрока
    */
   findPlayerBase () {
-    const entitiesState = this.gameDemo.stateManager.getEntityState()
+    const entities = this.gameEngine.state.get('entities')
 
-    for (const [_, entity] of entitiesState.entities) {
+    for (const [_, entity] of entities) {
       if (entity.entityType === 'base' && entity.fraction === 'Player') {
         return entity
       }
@@ -91,11 +101,11 @@ export class EntityService {
    * Проверка, выбрана ли база игрока
    */
   isPlayerBaseSelected () {
-    const selectionState = this.gameDemo.stateManager.getSelectionState()
-    const entitiesState = this.gameDemo.stateManager.getEntityState()
+    const selectionState = this.gameEngine.state.get('selection')
+    const entities = this.gameEngine.state.get('entities')
 
     for (const entityId of selectionState.selectedEntityIds) {
-      const entity = entitiesState.entities.get(entityId)
+      const entity = entities.get(entityId)
       if (
         entity &&
         entity.entityType === 'base' &&
@@ -111,10 +121,10 @@ export class EntityService {
    * Получение сущностей по типу
    */
   getEntitiesByType (type) {
-    const entitiesState = this.gameDemo.stateManager.getEntityState()
+    const entities = this.gameEngine.state.get('entities')
     const result = []
 
-    for (const [_, entity] of entitiesState.entities) {
+    for (const [_, entity] of entities) {
       if (entity.entityType === type) {
         result.push(entity)
       }
@@ -127,10 +137,10 @@ export class EntityService {
    * Получение сущностей по фракции
    */
   getEntitiesByFraction (fraction) {
-    const entitiesState = this.gameDemo.stateManager.getEntityState()
+    const entities = this.gameEngine.state.get('entities')
     const result = []
 
-    for (const [_, entity] of entitiesState.entities) {
+    for (const [_, entity] of entities) {
       if (entity.fraction === fraction) {
         result.push(entity)
       }
@@ -143,7 +153,7 @@ export class EntityService {
    * Проверка существования сущности
    */
   entityExists (entityId) {
-    const entitiesState = this.gameDemo.stateManager.getEntityState()
-    return entitiesState.entities.has(entityId)
+    const entities = this.gameEngine.state.get('entities')
+    return entities.has(entityId)
   }
 }

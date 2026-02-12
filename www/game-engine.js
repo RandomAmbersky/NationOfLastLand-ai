@@ -12,7 +12,7 @@ import { GAME_CONFIG } from './config/game-config.js'
  * Main Game Controller using GameEngine
  * Simplified architecture - GameEngine coordinates all systems
  */
-export class GameEngineDemo {
+export class GameDemo {
   constructor () {
     // Initialize GameEngine as central coordinator
     this.gameEngine = createEngine()
@@ -271,8 +271,8 @@ export class GameEngineDemo {
 }
 
 /**
- * Create a new GameEngineDemo instance
+ * Create a new GameDemo instance
  */
-export function createGameEngineDemo () {
-  return new GameEngineDemo()
+export function createGameDemo () {
+  return new GameDemo()
 }

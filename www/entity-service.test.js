@@ -1,31 +1,17 @@
 const { EntityService } = require('./entity-service.js')
 
 describe('EntityService', () => {
-  let gameDemo
+  let gameEngine
   let entityService
 
   beforeEach(() => {
-    gameDemo = {
-      stateManager: {
-        getEntityState: jest.fn(),
-        getSelectionState: jest.fn()
-      },
-      coordinateService: {
-        normalizeCoords: jest.fn((gameX, gameY) => {
-          // Если gameX - массив [x, y]
-          if (Array.isArray(gameX)) {
-            return { x: gameX[0] ?? 0, y: gameX[1] ?? 0 }
-          }
-          // Если gameX - объект {x, y}
-          if (gameX && typeof gameX === 'object' && !Array.isArray(gameX)) {
-            return { x: gameX.x ?? 0, y: gameY?.y ?? gameX.y ?? 0 }
-          }
-          // Если gameX - число, gameY - число
-          return { x: gameX ?? 0, y: gameY ?? 0 }
-        })
+    gameEngine = {
+      state: {
+        get: jest.fn(),
+        merge: jest.fn()
       }
     }
-    entityService = new EntityService(gameDemo)
+    entityService = new EntityService(gameEngine)
   })
 
   describe('createEntity', () => {
@@ -103,20 +89,29 @@ describe('EntityService', () => {
   describe('findPlayerBase', () => {
     it('should find player base when it exists', () => {
       const baseEntity = { id: 1, entityType: 'base', fraction: 'Player' }
-      gameDemo.stateManager.getEntityState = jest.fn(() => ({ entities: new Map([[1, baseEntity]]) }))
+      gameEngine.state.get = jest.fn((key) => {
+        if (key === 'entities') return new Map([[1, baseEntity]])
+        return null
+      })
       const result = entityService.findPlayerBase()
       expect(result).toBe(baseEntity)
     })
 
     it('should return null when no player base exists', () => {
-      gameDemo.stateManager.getEntityState = jest.fn(() => ({ entities: new Map([[1, { entityType: 'vehicle', fraction: 'Player' }]]) }))
+      gameEngine.state.get = jest.fn((key) => {
+        if (key === 'entities') return new Map([[1, { entityType: 'vehicle', fraction: 'Player' }]])
+        return null
+      })
       const result = entityService.findPlayerBase()
       expect(result).toBeNull()
     })
 
     it('should return null when base belongs to enemy', () => {
       const enemyBase = { id: 1, entityType: 'base', fraction: 'Enemy' }
-      gameDemo.stateManager.getEntityState = jest.fn(() => ({ entities: new Map([[1, enemyBase]]) }))
+      gameEngine.state.get = jest.fn((key) => {
+        if (key === 'entities') return new Map([[1, enemyBase]])
+        return null
+      })
       const result = entityService.findPlayerBase()
       expect(result).toBeNull()
     })
@@ -125,23 +120,32 @@ describe('EntityService', () => {
   describe('isPlayerBaseSelected', () => {
     it('should return true when player base is selected', () => {
       const baseEntity = { id: 1, entityType: 'base', fraction: 'Player' }
-      gameDemo.stateManager.getSelectionState = jest.fn(() => ({ selectedEntityIds: new Set([1]) }))
-      gameDemo.stateManager.getEntityState = jest.fn(() => ({ entities: new Map([[1, baseEntity]]) }))
+      gameEngine.state.get = jest.fn((key) => {
+        if (key === 'entities') return new Map([[1, baseEntity]])
+        if (key === 'selection') return { selectedEntityIds: [1] }
+        return null
+      })
       const result = entityService.isPlayerBaseSelected()
       expect(result).toBe(true)
     })
 
     it('should return false when no base is selected', () => {
-      gameDemo.stateManager.getSelectionState = jest.fn(() => ({ selectedEntityIds: new Set([1]) }))
-      gameDemo.stateManager.getEntityState = jest.fn(() => ({ entities: new Map([[1, { entityType: 'vehicle', fraction: 'Player' }]]) }))
+      gameEngine.state.get = jest.fn((key) => {
+        if (key === 'entities') return new Map([[1, { entityType: 'vehicle', fraction: 'Player' }]])
+        if (key === 'selection') return { selectedEntityIds: [1] }
+        return null
+      })
       const result = entityService.isPlayerBaseSelected()
       expect(result).toBe(false)
     })
 
     it('should return false when player vehicle is selected but not base', () => {
       const vehicleEntity = { id: 1, entityType: 'vehicle', fraction: 'Player' }
-      gameDemo.stateManager.getSelectionState = jest.fn(() => ({ selectedEntityIds: new Set([1]) }))
-      gameDemo.stateManager.getEntityState = jest.fn(() => ({ entities: new Map([[1, vehicleEntity]]) }))
+      gameEngine.state.get = jest.fn((key) => {
+        if (key === 'entities') return new Map([[1, vehicleEntity]])
+        if (key === 'selection') return { selectedEntityIds: [1] }
+        return null
+      })
       const result = entityService.isPlayerBaseSelected()
       expect(result).toBe(false)
     })
@@ -152,7 +156,10 @@ describe('EntityService', () => {
       const base1 = { id: 1, entityType: 'base' }
       const base2 = { id: 2, entityType: 'base' }
       const vehicle = { id: 3, entityType: 'vehicle' }
-      gameDemo.stateManager.getEntityState = jest.fn(() => ({ entities: new Map([[1, base1], [2, base2], [3, vehicle]]) }))
+      gameEngine.state.get = jest.fn((key) => {
+        if (key === 'entities') return new Map([[1, base1], [2, base2], [3, vehicle]])
+        return null
+      })
       const result = entityService.getEntitiesByType('base')
       expect(result).toHaveLength(2)
       expect(result).toContain(base1)
@@ -160,7 +167,10 @@ describe('EntityService', () => {
     })
 
     it('should return empty array when no entities match', () => {
-      gameDemo.stateManager.getEntityState = jest.fn(() => ({ entities: new Map([[1, { entityType: 'base' }]]) }))
+      gameEngine.state.get = jest.fn((key) => {
+        if (key === 'entities') return new Map([[1, { entityType: 'base' }]])
+        return null
+      })
       const result = entityService.getEntitiesByType('vehicle')
       expect(result).toEqual([])
     })
@@ -171,7 +181,10 @@ describe('EntityService', () => {
       const playerUnit1 = { id: 1, fraction: 'Player' }
       const playerUnit2 = { id: 2, fraction: 'Player' }
       const enemyUnit = { id: 3, fraction: 'Enemy' }
-      gameDemo.stateManager.getEntityState = jest.fn(() => ({ entities: new Map([[1, playerUnit1], [2, playerUnit2], [3, enemyUnit]]) }))
+      gameEngine.state.get = jest.fn((key) => {
+        if (key === 'entities') return new Map([[1, playerUnit1], [2, playerUnit2], [3, enemyUnit]])
+        return null
+      })
       const result = entityService.getEntitiesByFraction('Player')
       expect(result).toHaveLength(2)
       expect(result).toContain(playerUnit1)
@@ -179,7 +192,10 @@ describe('EntityService', () => {
     })
 
     it('should return empty array when no entities match', () => {
-      gameDemo.stateManager.getEntityState = jest.fn(() => ({ entities: new Map([[1, { fraction: 'Player' }]]) }))
+      gameEngine.state.get = jest.fn((key) => {
+        if (key === 'entities') return new Map([[1, { fraction: 'Player' }]])
+        return null
+      })
       const result = entityService.getEntitiesByFraction('Enemy')
       expect(result).toEqual([])
     })
@@ -187,13 +203,19 @@ describe('EntityService', () => {
 
   describe('entityExists', () => {
     it('should return true when entity exists', () => {
-      gameDemo.stateManager.getEntityState = jest.fn(() => ({ entities: new Map([[1, { id: 1 }]]) }))
+      gameEngine.state.get = jest.fn((key) => {
+        if (key === 'entities') return new Map([[1, { id: 1 }]])
+        return null
+      })
       const result = entityService.entityExists(1)
       expect(result).toBe(true)
     })
 
     it('should return false when entity does not exist', () => {
-      gameDemo.stateManager.getEntityState = jest.fn(() => ({ entities: new Map([[1, { id: 1 }]]) }))
+      gameEngine.state.get = jest.fn((key) => {
+        if (key === 'entities') return new Map([[1, { id: 1 }]])
+        return null
+      })
       const result = entityService.entityExists(999)
       expect(result).toBe(false)
     })

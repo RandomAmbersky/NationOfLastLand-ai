@@ -14,10 +14,6 @@ export class StateContainer {
     return JSON.parse(JSON.stringify(this._state))
   }
 
-  getMutable (key) {
-    return this._state[key]
-  }
-
   get (key) {
     return this._state[key]
   }

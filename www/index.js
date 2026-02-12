@@ -15,19 +15,17 @@ export { InputSystem, createInputSystem } from './systems/InputSystem.js'
 export { SelectionSystem, createSelectionSystem } from './systems/SelectionSystem.js'
 export { GameStateSystem, createGameStateSystem } from './systems/GameStateSystem.js'
 
+// Game demo
+export { GameDemo } from './game-demo.js'
+export { GameDemo as GameEngineDemo, createGameDemo as createGameEngineDemo } from './game-engine.js'
+
 // Service modules
 export { CoordinateService } from './coordinate-service.js'
 export { EntityService } from './entity-service.js'
 
-// Game demo
-export { GameDemo } from './game-demo.js'
-export { GameEngineDemo, createGameEngineDemo } from './game-engine.js'
-
-// Configuration
-export { GAME_CONFIG } from './config/game-config.js'
-
 // Utils
 export { calculateDistance, calculateDistanceBetween, clamp, lerp } from './utils/math.js'
+export { CoordinateTransformer, createCoordinateTransformer } from './utils/coordinate-transformer.js'
 
 // WASM imports
 export { initWasm, init, gameInit, create_vehicle, update, select_entity, deselect_entity, set_group_target, create_base, build_floor, get_entity_info, create_random_alert, clear_selection, handle_entity_selection, get_entities_data } from './wasm-imports.js'

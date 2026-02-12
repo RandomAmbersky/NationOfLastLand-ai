@@ -4,24 +4,25 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
+import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
 
 export class RendererSystem {
   constructor (gameEngine, coordinateService = null) {
     this.gameEngine = gameEngine
     this.coordinateService = coordinateService
+    this.transformer = null
     this.app = null
     this.targetIndicator = null
     this.alertHighlight = null
     this.gridContainer = null
     this.isDestroyed = false
-    this._cachedScale = null
     // Следим за сущностями, которые отрисовали (для очистки при удалении)
     this._renderedEntities = new Map()
   }
 
   init (app) {
      this.app = app
-     this._updateScaleCache()
+     this.transformer = createCoordinateTransformer(app)
      this.setupGrid()
      // Добавляем app в gameEngine для использования другими системами
      this.gameEngine.app = app
@@ -41,9 +42,8 @@ export class RendererSystem {
       const entity = this._renderedEntities.get(id)
       if (!entity || !entity.container) return
 
-      const { x: scaleX, y: scaleY } = this._getScale()
-      // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
-      const { x, y } = this.coordinateService?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
+      const { x, y } = this.transformer?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
+      const { x: scaleX, y: scaleY } = this.transformer?.getScale() ?? { x: 1, y: 1 }
       const screenX = x * scaleX
       const screenY = y * scaleY
 
@@ -60,9 +60,9 @@ export class RendererSystem {
      * Возвращает объект сущности с container и graphics
      */
     createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
-      const { x: scaleX, y: scaleY } = this._getScale()
+      const { x: scaleX, y: scaleY } = this.transformer?.getScale() ?? { x: 1, y: 1 }
       // x и y могут быть массивом [x, y], объектом {x, y} или просто числами
-      const { x: posX, y: posY } = this.coordinateService?.normalizeCoords(x, y) ?? { x: 0, y: 0 }
+      const { x: posX, y: posY } = this.transformer?.normalizeCoords(x, y) ?? { x: 0, y: 0 }
       // Преобразуем игровые координаты в экранные
       const screenX = posX * scaleX
       const screenY = posY * scaleY
@@ -191,9 +191,9 @@ export class RendererSystem {
         this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
       }
 
-      const { x: scaleX, y: scaleY } = this._getScale()
+      const { x: scaleX, y: scaleY } = this.transformer?.getScale() ?? { x: 1, y: 1 }
       // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
-      const { x, y } = this.coordinateService?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
+      const { x, y } = this.transformer?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
       const screenX = x * scaleX
       const screenY = y * scaleY
 
@@ -234,7 +234,7 @@ export class RendererSystem {
     gridGraphics.lineStyle(1, 0x444444, 0.5)
 
     const gridSize = 50
-    const { x: scaleX, y: scaleY } = this._getScale()
+    const { x: scaleX, y: scaleY } = this.transformer?.getScale() ?? { x: 1, y: 1 }
 
     for (let x = 0; x <= GAME_CONFIG.WORLD_SIZE.width; x += gridSize) {
       const scaledX = x * scaleX
@@ -262,7 +262,7 @@ export class RendererSystem {
   }
 
   update (_dt) {
-    this._updateScaleCache()
+    // Scale is calculated on demand via transformer.getScale()
     // Синхронизируем отрисованные сущности с state.entities
     this._syncEntities()
   }
@@ -338,28 +338,6 @@ export class RendererSystem {
     }
   }
 
-  invalidateScaleCache () {
-    this._cachedScale = null
-  }
-
-  _updateScaleCache () {
-    if (!this.app) return
-    this._cachedScale = {
-      x: this.app.screen.width / GAME_CONFIG.WORLD_SIZE.width,
-      y: this.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
-    }
-  }
-
-  _getScale () {
-    if (!this.app) return { x: 1, y: 1 }
-    // Используем размер канваса, а не screen
-    const canvas = this.app.view
-    return {
-      x: canvas.width / GAME_CONFIG.WORLD_SIZE.width,
-      y: canvas.height / GAME_CONFIG.WORLD_SIZE.height
-    }
-  }
-
   destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
@@ -393,6 +371,7 @@ export class RendererSystem {
 
     this.gameEngine = null
     this.app = null
+    this.transformer = null
   }
 }
 
