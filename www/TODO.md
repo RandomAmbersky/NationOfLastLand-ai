@@ -1,19 +1,20 @@
 # Todo List - Frontend Improvements
 
-## ✅ Исправлено: Дублирование архитектуры
+## ⚠️ Частично решено: Дублирование архитектуры
 
-**Статус**: ЗАВЕРШЕНО
+**Статус**: ЧАСТИЧНО (для backward compatibility legacy файлы сохранены в index.js)
 
-Удалены ссылки на устаревшие legacy файлы:
-- Обновлен `index.js` для экспорта только новой архитектуры
-- Обновлен `README.md` с новой структурой модулей
+Удалены прямые зависимости от устаревших файлов в новых системах:
+- Новая архитектура экспортируется через `index.js`
+- Legacy файлы (`game-demo.js`, `core-state-manager.js`, `selection-manager.js`) сохранены для обратной совместимости
 - Удалены дублирующие экспорты (`GameDemo as GameEngineDemo`)
 
 ## 🔴 Критические проблемы
 
 1. **Отсутствие модульных тестов для новых систем**
-   - Нет тестов для `RendererSystem`, `InputSystem`, `SelectionSystem`, `GameStateSystem`
-   - Тесты только для устаревшего `game-demo.js`
+   - ❌ Нет тестов для `RendererSystem`, `InputSystem`, `SelectionSystem`, `GameStateSystem`
+   - ✅ Есть тесты для `CoordinateTransformer` и `EntityService`
+   - Тесты только для частей новой архитектуры
 
 2. **Смешение ответственности**
    - `RendererSystem` создает сущности (`createEntitySprite`) И синхронизирует их (`_syncEntities`)
@@ -36,11 +37,12 @@
 
 ## 🟠 Проблемы кода
 
-6. **Ошибки в `_syncEntities`** (`RendererSystem.js:244`)
+6. **Ошибки в `_syncEntities`** (`RendererSystem.js:352`)
    ```javascript
    if (createdCount > 0 || removedCount > 0) {
    }  // Пустой блок - логирование отсутствует
    ```
+   - Добавить логирование для отладки синхронизации сущностей
 
 7. **Утечки памяти**
    - `RendererSystem` удаляет сущности из `_renderedEntities`, но не проверяет, есть ли контейнер
