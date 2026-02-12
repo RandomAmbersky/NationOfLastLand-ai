@@ -39,15 +39,18 @@ export class RendererSystem {
     if (!entity || !entity.container) return
 
     const { x: scaleX, y: scaleY } = this._getScale()
-    const screenX = gameX * scaleX
-    const screenY = gameY * scaleY
+    // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
+    const x = (Array.isArray(gameX) ? gameX[0] : gameX?.x) ?? gameX ?? 0
+    const y = (Array.isArray(gameY) ? gameY[1] : gameY?.y) ?? gameY ?? 0
+    const screenX = x * scaleX
+    const screenY = y * scaleY
 
     entity.container.x = screenX
     entity.container.y = screenY
     entity.x = screenX
     entity.y = screenY
-    entity.gameX = gameX
-    entity.gameY = gameY
+    entity.gameX = x
+    entity.gameY = y
   }
 
   /**
@@ -56,8 +59,11 @@ export class RendererSystem {
    */
   createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
     const { x: scaleX, y: scaleY } = this._getScale()
-    const screenX = x * scaleX
-    const screenY = y * scaleY
+    // x и y могут быть массивом [x, y], объектом {x, y} или просто числами
+    const posX = (Array.isArray(x) ? x[0] : x?.x) ?? x ?? 0
+    const posY = (Array.isArray(y) ? y[1] : y?.y) ?? y ?? 0
+    const screenX = posX * scaleX
+    const screenY = posY * scaleY
 
     const graphics = new PIXI.Graphics()
     let color
@@ -119,8 +125,8 @@ export class RendererSystem {
     container.addChild(graphics)
     container.x = screenX
     container.y = screenY
-    container.gameX = x
-    container.gameY = y
+    container.gameX = posX
+    container.gameY = posY
     this.app.stage.addChild(container)
 
     const entity = {
@@ -130,8 +136,8 @@ export class RendererSystem {
       type: entityType,
       vehicleType,
       faction,
-      gameX: x,
-      gameY: y,
+      gameX: posX,
+      gameY: posY,
       screenX,
       screenY
     }
@@ -184,8 +190,11 @@ export class RendererSystem {
     }
 
     const { x: scaleX, y: scaleY } = this._getScale()
-    const screenX = gameX * scaleX
-    const screenY = gameY * scaleY
+    // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
+    const x = (Array.isArray(gameX) ? gameX[0] : gameX?.x) ?? gameX ?? 0
+    const y = (Array.isArray(gameY) ? gameY[1] : gameY?.y) ?? gameY ?? 0
+    const screenX = x * scaleX
+    const screenY = y * scaleY
 
     const container = new PIXI.Container()
     const graphics = new PIXI.Graphics()
@@ -290,13 +299,14 @@ export class RendererSystem {
         // - entity_type: 'base', 'alert', 'vehicle'
         // - subtype: specific type (e.g., 'floors_1', 'RaiderAlert_Hidden', 'scout')
         // - fraction: faction name
-        // - position: { gameX, gameY }
+        // - position: Rust Position struct serialized as { x, y }
         
         const entityType = entityData.entity_type || entityData.type || 'vehicle'
         const vehicleType = entityData.subtype || entityData.vehicleType
         const faction = entityData.fraction
-        const x = entityData.position?.gameX || entityData.gameX || 0
-        const y = entityData.position?.gameY || entityData.gameY || 0
+        // Rust Position struct serializes as { x, y } object
+        const x = entityData.position?.x ?? entityData.gameX ?? 0
+        const y = entityData.position?.y ?? entityData.gameY ?? 0
         
         // Сущность есть в state.entities, но не отрисована
         // Создаем спрайт для нее

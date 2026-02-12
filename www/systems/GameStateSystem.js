@@ -60,8 +60,12 @@ export class GameStateSystem {
     const distance = 10 + Math.random() * 30
     const angle = Math.random() * Math.PI * 2
 
-    const spawnX = baseEntity.gameX + Math.cos(angle) * distance
-    const spawnY = baseEntity.gameY + Math.sin(angle) * distance
+    // Rust Position struct serializes as { x, y } object
+    const baseX = baseEntity.position?.x ?? baseEntity.gameX ?? 0
+    const baseY = baseEntity.position?.y ?? baseEntity.gameY ?? 0
+
+    const spawnX = baseX + Math.cos(angle) * distance
+    const spawnY = baseY + Math.sin(angle) * distance
 
     try {
       const result = create_vehicle(vehicleType, spawnX, spawnY)
