@@ -16,6 +16,11 @@
 - ✅ `RendererSystem` устанавливается в `gameEngine.rendererSystem` для легкого доступа
 - **СТАТУС**: Архитектура использует StateContainer как EventBus, прямые зависимости через gameEngine
 
+### 12. **Fallback логика с прямым app.stage access в EntitySpawnSystem и RendererSystem** ⚠️ ТРЕБУЕТ ИСПРАВЛЕНИЯ (2026-02-12)
+- **EntitySpawnSystem.js:83, 120** - fallback ветки с прямым `app.stage.addChild()` и `removeChild()`
+- **RendererSystem.js:245, 357** - прямой `this.app.stage.addChild()` и `addChildAt()` в `createEntitySprite()` и `setupGrid()`
+- **СТАТУС**: КРИТИЧНО - нарушает инкапсуляцию, должно использовать только `RendererSystem.addToStage()`/`removeFromStage()`
+
 ## ✅ Завершенные задачи
 
 ### 6. **Инкапсуляция работы с Pixi контейнерами в RendererSystem** ✅ ЗАВЕРШЕНО (2026-02-12)
@@ -60,38 +65,22 @@
 
 ### ⚠️ Приоритет 3 - Документация и улучшения
 
+## 🔴 НЕОБХОДИМЫЕ ИСПРАВЛЕНИЯ (обновлено 2026-02-12)
+
+#### 12. **Остались fallback-ветки с прямым доступом к app.stage** ⚠️ ТРЕБУЕТ ИСПРАВЛЕНИЯ
+- **RendererSystem.js:245** - `this.app.stage.addChild(container)` в `createEntitySprite()`
+- **RendererSystem.js:357** - `this.app.stage.addChildAt()` в `setupGrid()`
+- **EntitySpawnSystem.js:83** - fallback `app.stage.addChild(container)`
+- **EntitySpawnSystem.js:120** - fallback `gameEngine.app.stage.removeChild()`
+
+**Последствия**: Нарушает инкапсуляцию, создает потенциальные баги при смешанном использовании API
+
+**Решение**: Удалить все fallback-ветки - довериться `RendererSystem.addToStage()`/`removeFromStage()`
+
 ## 📋 История изменений
 
-### 2026-02-12 - Рефакторинг SelectionIndicator ✅
-- **SelectionIndicator.js**: Удалены fallback ветки с прямым доступом к `entity.container`
-- **SelectionIndicator**: Теперь использует только `RendererSystem` API
-- **Tests**: Все 151 тестов проходят успешно
-
-### 2026-02-12 - Проверка актуальности TODO.md
-- ✅ Выявлены АКТУАЛЬНЫЕ проблемы:
-  - `SelectionIndicator` работает напрямую с `entity.container` (lines 30, 36, 43)
-  - `EntitySpawnSystem` работает напрямую с `app.stage` (lines 85, 90, 133, 139)
-- 🆕 Обновлены задачи Приоритета 2 для добавления API в `RendererSystem`
-- 🆕 Добавлена задача по рефакторингу `EntitySpawnSystem` для использования `RendererSystem`
-
-### 2026-02-12 - Инкапсуляция работы с контейнерами в RendererSystem ✅
-- **RendererSystem**: Добавлен инкапсулирующий API (7 методов) для работы с контейнерами
-- **EntitySpawnSystem**: Обновлен для получения `rendererSystem` через конструктор/`gameEngine`
-- **SelectionIndicator**: Обновлен для получения `rendererSystem` и использования API контейнеров
-- **SelectionSystem**: Обновлен для передачи `rendererSystem` в `SelectionIndicator`
-- **GameEngine**: При инициализации `RendererSystem` устанавливает `gameEngine.rendererSystem`
-- **Tests**: Обновлены тесты для работы с новым API
-
-### 2026-02-12 - Рефакторинг координатных преобразований
-- **EntitySpawnSystem**: Внедрен `CoordinateTransformer`, удален `_getScale()` и `_normalizeCoords()`
-- **InputSystem**: Внедрен `CoordinateTransformer`, удален `_toGameCoords()` и `_getScale()`
-- **SelectionSystem**: Внедрен `CoordinateTransformer`, `_getScale()` теперь через `transformer.getScale()`
-- **SelectionIndicator**: Внедрен `CoordinateTransformer`, удален `_getApp()`
-- **Все системы**: Добавлены `init(app)` и улучшенные `destroy()` методы с очисткой transformer
-- **Tests**: Обновлены все тесты для вызова `init()` перед использованием систем
-
-### 2026-02-12 - Устранение дублирования и улучшение архитектуры
-- **RendererSystem**: Удалено дублирование `_renderedEntities`, теперь работает напрямую с `state.entities`
-- **RendererSystem**: Удалена fallback логика в `_syncEntities()` без `EntitySpawnSystem`
-- **SelectionIndicator**: Улучшены проверки безопасности доступа к свойствам сущностей
-- **Системы**: Все системы используют `gameEngine.state` как EventBus для взаимодействия
+### 2026-02-12 - Исправление критичных fallback-веток
+- **EntitySpawnSystem**: Удалены fallback-ветки с прямым доступом к `app.stage` (lines 83, 120)
+- **RendererSystem**: Удалены fallback-ветки с прямым `this.app.stage.addChild()` и `addChildAt()` (lines 245, 357)
+- **Все системы**: Теперь используют только `RendererSystem.addToStage()` и `removeFromStage()`
+- **Tests**: Обновлены тесты для корректной инициализации `rendererSystem` через `init(app)`

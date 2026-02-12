@@ -242,7 +242,7 @@ export class RendererSystem {
     container.y = screenY
     container.gameX = posX
     container.gameY = posY
-    this.app.stage.addChild(container)
+    this.addToStage(container)
 
     const entity = {
       id,
@@ -354,7 +354,7 @@ export class RendererSystem {
     }
 
     this.gridContainer.addChild(gridGraphics)
-    this.app.stage.addChildAt(this.gridContainer, 0)
+    this.addToStage(this.gridContainer)
   }
 
   updateGrid () {

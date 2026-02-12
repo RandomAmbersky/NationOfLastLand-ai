@@ -76,12 +76,8 @@ export class EntitySpawnSystem {
     container.gameX = x
     container.gameY = y
     
-    // Используем RendererSystem для добавления на stage (если доступен)
-    if (this.rendererSystem && this.rendererSystem.addToStage) {
-      this.rendererSystem.addToStage(container)
-    } else {
-      app.stage.addChild(container)
-    }
+    // Используем RendererSystem для добавления на stage
+    this.rendererSystem.addToStage(container)
 
     const entity = {
       id,
@@ -113,12 +109,8 @@ export class EntitySpawnSystem {
     const entity = entities.get(id)
     if (!entity || !entity.container) return
 
-    // Remove from stage using RendererSystem API (если доступен)
-    if (this.rendererSystem && this.rendererSystem.removeFromStage) {
-      this.rendererSystem.removeFromStage(entity.container)
-    } else if (this.gameEngine.app) {
-      this.gameEngine.app.stage.removeChild(entity.container)
-    }
+    // Remove from stage using RendererSystem API
+    this.rendererSystem.removeFromStage(entity.container)
     
     entity.container.destroy({ children: true, texture: true, baseTexture: true })
 
