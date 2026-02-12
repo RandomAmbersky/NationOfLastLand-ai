@@ -16,8 +16,6 @@ export class RendererSystem {
     this.alertHighlight = null
     this.gridContainer = null
     this.isDestroyed = false
-    // Следим за сущностями, которые отрисовали (для очистки при удалении)
-    this._renderedEntities = new Map()
     this.entitySpawnSystem = null
   }
 
@@ -33,7 +31,9 @@ export class RendererSystem {
    * Получить отрисованную сущность по ID
    */
   getEntity (id) {
-    return this._renderedEntities.get(id)
+    const entities = this.gameEngine.state.get('entities')
+    if (!(entities instanceof Map)) return null
+    return entities.get(id)
   }
 
   /**
@@ -68,7 +68,10 @@ export class RendererSystem {
    * Обновить позицию сущности на основе данных из state.entities
    */
   updateEntityPosition (id, gameX, gameY) {
-    const entity = this._renderedEntities.get(id)
+    const entities = this.gameEngine.state.get('entities')
+    if (!(entities instanceof Map)) return
+    
+    const entity = entities.get(id)
     if (!entity || !entity.container) return
 
     const coords = this._toScreenCoords(gameX, gameY)
@@ -178,10 +181,7 @@ export class RendererSystem {
       screenY
     }
 
-    // Добавляем в отрисованные сущности
-    this._renderedEntities.set(id, entity)
-
-    // Обновляем state.entities - добавляем container для рендеринга
+    // Добавляем в state.entities
     const entities = this.gameEngine.state.get('entities')
     if (entities instanceof Map) {
       const existingEntity = entities.get(id)
@@ -198,25 +198,22 @@ export class RendererSystem {
   }
 
   /**
-   * Удалить сущность из отрисованных и из state.entities
+   * Удалить сущность из state.entities
    */
   removeEntity (id) {
-    const entity = this._renderedEntities.get(id)
-    if (!entity) return
+    const entities = this.gameEngine.state.get('entities')
+    if (!(entities instanceof Map)) return
 
-    if (entity.container) {
+    const entity = entities.get(id)
+    if (!entity || !entity.container) return
+
+    if (this.app && entity.container) {
       this.app.stage.removeChild(entity.container)
       entity.container.destroy({ children: true, texture: true, baseTexture: true })
     }
 
-    this._renderedEntities.delete(id)
-
-    // Удаляем из state.entities
-    const entities = this.gameEngine.state.get('entities')
-    if (entities instanceof Map) {
-      entities.delete(id)
-      this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
-    }
+    entities.delete(id)
+    this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
   }
 
   showTargetIndicator (gameX, gameY) {
@@ -327,7 +324,6 @@ export class RendererSystem {
     }
 
     const entitiesCount = entities.size
-    const renderedCount = this._renderedEntities.size
 
     // Если есть EntitySpawnSystem - делегируем спавн
     if (this.entitySpawnSystem) {
@@ -336,31 +332,18 @@ export class RendererSystem {
 
       console.log('RendererSystem._syncEntities:', {
         entitiesCount,
-        renderedCount,
         newEntitiesCreated: newEntities.length,
         entitiesRemoved: removedCount
       })
       return
     }
 
-    console.log('RendererSystem._syncEntities (fallback):', {
-      entitiesCount,
-      renderedCount
-    })
+    console.warn('RendererSystem._syncEntities: no EntitySpawnSystem available')
   }
 
   destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
-
-    // Очищаем отрисованные сущности
-    for (const [_id, entity] of this._renderedEntities) {
-      if (entity.container) {
-        this.app?.stage.removeChild(entity.container)
-        entity.container.destroy({ children: true, texture: true, baseTexture: true })
-      }
-    }
-    this._renderedEntities.clear()
 
     if (this.targetIndicator) {
       this.app?.stage.removeChild(this.targetIndicator)

@@ -1,6 +1,7 @@
 /**
  * Selection Indicator Service - Manages visual selection indicators
  * Handles selection rings and info overlays for entities
+ * Works through RendererSystem for entity access
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
@@ -55,17 +56,19 @@ export class SelectionIndicator {
 
      // Remove infoIndicator from all entities
      for (const [, entity] of entities) {
-       if (entity.infoIndicator) {
+       if (entity && entity.infoIndicator) {
          this.removeInfoIndicator(entity)
        }
      }
 
+     // Remove selection indicators from non-selected entities
      for (const [entityId, entity] of entities) {
-       if (entity.selectionIndicator && !selections.has(entityId)) {
+       if (entity && entity.selectionIndicator && !selections.has(entityId)) {
          this.removeSelectionIndicator(entity)
        }
      }
 
+     // Add selection indicators for selected entities
      for (const entityId of selections) {
        const entity = entities.get(entityId)
        if (entity && !entity.selectionIndicator) {
@@ -83,7 +86,7 @@ export class SelectionIndicator {
     this.isDestroyed = true
 
     const entities = this.gameEngine.state.get('entities')
-    for (const [_entityId, entity] of entities) {
+    for (const [, entity] of entities) {
       if (entity && entity.selectionIndicator) {
         this.removeSelectionIndicator(entity)
       }
@@ -102,7 +105,7 @@ export class SelectionIndicator {
     let hadFixes = false
 
     for (const [entityId, entity] of entities) {
-      if (entity.selectionIndicator && !selections.has(entityId)) {
+      if (entity && entity.selectionIndicator && !selections.has(entityId)) {
         console.warn('Entity ' + entityId + ' has indicator but not in selection - removing')
         this.removeSelectionIndicator(entity)
         hadFixes = true

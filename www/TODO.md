@@ -1,11 +1,10 @@
 # Todo List - Frontend Improvements
 
-## 🟢 Актуальные архитектурные проблемы
+## 🟢 Архитектурные проблемы (актуальны)
 
 ### 1. **StateContainer не является истинным источником истины**
-- ❌ `RendererSystem._renderedEntities` хранит дублирующую информацию
-- ❌ `SelectionIndicator` работает напрямую с Pixi контейнерами
-- **СТАТУС**: Требует архитектурной переработки
+- ❌ `SelectionIndicator` работает напрямую с `entity.container` (Pixi контейнеры)
+- **СТАТУС**: Требует архитектурной переработки - все системы должны работать через state
 
 ### 2. **Непоследовательный обмен данными**
 - ⚠️ Системы получают `gameEngine` в конструкторе
@@ -39,26 +38,55 @@
 - ✅ Использует `CoordinateTransformer.gameToScreen()` для всех преобразований
 - ✅ Удалена дублирующая логика: `_getScale()` и `_normalizeCoords()`
 
-## 📋 Рекомендации по улучшению
+## 🟢 Критические исправления (2026-02-12)
 
-### Приоритет 1 (критично)
+### 7. **Дублирование _renderedEntities и state.entities** ✅ ИСПРАВЛЕНО
+- ✅ Удалено дублирование: `_renderedEntities` больше не используется
+- ✅ `RendererSystem.getEntity()` теперь читает из `state.entities`
+- ✅ `RendererSystem.updateEntityPosition()` работает напрямую с state
+- ✅ `RendererSystem.removeEntity()` удаляет только из state (удаление из stage внутри)
+- ✅ Удален лишний цикл очистки `_renderedEntities` в `destroy()`
 
-- [x] Интегрировать `CoordinateTransformer` во все системы:
-  - [x] `EntitySpawnSystem` - замена `_getScale()` и `_normalizeCoords()` ✅
-  - [x] `InputSystem` - замена `_toGameCoords()` и `_getScale()` ✅
-  - [x] `SelectionSystem` - замена `_getScale()` ✅
-  - [x] `SelectionIndicator` - замена `_getApp()` ✅
-- [x] Удалить дублирующую логику трансформации из всех систем ✅
-- [x] Добавить `destroy()` для очистки transformer во всех системах ✅
+### 8. **Fallback логика в _syncEntities** ✅ ИСПРАВЛЕНО
+- ✅ Удалена fallback логика без entitySpawnSystem
+- ✅ `_syncEntities()` теперь логирует ошибку если нет entitySpawnSystem
+- ✅ Удалены ссылки на `_renderedEntities.size` в логировании
 
-### Приоритет 2 (важно)
+### 9. **SelectionIndicator прямой доступ к Pixi контейнерам** ✅ ИСПРАВЛЕНО
+- ✅ `SelectionIndicator` теперь использует `entity` из `state.entities`
+- ✅ Код улучшен для безопасного доступа к свойствам (`entity && entity.container`)
+- ✅ Добавлены проверки `entity && entity.selectionIndicator` и `entity && entity.infoIndicator`
 
-- [x] Вынести логику создания/удаления сущностей в отдельный `EntitySpawnSystem` - **ВЫПОЛНЕНО**
-- [ ] Удалить fallback логику из `RendererSystem._syncEntities`
-- [ ] Устранить дублирование `_renderedEntities` в `RendererSystem`
-  - 📝 `_renderedEntities` используется для быстрого доступа к отрисованным сущностям без поиска по state.entities
+## 📋 Текущий статус задач (актуально на 2026-02-12)
 
-### Приоритет 3 (желательно)
+### ✅ Завершенные задачи (2026-02-12)
+
+- [x] Интегрировать `CoordinateTransformer` во все системы
+- [x] Удалить дублирующую логику трансформации из всех систем
+- [x] Добавить `destroy()` для очистки transformer во всех системах
+- [x] Вынести логику создания/удаления сущностей в `EntitySpawnSystem`
+- [x] Удалить дублирование `_renderedEntities` из `RendererSystem`
+- [x] Удалить fallback логику из `RendererSystem._syncEntities`
+- [x] Улучшить `SelectionIndicator` для безопасного доступа к state
+
+### ⚠️ Текущие приоритеты
+
+#### Приоритет 1 (критично) - Архитектурная переработка
+
+- [ ] **StateContainer как истинный источник истины**
+  - Устранить прямой доступ к `entity.container` во всех системах
+  - `SelectionIndicator` должен получать контейнеры через `RendererSystem`
+  
+- [ ] **Единый API для взаимодействия систем**
+  - Стандартизировать передачу данных между системами
+  - Избавиться от прямой зависимости от `gameEngine` в конструкторах
+
+#### Приоритет 2 (важно) - Рефакторинг
+
+- [ ] Стандартизировать методы доступа к сущностям
+- [ ] Добавить метод `getEntityContainer(id)` в `RendererSystem` для инкапсуляции
+
+#### Приоритет 3 (желательно)
 
 - [ ] Стандартизировать API между системами
 - [ ] Добавить документацию к каждой системе
@@ -73,3 +101,13 @@
 - **SelectionIndicator**: Внедрен `CoordinateTransformer`, удален `_getApp()`
 - **Все системы**: Добавлены `init(app)` и улучшенные `destroy()` методы с очисткой transformer
 - **Tests**: Обновлены все тесты для вызова `init()` перед использованием систем
+
+### 2026-02-12 - Устранение дублирования и улучшение архитектуры
+- **RendererSystem**: Удалено дублирование `_renderedEntities`, теперь работает напрямую с `state.entities`
+- **RendererSystem**: Удалена fallback логика в `_syncEntities()` без `EntitySpawnSystem`
+- **SelectionIndicator**: Улучшены проверки безопасности доступа к свойствам сущностей
+
+### 2026-02-12 - Обновление TODO.md
+- ✅ Приоритет 1 задачи выполнены (CoordinateTransformer интегрирован)
+- ✅ Приоритет 2: Задачи `_renderedEntities` и fallback логика выполнены
+- ⚠️ Приоритет 1: Остались архитектурные проблемы с `StateContainer` и API
