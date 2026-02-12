@@ -61,11 +61,11 @@ export class SelectionSystem {
       return false
     }
 
-    this.gameEngine.emit('selectEntity', {
-      entityId,
-      isMultiSelect,
-      currentSelections: Array.from(selections)
-    })
+     this.gameEngine.state.emit('selectEntity', {
+       entityId,
+       isMultiSelect,
+       currentSelections: Array.from(selections)
+     })
 
     return true
   }
@@ -191,11 +191,11 @@ export class SelectionSystem {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
-    this.gameEngine.emit('groupTargetSet', {
-      targetX: gameX,
-      targetY: gameY,
-      selections: Array.from(selections)
-    })
+     this.gameEngine.state.emit('groupTargetSet', {
+       targetX: gameX,
+       targetY: gameY,
+       selections: Array.from(selections)
+     })
   }
 
   updateIndicators (selections) {

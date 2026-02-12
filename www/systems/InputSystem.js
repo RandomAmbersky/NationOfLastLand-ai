@@ -57,14 +57,14 @@ export class InputSystem {
     this._startDragSelection(event)
   }
 
-  _handleRightMouseDown (event) {
+   _handleRightMouseDown (event) {
     const { screenX, screenY } = this._getCanvasCoords(event)
     const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
 
     if (entityAtPosition !== null) {
-      this.gameEngine.emit('entitySelected', { entityId: entityAtPosition })
+      this.gameEngine.state.emit('entitySelected', { entityId: entityAtPosition })
     } else {
-      this.gameEngine.emit('selectionCleared')
+      this.gameEngine.state.emit('selectionCleared')
     }
   }
 
@@ -132,22 +132,22 @@ export class InputSystem {
 
     const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
 
-    if (entityAtPosition !== null) {
-      const isMultiSelect = event.shiftKey
-      this.gameEngine.emit('entityClicked', {
-        entityId: entityAtPosition,
-        isMultiSelect,
-        gameX,
-        gameY
-      })
-    } else {
-      const selections = this.gameEngine.state.get('selections')
-      if (selections.size > 0) {
-        this.gameEngine.emit('groupTargetSet', { gameX, gameY })
-      } else {
-        this.gameEngine.emit('selectionCleared')
-      }
-    }
+     if (entityAtPosition !== null) {
+       const isMultiSelect = event.shiftKey
+       this.gameEngine.state.emit('entityClicked', {
+         entityId: entityAtPosition,
+         isMultiSelect,
+         gameX,
+         gameY
+       })
+     } else {
+       const selections = this.gameEngine.state.get('selections')
+       if (selections.size > 0) {
+         this.gameEngine.state.emit('groupTargetSet', { gameX, gameY })
+       } else {
+         this.gameEngine.state.emit('selectionCleared')
+       }
+     }
   }
 
   handleDoubleClick (event) {
@@ -156,40 +156,40 @@ export class InputSystem {
     const { screenX, screenY } = this._getCanvasCoords(event)
     const entityId = this._findEntityAtPosition(screenX, screenY)
 
-    if (entityId !== null) {
-      this.gameEngine.emit('entityDoubleClicked', { entityId })
-    } else {
-      this.gameEngine.emit('selectAllPlayerUnits')
-    }
+     if (entityId !== null) {
+       this.gameEngine.state.emit('entityDoubleClicked', { entityId })
+     } else {
+       this.gameEngine.state.emit('selectAllPlayerUnits')
+     }
   }
 
   handleKeyDown (event) {
     if (!this.gameEngine.state.get('isRunning')) return
 
-    if (event.ctrlKey && event.key === 'a') {
-      event.preventDefault()
-      this.gameEngine.emit('selectAllPlayerUnitsAtBase')
-      return
-    }
+     if (event.ctrlKey && event.key === 'a') {
+       event.preventDefault()
+       this.gameEngine.state.emit('selectAllPlayerUnitsAtBase')
+       return
+     }
 
-    switch (event.key) {
-      case 'Escape':
-        this.gameEngine.emit('selectionCleared')
-        break
+     switch (event.key) {
+       case 'Escape':
+         this.gameEngine.state.emit('selectionCleared')
+         break
 
-      case ' ':
-        if (this.gameEngine.state.get('selections').size > 0) {
-          this.gameEngine.emit('groupStop')
-        }
-        event.preventDefault()
-        break
+       case ' ':
+         if (this.gameEngine.state.get('selections').size > 0) {
+           this.gameEngine.state.emit('groupStop')
+         }
+         event.preventDefault()
+         break
 
-      case 'Delete':
-        if (this.gameEngine.state.get('selections').size > 0) {
-          this.gameEngine.emit('groupCancelCommand')
-        }
-        break
-    }
+       case 'Delete':
+         if (this.gameEngine.state.get('selections').size > 0) {
+           this.gameEngine.state.emit('groupCancelCommand')
+         }
+         break
+     }
   }
 
   _cleanupDragGraphics () {
@@ -286,12 +286,12 @@ export class InputSystem {
     const bounds = this._calculateSelectionBounds()
     const drag = this.dragState
 
-    if (this._isValidSelectionBounds(bounds)) {
-      drag.justFinishedDrag = true
-      this.gameEngine.emit('rectangleSelection', { bounds })
-    } else {
-      drag.justFinishedDrag = false
-    }
+     if (this._isValidSelectionBounds(bounds)) {
+       drag.justFinishedDrag = true
+       this.gameEngine.state.emit('rectangleSelection', { bounds })
+     } else {
+       drag.justFinishedDrag = false
+     }
 
     if (drag.graphics) {
       this.app.stage.removeChild(drag.graphics)
@@ -331,8 +331,23 @@ export class InputSystem {
     }
   }
 
-  _findEntityAtPosition (screenX, screenY) {
-    this.gameEngine.emit('findEntityAtPosition', { screenX, screenY })
+   _findEntityAtPosition (screenX, screenY) {
+    const entities = this.gameEngine.state.get('entities')
+    if (!(entities instanceof Map)) return null
+
+    // Ищем сущность, которая отрисована и содержит точку
+    for (const [id, entity] of entities) {
+      if (entity.container && entity.container.x !== undefined && entity.container.y !== undefined) {
+        // Примерная проверка попадания (для квадратных сущностей)
+        const size = 10 // Примерный размер сущности
+        const entityScreenX = entity.container.x
+        const entityScreenY = entity.container.y
+        if (screenX >= entityScreenX - size && screenX <= entityScreenX + size &&
+            screenY >= entityScreenY - size && screenY <= entityScreenY + size) {
+          return id
+        }
+      }
+    }
     return null
   }
 
