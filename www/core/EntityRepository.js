@@ -3,6 +3,8 @@
  * Provides clean abstraction over the Map-based entity storage
  */
 
+import { findPlayerBase as findPlayerBaseUtil, getEntitiesByType, getEntitiesByFraction } from '../utils/entity-utils.js'
+
 export class EntityRepository {
   constructor(stateContainer, key = 'entities') {
     this.state = stateContainer
@@ -45,14 +47,7 @@ export class EntityRepository {
    * @returns {Array<Object>} Array of entities
    */
   getByType(type) {
-    const entities = this.getEntities()
-    const result = []
-    for (const [, entity] of entities) {
-      if (entity.entityType === type || entity.type === type) {
-        result.push(entity)
-      }
-    }
-    return result
+    return getEntitiesByType(this.getEntities(), type)
   }
 
   /**
@@ -61,14 +56,7 @@ export class EntityRepository {
    * @returns {Array<Object>} Array of entities
    */
   getByFraction(fraction) {
-    const entities = this.getEntities()
-    const result = []
-    for (const [, entity] of entities) {
-      if (entity.fraction === fraction) {
-        result.push(entity)
-      }
-    }
-    return result
+    return getEntitiesByFraction(this.getEntities(), fraction)
   }
 
   /**
@@ -110,7 +98,7 @@ export class EntityRepository {
    * @returns {Object|null} Base entity or null
    */
   findPlayerBase() {
-    return this.find({ type: 'base', fraction: 'Player' })
+    return findPlayerBaseUtil(this.getEntities())
   }
 
   /**
