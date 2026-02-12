@@ -5,7 +5,6 @@
 
 import { GAME_CONFIG } from '../config/game-config.js'
 import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
-import { EntityService } from '../entity-service.js'
 
 export class RendererSystem {
   constructor (gameEngine, coordinateService = null) {
@@ -19,7 +18,7 @@ export class RendererSystem {
     this.isDestroyed = false
     // Следим за сущностями, которые отрисовали (для очистки при удалении)
     this._renderedEntities = new Map()
-    this.entityService = new EntityService(gameEngine)
+    this.entitySpawnSystem = null
   }
 
   init (app) {
@@ -55,6 +54,13 @@ export class RendererSystem {
       entity.y = screenY
       entity.gameX = x
       entity.gameY = y
+    }
+
+    /**
+     * Установить систему для спавна сущностей
+     */
+    setEntitySpawnSystem(entitySpawnSystem) {
+      this.entitySpawnSystem = entitySpawnSystem
     }
 
     /**
@@ -291,7 +297,21 @@ export class RendererSystem {
     const entitiesCount = entities.size
     const renderedCount = this._renderedEntities.size
 
-    // Создаем новые сущности, которые еще не отрисованы
+    // Если есть EntitySpawnSystem - делегируем спавн
+    if (this.entitySpawnSystem) {
+      const newEntities = this.entitySpawnSystem.processSpawns(entities)
+      const removedCount = this.entitySpawnSystem.processDeletions(entities)
+
+      console.log('RendererSystem._syncEntities:', {
+        entitiesCount,
+        renderedCount,
+        newEntitiesCreated: newEntities.length,
+        entitiesRemoved: removedCount
+      })
+      return
+    }
+
+    // Fallback: старая логика без entitySpawnSystem
     const renderedIds = new Set(this._renderedEntities.keys())
     let createdCount = 0
     
@@ -345,8 +365,12 @@ export class RendererSystem {
       }
     }
 
-    if (createdCount > 0 || removedCount > 0) {
-    }
+    console.log('RendererSystem._syncEntities:', {
+      entitiesCount,
+      renderedCount,
+      createdCount,
+      removedCount
+    })
   }
 
   destroy () {
@@ -380,6 +404,11 @@ export class RendererSystem {
       this.gridContainer = null
     }
 
+    if (this.entitySpawnSystem) {
+      this.entitySpawnSystem.destroy()
+      this.entitySpawnSystem = null
+    }
+
     this.gameEngine = null
     this.app = null
     this.transformer = null
@@ -389,4 +418,3 @@ export class RendererSystem {
 export function createRenderer (gameEngine, coordinateService = null) {
   return new RendererSystem(gameEngine, coordinateService)
 }
-

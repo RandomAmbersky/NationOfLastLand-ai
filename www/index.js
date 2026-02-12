@@ -14,6 +14,7 @@ export { RendererSystem, createRenderer } from "./systems/RendererSystem.js"
 export { InputSystem, createInputSystem } from "./systems/InputSystem.js"
 export { SelectionSystem, createSelectionSystem } from "./systems/SelectionSystem.js"
 export { GameStateSystem, createGameStateSystem } from "./systems/GameStateSystem.js"
+export { EntitySpawnSystem, createEntitySpawnSystem } from "./systems/EntitySpawnSystem.js"
 
 
 // Service modules
