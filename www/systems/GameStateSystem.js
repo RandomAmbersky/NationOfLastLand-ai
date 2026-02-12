@@ -34,7 +34,8 @@ export class GameStateSystem {
       }, 'gameInitialized')
 
       if (gameState.entities) {
-        const entitiesMap = new Map()
+        const existingEntities = this.gameEngine.state.get('entities')
+        const entitiesMap = existingEntities instanceof Map ? existingEntities : new Map()
         for (const entity of gameState.entities) {
           entitiesMap.set(entity.id, entity)
         }
@@ -129,7 +130,8 @@ export class GameStateSystem {
       }, 'gameStateUpdated')
 
       if (gameState.entities) {
-        const entitiesMap = new Map()
+        const existingEntities = this.gameEngine.state.get('entities')
+        const entitiesMap = existingEntities instanceof Map ? existingEntities : new Map()
         for (const entity of gameState.entities) {
           entitiesMap.set(entity.id, entity)
         }
@@ -137,11 +139,13 @@ export class GameStateSystem {
       }
 
       if (gameState.removed_entities && gameState.removed_entities.length > 0) {
-        const selections = new Set(this.gameEngine.state.get('selections'))
-        for (const removedId of gameState.removed_entities) {
-          selections.delete(removedId)
+        const selections = this.gameEngine.state.get('selections')
+        if (selections instanceof Set) {
+          for (const removedId of gameState.removed_entities) {
+            selections.delete(removedId)
+          }
+          this.gameEngine.state.merge({ selections }, 'selectionsChanged')
         }
-        this.gameEngine.state.merge({ selections }, 'selectionsChanged')
       }
 
       return { success: true, data: gameState }

@@ -11,6 +11,8 @@ export class InputSystem {
     this.app = null
     this.dragState = this._createDragState()
     this.isDestroyed = false
+    this._lastDragTime = 0
+    this._dragDebounceDelay = 50
   }
 
   _createDragState () {
@@ -271,6 +273,13 @@ export class InputSystem {
     }
   }
 
+  _shouldDebounceDrag () {
+    const now = performance.now()
+    const elapsed = now - this._lastDragTime
+    this._lastDragTime = now
+    return elapsed < this._dragDebounceDelay
+  }
+
   _cancelDragSelection () {
     const drag = this.dragState
     drag.isDragging = false
@@ -283,6 +292,10 @@ export class InputSystem {
   }
 
   _processDragSelection () {
+    if (this._shouldDebounceDrag()) {
+      return
+    }
+
     const bounds = this._calculateSelectionBounds()
     const drag = this.dragState
 
@@ -336,7 +349,7 @@ export class InputSystem {
     return null
   }
 
-  update (dt) {}
+  update (_dt) {}
 
   render () {}
 

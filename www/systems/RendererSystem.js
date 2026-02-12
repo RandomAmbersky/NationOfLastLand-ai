@@ -14,10 +14,12 @@ export class RendererSystem {
     this.alertHighlight = null
     this.gridContainer = null
     this.isDestroyed = false
+    this._cachedScale = null
   }
 
   init (app) {
     this.app = app
+    this._updateScaleCache()
     this.setupGrid()
   }
 
@@ -25,8 +27,7 @@ export class RendererSystem {
     const entity = this.entities.get(id)
     if (!entity || !entity.container) return
 
-    const scaleX = this.app.screen.width / GAME_CONFIG.WORLD_SIZE.width
-    const scaleY = this.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
+    const { x: scaleX, y: scaleY } = this._getScale()
     const screenX = gameX * scaleX
     const screenY = gameY * scaleY
 
@@ -39,8 +40,7 @@ export class RendererSystem {
   }
 
   createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
-    const scaleX = this.app.screen.width / GAME_CONFIG.WORLD_SIZE.width
-    const scaleY = this.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
+    const { x: scaleX, y: scaleY } = this._getScale()
     const screenX = x * scaleX
     const screenY = y * scaleY
 
@@ -132,8 +132,7 @@ export class RendererSystem {
       this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
     }
 
-    const scaleX = this.app.screen.width / GAME_CONFIG.WORLD_SIZE.width
-    const scaleY = this.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
+    const { x: scaleX, y: scaleY } = this._getScale()
     const screenX = gameX * scaleX
     const screenY = gameY * scaleY
 
@@ -174,8 +173,7 @@ export class RendererSystem {
     gridGraphics.lineStyle(1, 0x444444, 0.5)
 
     const gridSize = 50
-    const scaleX = this.app.screen.width / GAME_CONFIG.WORLD_SIZE.width
-    const scaleY = this.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
+    const { x: scaleX, y: scaleY } = this._getScale()
 
     for (let x = 0; x <= GAME_CONFIG.WORLD_SIZE.width; x += gridSize) {
       const scaledX = x * scaleX
@@ -202,15 +200,33 @@ export class RendererSystem {
     this.setupGrid()
   }
 
-  update (dt) {}
+  update (_dt) {
+    this._updateScaleCache()
+  }
 
   render () {}
+
+  invalidateScaleCache () {
+    this._cachedScale = null
+  }
+
+  _updateScaleCache () {
+    if (!this.app) return
+    this._cachedScale = {
+      x: this.app.screen.width / GAME_CONFIG.WORLD_SIZE.width,
+      y: this.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
+    }
+  }
+
+  _getScale () {
+    return this._cachedScale || { x: 1, y: 1 }
+  }
 
   destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
 
-    for (const [id, entity] of this.entities) {
+    for (const [_id, entity] of this.entities) {
       if (entity.container) {
         this.app?.stage.removeChild(entity.container)
         entity.container.destroy({ children: true, texture: true, baseTexture: true })
@@ -244,3 +260,4 @@ export class RendererSystem {
 export function createRenderer (gameEngine) {
   return new RendererSystem(gameEngine)
 }
+

@@ -52,9 +52,11 @@ export class CoordinateService {
      * @returns {Object} Игровые координаты
      */
   screenToGame (x, y) {
+    const width = this.gameDemo.app.screen.width
+    const height = this.gameDemo.app.screen.height
     return {
-      x: (x / this.gameDemo.app.screen.width) * GAME_CONFIG.WORLD_SIZE.width,
-      y: (y / this.gameDemo.app.screen.height) * GAME_CONFIG.WORLD_SIZE.height
+      x: (x / width) * GAME_CONFIG.WORLD_SIZE.width,
+      y: (y / height) * GAME_CONFIG.WORLD_SIZE.height
     }
   }
 

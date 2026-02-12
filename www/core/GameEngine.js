@@ -11,7 +11,7 @@ export class System {
     this.isDestroyed = false
   }
 
-  update (dt) {}
+  update (_dt) {}
 
   render () {}
 
@@ -33,7 +33,6 @@ export class GameEngine {
       selections: new Set(),
       bases: new Map()
     })
-    
     this.systems = []
     this._loopId = null
     this._lastFrameTime = 0
@@ -68,18 +67,18 @@ export class GameEngine {
 
     this.state.merge({ isRunning: false }, 'engineStopped')
     if (this._loopId) {
-      cancelAnimationFrame(this._loopId)
+      globalThis.cancelAnimationFrame(this._loopId)
       this._loopId = null
     }
   }
 
-  update (dt) {
-    this.state.merge({ deltaTime: dt, time: this.state.get('time') + dt })
+  update (_dt) {
+    this.state.merge({ deltaTime: _dt, time: this.state.get('time') + _dt })
 
     for (const system of this.systems) {
       if (!system.isDestroyed) {
         try {
-          system.update(dt)
+          system.update(_dt)
         } catch (error) {
           console.error('GameEngine: Error in system update:', error)
         }

@@ -14,6 +14,10 @@ export class StateContainer {
     return JSON.parse(JSON.stringify(this._state))
   }
 
+  getMutable (key) {
+    return this._state[key]
+  }
+
   get (key) {
     return this._state[key]
   }
@@ -28,14 +32,13 @@ export class StateContainer {
     }
 
     const newState = updater(this._state)
-    
     if (newState === undefined) {
       throw new Error('StateContainer: updater must return a state object')
     }
 
     const stateChanged = this._state !== newState
     if (!stateChanged) {
-      const hasChanges = Object.keys(newState).some(k => 
+      const hasChanges = Object.keys(newState).some(k =>
         JSON.stringify(this._state[k]) !== JSON.stringify(newState[k])
       )
       if (!hasChanges) {
@@ -53,6 +56,42 @@ export class StateContainer {
     }
 
     return newState
+  }
+
+  mergeMap (key, updateFn, eventType = null) {
+    const state = this._state[key]
+    if (state instanceof Map) {
+      const updated = updateFn(state)
+      if (updated !== state) {
+        this._state[key] = updated
+        this._version++
+        if (eventType) {
+          this.emit(eventType, this._state)
+        } else {
+          this.emit('stateUpdated', this._state)
+        }
+      }
+      return state
+    }
+    return this.merge({ [key]: updateFn(state || new Map()) }, eventType)
+  }
+
+  mergeSet (key, updateFn, eventType = null) {
+    const state = this._state[key]
+    if (state instanceof Set) {
+      const updated = updateFn(state)
+      if (updated !== state) {
+        this._state[key] = updated
+        this._version++
+        if (eventType) {
+          this.emit(eventType, this._state)
+        } else {
+          this.emit('stateUpdated', this._state)
+        }
+      }
+      return state
+    }
+    return this.merge({ [key]: updateFn(state || new Set()) }, eventType)
   }
 
   subscribe (event, handler) {

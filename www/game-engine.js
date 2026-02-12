@@ -56,11 +56,11 @@ export class GameEngineDemo {
     const state = this.gameEngine.state
 
     // Subscribe to state changes
-    state.subscribe('entitiesUpdated', (newState) => {
-      this.entities = newState.entities
+    state.subscribe('entitiesUpdated', (_newState) => {
+      this.entities = _newState.entities
     })
 
-    state.subscribe('selectionsChanged', (newState) => {
+    state.subscribe('selectionsChanged', (_newState) => {
       // Handle selection changes
     })
   }

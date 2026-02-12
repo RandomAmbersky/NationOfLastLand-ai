@@ -10,9 +10,9 @@ export function createDisposable () {
 
   return {
     add (resource) {
-      if (resource && typeof resource.dispose === "function") {
+      if (resource && typeof resource.dispose === 'function') {
         resources.push(resource)
-      } else if (typeof resource === "function") {
+      } else if (typeof resource === 'function') {
         resources.push({ dispose: resource })
       }
     },
@@ -22,7 +22,7 @@ export function createDisposable () {
         try {
           resource.dispose()
         } catch (error) {
-          console.error("Error during cleanup:", error)
+          console.error('Error during cleanup:', error)
         }
       })
       resources.length = 0
@@ -91,11 +91,11 @@ export class EventManager {
 
   addEventListener (target, event, handler, options) {
     if (this.isDisposed) return
-    const key = target + "-" + event
-    if (!this.listeners.has(key)) {
-      this.listeners.set(key, [])
+    const _key = target + '-' + event
+    if (!this.listeners.has(_key)) {
+      this.listeners.set(_key, [])
     }
-    this.listeners.get(key).push({ target, event, handler, options })
+    this.listeners.get(_key).push({ target, event, handler, options })
     target.addEventListener(event, handler, options)
   }
 
@@ -104,7 +104,7 @@ export class EventManager {
   }
 
   removeListenersForTarget (target) {
-    this.listeners.forEach((listeners, key) => {
+    this.listeners.forEach((listeners) => {
       listeners.forEach(({ event, handler, options }) => {
         target.removeEventListener(event, handler, options)
       })
@@ -119,7 +119,7 @@ export class EventManager {
         try {
           target.removeEventListener(event, handler, options)
         } catch (error) {
-          console.error("Error removing event listener:", error)
+          console.error('Error removing event listener:', error)
         }
       })
     })
@@ -152,7 +152,7 @@ export class GraphicsCleanup {
           graphics.destroy({ children: true, texture: true, baseTexture: true })
         }
       } catch (error) {
-        console.error("Error destroying graphics:", error)
+        console.error('Error destroying graphics:', error)
       }
     })
     this.graphicsList.clear()
@@ -179,9 +179,9 @@ export class Cleanupable {
 
   addCleanup (resource) {
     if (this._isDestroyed) return
-    if (resource && typeof resource.dispose === "function") {
+    if (resource && typeof resource.dispose === 'function') {
       this._cleanupables.push(resource)
-    } else if (typeof resource === "function") {
+    } else if (typeof resource === 'function') {
       this._cleanupables.push({ dispose: resource })
     }
   }
@@ -193,7 +193,7 @@ export class Cleanupable {
       try {
         resource.dispose()
       } catch (error) {
-        console.error("Error during cleanup:", error)
+        console.error('Error during cleanup:', error)
       }
     })
     this._cleanupables.length = 0

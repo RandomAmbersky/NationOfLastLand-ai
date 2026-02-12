@@ -4,20 +4,51 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
-import { SelectionIndicatorManager } from '../services/SelectionIndicator.js'
-import { EntityService } from '../services/EntityService.js'
+import { SelectionIndicator } from '../services/SelectionIndicator.js'
+import { EntityService } from '../entity-service.js'
 
 export class SelectionSystem {
   constructor (gameEngine) {
     this.gameEngine = gameEngine
-    this.selectionIndicatorManager = null
+    this.selectionIndicator = null
     this.entityService = null
     this.isDestroyed = false
+    this._typeIndex = new Map()
+    this._factionIndex = new Map()
   }
 
   init () {
-    this.selectionIndicatorManager = new SelectionIndicatorManager(this.gameEngine)
+    this.selectionIndicator = new SelectionIndicator(this.gameEngine)
     this.entityService = new EntityService(this.gameEngine)
+    this._buildIndices()
+  }
+
+  _buildIndices () {
+    const entities = this.gameEngine.state.get('entities')
+    this._typeIndex.clear()
+    this._factionIndex.clear()
+
+    for (const [id, entity] of entities) {
+      const type = entity.vehicleType || entity.type
+      if (!this._typeIndex.has(type)) {
+        this._typeIndex.set(type, [])
+      }
+      this._typeIndex.get(type).push(id)
+
+      const faction = entity.fraction
+      if (faction) {
+        if (!this._factionIndex.has(faction)) {
+          this._factionIndex.set(faction, [])
+        }
+        this._factionIndex.get(faction).push(id)
+      }
+    }
+  }
+
+  _getIndex (key, value) {
+    if (key === 'type') return this._typeIndex.get(value) || []
+    if (key === 'faction') return this._factionIndex.get(value) || []
+    return []
   }
 
   selectEntity (entityId, isMultiSelect = false) {
@@ -46,7 +77,9 @@ export class SelectionSystem {
     if (selections.has(entityId)) {
       selections.delete(entityId)
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicatorManager.updateIndicators(selections)
+      if (this.selectionIndicator) {
+        this.selectionIndicator.updateIndicators(selections)
+      }
       return true
     }
     return false
@@ -59,7 +92,9 @@ export class SelectionSystem {
     if (selections.size > 0) {
       selections.clear()
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicatorManager.updateIndicators(selections)
+      if (this.selectionIndicator) {
+        this.selectionIndicator.updateIndicators(selections)
+      }
       return true
     }
     return false
@@ -67,23 +102,23 @@ export class SelectionSystem {
 
   selectAllPlayerUnits () {
     const state = this.gameEngine.state
-    const entities = state.get('entities')
     const selections = state.get('selections')
     const maxGroupSize = GAME_CONFIG.LIMITS.maxGroupSize
 
+    const playerUnits = this._getIndex('faction', 'Player')
     let count = 0
-    for (const [id, entity] of entities) {
-      if (entity.faction === 'Player' && entity.type === 'vehicle' &&
-          entity.vehicleType !== 'alert') {
-        if (count < maxGroupSize) {
-          selections.add(id)
-          count++
-        }
+    for (const id of playerUnits) {
+      if (count >= maxGroupSize) break
+      if (!selections.has(id)) {
+        selections.add(id)
+        count++
       }
     }
 
     state.merge({ selections }, 'selectionsChanged')
-    this.selectionIndicatorManager.updateIndicators(selections)
+    if (this.selectionIndicator) {
+      this.selectionIndicator.updateIndicators(selections)
+    }
     return count
   }
 
@@ -107,7 +142,9 @@ export class SelectionSystem {
     }
 
     state.merge({ selections }, 'selectionsChanged')
-    this.selectionIndicatorManager.updateIndicators(selections)
+    if (this.selectionIndicator) {
+      this.selectionIndicator.updateIndicators(selections)
+    }
     return limitedEntities.length
   }
 
@@ -125,28 +162,28 @@ export class SelectionSystem {
 
   selectSameType (entityId) {
     const state = this.gameEngine.state
-    const entities = state.get('entities')
     const selections = state.get('selections')
     const maxGroupSize = GAME_CONFIG.LIMITS.maxGroupSize
 
-    const entity = entities.get(entityId)
+    const entity = this.gameEngine.state.get('entities').get(entityId)
     if (!entity) return 0
 
     const targetType = entity.vehicleType || entity.type
+    const sameTypeEntities = this._getIndex('type', targetType)
 
     let count = 0
-    for (const [id, e] of entities) {
-      if (e.id === entityId) continue
-      if ((e.vehicleType || e.type) === targetType) {
-        if (count < maxGroupSize) {
-          selections.add(id)
-          count++
-        }
+    for (const id of sameTypeEntities) {
+      if (count >= maxGroupSize) break
+      if (!selections.has(id)) {
+        selections.add(id)
+        count++
       }
     }
 
     state.merge({ selections }, 'selectionsChanged')
-    this.selectionIndicatorManager.updateIndicators(selections)
+    if (this.selectionIndicator) {
+      this.selectionIndicator.updateIndicators(selections)
+    }
     return count
   }
 
@@ -162,10 +199,14 @@ export class SelectionSystem {
   }
 
   updateIndicators (selections) {
-    this.selectionIndicatorManager.updateIndicators(selections)
+    if (this.selectionIndicator) {
+      this.selectionIndicator.updateIndicators(selections)
+    }
   }
 
-  update (dt) {}
+  update (_dt) {
+    this._buildIndices()
+  }
 
   render () {}
 
@@ -173,11 +214,11 @@ export class SelectionSystem {
     if (this.isDestroyed) return
     this.isDestroyed = true
 
-    if (this.selectionIndicatorManager) {
-      this.selectionIndicatorManager.destroy()
+    if (this.selectionIndicator) {
+      this.selectionIndicator.destroy()
     }
 
-    this.selectionIndicatorManager = null
+    this.selectionIndicator = null
     this.entityService = null
     this.gameEngine = null
   }
