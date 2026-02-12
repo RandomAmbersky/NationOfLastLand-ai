@@ -5,7 +5,7 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
-import { withTransformer, ensureTransformer } from '../utils/TransformerMixin.js'
+import { withTransformer } from '../utils/TransformerMixin.js'
 
 export class SelectionIndicator extends withTransformer(class {}) {
   constructor(gameEngine, rendererSystem = null) {
@@ -16,8 +16,10 @@ export class SelectionIndicator extends withTransformer(class {}) {
   }
 
   init(app) {
-    // Get transformer from available sources
-    this.transformer = ensureTransformer(this)
+    // Initialize transformer via mixin's _getTransformer() fallback chain
+    if (!this.transformer) {
+      this.transformer = this._getTransformer()
+    }
     
     // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {

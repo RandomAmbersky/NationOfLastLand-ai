@@ -5,7 +5,7 @@
 
 import { drawEntity } from '../utils/entity-drawer.js'
 import { createRepository } from '../core/EntityRepository.js'
-import { withTransformer, ensureTransformer } from '../utils/TransformerMixin.js'
+import { withTransformer } from '../utils/TransformerMixin.js'
 
 export class EntitySpawnSystem extends withTransformer(class {}) {
   constructor(gameEngine, rendererSystem = null) {
@@ -23,13 +23,15 @@ export class EntitySpawnSystem extends withTransformer(class {}) {
     this.renderer = this.app || null
     this.repository = createRepository(this.gameEngine.state)
     
-    // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
+    // If RendererSystem was not passed to constructor, try to get it from gameEngine
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {
       this.rendererSystem = this.gameEngine.rendererSystem
     }
     
-    // Get transformer from available sources
-    this.transformer = ensureTransformer(this)
+    // Initialize transformer via mixin's _getTransformer() fallback chain
+    if (!this.transformer) {
+      this.transformer = this._getTransformer()
+    }
   }
 
   /**

@@ -4,7 +4,7 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
-import { withTransformer, ensureTransformer } from '../utils/TransformerMixin.js'
+import { withTransformer } from '../utils/TransformerMixin.js'
 
 export class InputSystem extends withTransformer(class {}) {
   constructor (gameEngine, rendererSystem = null) {
@@ -20,13 +20,15 @@ export class InputSystem extends withTransformer(class {}) {
   init (app) {
     this.app = app
     
-    // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
+    // If RendererSystem was not passed to constructor, try to get it from gameEngine
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {
       this.rendererSystem = this.gameEngine.rendererSystem
     }
     
-    // Get transformer from available sources
-    this.transformer = ensureTransformer(this)
+    // Initialize transformer via mixin's _getTransformer() fallback chain
+    if (!this.transformer) {
+      this.transformer = this._getTransformer()
+    }
     
     this.setupEventListeners()
   }
@@ -152,7 +154,7 @@ export class InputSystem extends withTransformer(class {}) {
      }
 
      const { screenX, screenY } = this._getCanvasCoords(event)
-     const transformer = ensureTransformer(this)
+     const transformer = this._getTransformer()
      const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
 
      const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
@@ -176,7 +178,7 @@ export class InputSystem extends withTransformer(class {}) {
     if (!this.gameEngine.state.get('isRunning')) return
 
     const { screenX, screenY } = this._getCanvasCoords(event)
-    const transformer = ensureTransformer(this)
+    const transformer = this._getTransformer()
     const entityId = this._findEntityAtPosition(screenX, screenY)
 
      if (entityId !== null) {
@@ -351,8 +353,7 @@ export class InputSystem extends withTransformer(class {}) {
      const entities = this.gameEngine.state.get('entities')
      if (!(entities instanceof Map)) return null
 
-     // Используем transformer.screenToGame для корректного преобразования
-     const transformer = ensureTransformer(this)
+     const transformer = this._getTransformer()
      const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
      
      // Ищем сущность, которая отрисована и содержит точку

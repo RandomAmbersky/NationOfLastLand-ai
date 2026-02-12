@@ -6,7 +6,7 @@
 import { GAME_CONFIG } from '../config/game-config.js'
 import { createRepository } from '../core/EntityRepository.js'
 import { drawEntity, createEntitySprite } from '../utils/entity-drawer.js'
-import { withTransformer, getTransformer } from '../utils/TransformerMixin.js'
+import { withTransformer } from '../utils/TransformerMixin.js'
 
 export class RendererSystem extends withTransformer(class {}) {
   constructor (gameEngine, coordinateService = null) {
@@ -22,12 +22,16 @@ export class RendererSystem extends withTransformer(class {}) {
   }
 
   init (app) {
-     this.app = app
-     this.entityRepository = createRepository(this.gameEngine.state)
-     this.setupGrid()
-     this.gameEngine.app = app
-     this.gameEngine.rendererSystem = this
-   }
+    this.app = app
+    this.entityRepository = createRepository(this.gameEngine.state)
+    this.setupGrid()
+    this.gameEngine.app = app
+    this.gameEngine.rendererSystem = this
+    // Initialize transformer via mixin's _getTransformer() fallback chain
+    if (!this.transformer) {
+      this.transformer = this._getTransformer()
+    }
+  }
 
   /**
    * Получить отрисованную сущность по ID
@@ -38,12 +42,14 @@ export class RendererSystem extends withTransformer(class {}) {
 
   /**
    * Get the coordinate transformer instance
+   * Override to support coordinateService, otherwise uses mixin's _getTransformer()
    */
   _getTransformer() {
     if (this.transformer) return this.transformer
     if (this.coordinateService && this.coordinateService.getTransformer) {
       return this.coordinateService.getTransformer()
     }
+    // Use mixin's _getTransformer() which has fallback chain
     return super._getTransformer()
   }
 

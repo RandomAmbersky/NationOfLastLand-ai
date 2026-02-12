@@ -4,6 +4,7 @@
  */
 
 import { StateContainer } from './StateContainer.js'
+import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
 
 export class System {
   constructor (gameEngine) {
@@ -43,7 +44,6 @@ export class GameEngine {
   setApp (app) {
     this.app = app
     // Create transformer once and share across systems
-    const { createCoordinateTransformer } = require('../utils/coordinate-transformer.js')
     this.transformer = createCoordinateTransformer(app)
   }
 

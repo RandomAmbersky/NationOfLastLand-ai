@@ -40,29 +40,3 @@ export function withTransformer(BaseClass) {
     }
   }
 }
-
-/**
- * Get the transformer from available sources
- * @param {Object} context - Context object with gameEngine/rendererSystem/app
- * @returns {Object|null} CoordinateTransformer or null
- */
-export function getTransformer(context) {
-  if (context.transformer) return context.transformer
-  if (context.gameEngine?.transformer) return context.gameEngine.transformer
-  if (context.rendererSystem?.transformer) return context.rendererSystem.transformer
-  if (context.app) return createCoordinateTransformer(context.app)
-  return null
-}
-
-/**
- * Get or create coordinate transformer
- * @param {Object} context - Context object
- * @returns {Object} CoordinateTransformer instance
- */
-export function ensureTransformer(context) {
-  if (context.transformer) return context.transformer
-  if (context.gameEngine?.transformer) return context.gameEngine.transformer
-  if (context.rendererSystem?.transformer) return context.rendererSystem.transformer
-  if (context.app) return context.transformer = createCoordinateTransformer(context.app)
-  return null
-}
