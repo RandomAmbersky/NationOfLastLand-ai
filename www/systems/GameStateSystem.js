@@ -45,10 +45,11 @@ export class GameStateSystem {
          this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
        }
 
-        // Подписываемся на событие клика по юниту
-        this.gameEngine.state.subscribe('entityClicked', (data) => {
-          this.selectionSystem?.handleEntityClicked(data)
-        })
+         // Подписываемся на событие клика по юниту
+         this.gameEngine.state.subscribe('entityClicked', (data) => {
+           console.log('GameStateSystem: entityClicked event received', data)
+           this.selectionSystem?.handleEntityClicked(data)
+         })
 
         // Подписываемся на событие выбора юнита (правая кнопка мыши)
         this.gameEngine.state.subscribe('entitySelected', (data) => {

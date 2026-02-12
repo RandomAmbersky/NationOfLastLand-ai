@@ -132,16 +132,17 @@ export class InputSystem {
 
      const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
 
-     if (entityAtPosition !== null) {
-       // Клик по юниту
-       const isMultiSelect = event.shiftKey
-       this.gameEngine.state.emit('entityClicked', {
-         entityId: entityAtPosition,
-         isMultiSelect,
-         gameX,
-         gameY
-       })
-     } else {
+      if (entityAtPosition !== null) {
+        // Клик по юниту
+        const isMultiSelect = event.shiftKey
+        console.log('InputSystem: entity clicked, id=', entityAtPosition, 'shiftKey=', isMultiSelect)
+        this.gameEngine.state.emit('entityClicked', {
+          entityId: entityAtPosition,
+          isMultiSelect,
+          gameX,
+          gameY
+        })
+      } else {
        // Клик по пустому месту
        const selections = this.gameEngine.state.get('selections')
        if (selections.size > 0) {

@@ -22,21 +22,22 @@ export class System {
 }
 
 export class GameEngine {
-  constructor (config = {}) {
-    this.config = config
-    this.state = new StateContainer({
-      isRunning: false,
-      lastUpdate: Date.now(),
-      deltaTime: 0,
-      time: 0,
-      entities: new Map(),
-      selections: new Set(),
-      bases: new Map()
-    })
-    this.systems = []
-    this._loopId = null
-    this._lastFrameTime = 0
-  }
+   constructor (config = {}) {
+     this.config = config
+     this.state = new StateContainer({
+       isRunning: false,
+       lastUpdate: Date.now(),
+       deltaTime: 0,
+       time: 0,
+       entities: new Map(),
+       selections: new Set(),
+       bases: new Map()
+     })
+     this.systems = []
+     this._loopId = null
+     this._lastFrameTime = 0
+     this.app = null
+   }
 
   addSystem (system) {
     if (!system || typeof system.update !== 'function') {

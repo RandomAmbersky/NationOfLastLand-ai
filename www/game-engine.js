@@ -100,10 +100,13 @@ export class GameEngineDemo {
      // Initialize input with app
      this.inputSystem.init(this.app)
 
-     // Initialize selection with app
-     this.selectionSystem.init(this.app)
+      // Initialize selection with app
+      this.selectionSystem.init(this.app)
+      
+      // Устанавливаем app в GameEngine для SelectionIndicator
+      this.gameEngine.app = this.app
 
-     // Add resize handler
+      // Add resize handler
      window.addEventListener('resize', () => this.handleResize())
    }
 
@@ -120,31 +123,31 @@ export class GameEngineDemo {
     }
   }
 
-  /**
-   * Initialize game
-   */
-  async initializeGame () {
-     try {
-       // Передаем selectionSystem в gameStateSystem
-       this.gameStateSystem.selectionSystem = this.selectionSystem
-       const result = await this.gameStateSystem.initializeGame()
-       this.isInitialized = true
-       this.gameEngine.start()
-       // Update status in DOM
-       const statusEl = document.getElementById('status')
-       if (statusEl) {
-         statusEl.textContent = 'Game initialized successfully!'
-       }
-       return result
-     } catch (error) {
-       console.error('Game initialization error:', error)
-       const statusEl = document.getElementById('status')
-       if (statusEl) {
-         statusEl.textContent = `Error: ${error.message}`
-       }
-       return { success: false, error: error.message }
-     }
-   }
+   /**
+    * Initialize game
+    */
+   async initializeGame () {
+      try {
+        // Передаем selectionSystem в gameStateSystem ДО инициализации
+        this.gameStateSystem.selectionSystem = this.selectionSystem
+        const result = await this.gameStateSystem.initializeGame()
+        this.isInitialized = true
+        this.gameEngine.start()
+        // Update status in DOM
+        const statusEl = document.getElementById('status')
+        if (statusEl) {
+          statusEl.textContent = 'Game initialized successfully!'
+        }
+        return result
+      } catch (error) {
+        console.error('Game initialization error:', error)
+        const statusEl = document.getElementById('status')
+        if (statusEl) {
+          statusEl.textContent = `Error: ${error.message}`
+        }
+        return { success: false, error: error.message }
+      }
+    }
 
   /**
    * Update game loop

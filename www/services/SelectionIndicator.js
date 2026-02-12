@@ -14,6 +14,7 @@ export class SelectionIndicator {
   createSelectionIndicator(entity, isEnemy = false) {
      const app = this._getApp()
      if (!app) return
+     if (!entity || !entity.container) return
      const graphics = new PIXI.Graphics()
      const color = isEnemy
        ? GAME_CONFIG.COLORS.selection.enemy

@@ -80,17 +80,22 @@ export class SelectionSystem {
     return entity.fraction === 'Player'
   }
 
-  /**
-   * Обработка клика по юниту (правила из units_moving_rules.md)
-   */
-  handleEntityClicked (data) {
-    const { entityId, isMultiSelect, gameX, gameY } = data
-    const state = this.gameEngine.state
-    const selections = state.get('selections')
-    const entities = state.get('entities')
-    const clickedEntity = entities.get(entityId)
+   /**
+    * Обработка клика по юниту (правила из units_moving_rules.md)
+    */
+   handleEntityClicked (data) {
+     const { entityId, isMultiSelect, gameX, gameY } = data
+     console.log('SelectionSystem.handleEntityClicked:', data)
+     const state = this.gameEngine.state
+     const selections = state.get('selections')
+     const entities = state.get('entities')
+     const clickedEntity = entities.get(entityId)
+     console.log('clickedEntity:', clickedEntity)
 
-    if (!clickedEntity) return
+     if (!clickedEntity) {
+       console.warn('handleEntityClicked: clickedEntity not found for id', entityId)
+       return
+     }
 
     // Если ничего не выбрано - просто выбираем юнит
     if (selections.size === 0) {
