@@ -16,73 +16,73 @@ import {
 } from '../wasm-imports.js'
 
 export class GameStateSystem {
-  constructor (gameEngine) {
+  constructor(gameEngine) {
     this.gameEngine = gameEngine
     this.isDestroyed = false
   }
 
-  async initializeGame () {
-     try {
-       // Initialize WASM if not already initialized
-       await initWasm()
-       const result = gameInit()
-       const gameState = JSON.parse(result)
-       
-       this.gameEngine.state.merge({
-         isRunning: false,
-         lastUpdate: Date.now(),
-         time: gameState.time,
-         entitiesCount: gameState.entities_count,
-         alertsCount: gameState.alerts_count
-       }, 'gameInitialized')
+  async initializeGame() {
+    try {
+      // Initialize WASM if not already initialized
+      await initWasm()
+      const result = gameInit()
+      const gameState = JSON.parse(result)
 
-       if (gameState.entities) {
-         const existingEntities = this.gameEngine.state.get('entities')
-         const entitiesMap = existingEntities instanceof Map ? existingEntities : new Map()
-         for (const entity of gameState.entities) {
-           entitiesMap.set(entity.id, entity)
-         }
-         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
-       }
+      this.gameEngine.state.merge({
+        isRunning: false,
+        lastUpdate: Date.now(),
+        time: gameState.time,
+        entitiesCount: gameState.entities_count,
+        alertsCount: gameState.alerts_count
+      }, 'gameInitialized')
 
-         // Подписываемся на событие клика по юниту
-         this.gameEngine.state.subscribe('entityClicked', (data) => {
-           console.log('GameStateSystem: entityClicked event received', data)
-           this.selectionSystem?.handleEntityClicked(data)
-           this._handleEntityClicked(data)
-         })
+      if (gameState.entities) {
+        const existingEntities = this.gameEngine.state.get('entities')
+        const entitiesMap = existingEntities instanceof Map ? existingEntities : new Map()
+        for (const entity of gameState.entities) {
+          entitiesMap.set(entity.id, entity)
+        }
+        this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
+      }
 
-        // Подписываемся на событие выбора юнита (правая кнопка мыши)
-        this.gameEngine.state.subscribe('entitySelected', (data) => {
-          this.selectionSystem?.handleEntitySelected(data)
-        })
+      // Подписываемся на событие клика по юниту
+      this.gameEngine.state.subscribe('entityClicked', (data) => {
+        console.log('GameStateSystem: entityClicked event received', data)
+        this.selectionSystem?.handleEntityClicked(data)
+        this._handleEntityClicked(data)
+      })
 
-        // Подписываемся на событие сброса выделения
-        this.gameEngine.state.subscribe('selectionCleared', (data) => {
-          this.selectionSystem?.handleSelectionCleared(data)
-        })
+      // Подписываемся на событие выбора юнита (правая кнопка мыши)
+      this.gameEngine.state.subscribe('entitySelected', (data) => {
+        this.selectionSystem?.handleEntitySelected(data)
+      })
 
-        // Подписываемся на событие выделения прямоугольником
-        this.gameEngine.state.subscribe('rectangleSelection', (data) => {
-          this.selectionSystem?.handleRectangleSelection(data)
-        })
+      // Подписываемся на событие сброса выделения
+      this.gameEngine.state.subscribe('selectionCleared', (data) => {
+        this.selectionSystem?.handleSelectionCleared(data)
+      })
 
-        return { success: true, data: gameState }
-     } catch (error) {
-       return { success: false, error: error.message }
-     }
-   }
+      // Подписываемся на событие выделения прямоугольником
+      this.gameEngine.state.subscribe('rectangleSelection', (data) => {
+        this.selectionSystem?.handleRectangleSelection(data)
+      })
 
-  async spawnVehicle (vehicleType, baseEntity) {
+      return { success: true, data: gameState }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  async spawnVehicle(vehicleType, baseEntity) {
     if (!baseEntity) {
       return { success: false, error: 'No base selected' }
     }
 
-     const distance = 10 + Math.random() * 30
-     const angle = Math.random() * Math.PI * 2
+    const distance = 10 + Math.random() * 30
+    const angle = Math.random() * Math.PI * 2
 
-     // Rust Position struct serializes as { x, y } object
-     const { x: baseX, y: baseY } = this.gameEngine.coordinateService?.normalizeCoords(baseEntity.position, baseEntity.gameX) ?? { x: 0, y: 0 }
+    // Rust Position struct serializes as { x, y } object
+    const { x: baseX, y: baseY } = this.gameEngine.coordinateService?.normalizeCoords(baseEntity.position, baseEntity.gameX) ?? { x: 0, y: 0 }
 
     const spawnX = baseX + Math.cos(angle) * distance
     const spawnY = baseY + Math.sin(angle) * distance
@@ -100,7 +100,7 @@ export class GameStateSystem {
     }
   }
 
-  async createBase (x, y) {
+  async createBase(x, y) {
     try {
       const result = create_base(x, y)
       const baseInfo = JSON.parse(result)
@@ -110,7 +110,7 @@ export class GameStateSystem {
     }
   }
 
-  async buildFloor (baseId, floorType) {
+  async buildFloor(baseId, floorType) {
     try {
       const result = build_floor(baseId, floorType)
       const updatedBase = JSON.parse(result)
@@ -120,7 +120,7 @@ export class GameStateSystem {
     }
   }
 
-  async createRandomAlert () {
+  async createRandomAlert() {
     try {
       const result = create_random_alert()
       const alertResult = JSON.parse(result)
@@ -130,7 +130,7 @@ export class GameStateSystem {
     }
   }
 
-  async setGroupTarget (x, y) {
+  async setGroupTarget(x, y) {
     try {
       const result = set_group_target(x, y)
       const groupResult = JSON.parse(result)
@@ -140,7 +140,7 @@ export class GameStateSystem {
     }
   }
 
-  updateGameLoop (dt) {
+  updateGameLoop(dt) {
     try {
       const result = update(dt)
       const gameState = JSON.parse(result)
@@ -176,58 +176,65 @@ export class GameStateSystem {
     }
   }
 
-  destroy () {
+  destroy() {
     if (this.isDestroyed) return
     this.isDestroyed = true
     this.gameEngine = null
   }
 
-  update (dt) {
+  update(dt) {
     // Call updateGameLoop for game state updates
     return this.updateGameLoop(dt)
   }
 
-  render () {
+  render() {
     // GameStateSystem does not render anything
   }
 
-  clearSelection () {
-     try {
-       return _clearSelection()
-     } catch (error) {
-       return null
-     }
-   }
+  clearSelection() {
+    try {
+      return _clearSelection()
+    } catch (error) {
+      return null
+    }
+  }
 
-  _handleEntityClicked (data) {
-     const { entityId, isMultiSelect, gameX, gameY } = data
-     const entities = this.gameEngine.state.get('entities')
-     const entity = entities.get(entityId)
-     
-     if (entity) {
-       console.log('Entity clicked:', entity)
-       // Здесь можно добавить отображение параметров юнита в UI
-       // Например, обновить элемент DOM с информацией о юните
-       this._showEntityInfo(entity)
-     }
-   }
+  _handleEntityClicked(data) {
+    const { entityId, isMultiSelect, gameX, gameY } = data
+    const entities = this.gameEngine.state.get('entities')
+    const entity = entities.get(entityId)
 
-  _showEntityInfo (entity) {
-     // Пытаемся найти элемент для отображения информации
-     const entityInfoEl = document.getElementById('entity-info')
-     if (entityInfoEl) {
-       const info = `
+    if (entity) {
+      console.log('Entity clicked:', entity)
+      // Здесь можно добавить отображение параметров юнита в UI
+      // Например, обновить элемент DOM с информацией о юните
+      this._showEntityInfo(entity)
+    }
+  }
+
+  _showEntityInfo(entity) {
+    // Пытаемся найти элемент для отображения информации
+    const entityInfoEl = document.getElementById('entity-info')
+    if (entityInfoEl) {
+      // Получаем тип: приоритет от subtype (из Rust), затем entity_type
+      const typeValue = entity.subtype || entity.entity_type || 'N/A'
+      // Получаем фракцию
+      const fractionValue = entity.fraction || 'N/A'
+      // Получаем позицию: приоритет от gameX/gameY, затем из position
+      const gameX = entity.gameX ?? (entity.position?.x ?? 0)
+      const gameY = entity.gameY ?? (entity.position?.y ?? 0)
+      const info = `
 ID: ${entity.id}
-Тип: ${entity.vehicleType || entity.type}
-Фракция: ${entity.fraction || 'N/A'}
-Позиция: (${entity.gameX?.toFixed(1) ?? 0}, ${entity.gameY?.toFixed(1) ?? 0})
+Тип: ${typeValue}
+Фракция: ${fractionValue}
+Позиция: (${gameX.toFixed(1)}, ${gameY.toFixed(1)})
        `
-       entityInfoEl.textContent = info
-       entityInfoEl.style.display = 'block'
-     }
-   }
+      entityInfoEl.textContent = info
+      entityInfoEl.style.display = 'block'
+    }
+  }
 }
 
-export function createGameStateSystem (gameEngine) {
+export function createGameStateSystem(gameEngine) {
   return new GameStateSystem(gameEngine)
 }
