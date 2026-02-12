@@ -109,7 +109,7 @@ class InputSystem {
       this._processDragSelection()
     } else {
       if (drag.graphics) {
-        this.app.stage.removeChild(drag.graphics)
+        this._removeDragGraphics(drag.graphics)
         drag.graphics = null
       }
     }
@@ -124,7 +124,7 @@ class InputSystem {
     drag.hasDragged = false
 
     if (drag.graphics) {
-      this.app.stage.removeChild(drag.graphics)
+      this._removeDragGraphics(drag.graphics)
       drag.graphics = null
     }
   }
@@ -199,8 +199,31 @@ class InputSystem {
   _cleanupDragGraphics() {
     const drag = this.dragState
     if (drag.graphics && !drag.isDragging) {
-      this.app.stage.removeChild(drag.graphics)
+      this._removeDragGraphics(drag.graphics)
       drag.graphics = null
+    }
+  }
+
+  _setupDragGraphics() {
+    const drag = this.dragState
+    if (drag.graphics) {
+      this._removeDragGraphics(drag.graphics)
+    }
+    drag.graphics = { destroy: jest.fn() }
+    this._addDragGraphics(drag.graphics)
+  }
+
+  _addDragGraphics(graphics) {
+    // Mock implementation for test - in real code would use RendererSystem
+    if (this.app && this.app.stage) {
+      this.app.stage.addChild(graphics)
+    }
+  }
+
+  _removeDragGraphics(graphics) {
+    // Mock implementation for test - in real code would use RendererSystem
+    if (this.app && this.app.stage) {
+      this.app.stage.removeChild(graphics)
     }
   }
 
@@ -214,7 +237,7 @@ class InputSystem {
       drag.isDragging = false
       drag.mouseLeftCanvas = false
       if (drag.graphics) {
-        this.app.stage.removeChild(drag.graphics)
+        this._removeDragGraphics(drag.graphics)
         drag.graphics = null
       }
     }
@@ -227,13 +250,7 @@ class InputSystem {
     drag.hasDragged = false
     drag.mouseLeftCanvas = false
 
-    if (drag.graphics) {
-      this.app.stage.removeChild(drag.graphics)
-      drag.graphics = null
-    }
-
-    drag.graphics = { destroy: jest.fn() }
-    this.app.stage.addChild(drag.graphics)
+    this._setupDragGraphics()
   }
 
   _updateDragSelection(event) {
@@ -269,7 +286,7 @@ class InputSystem {
     drag.mouseLeftCanvas = false
 
     if (drag.graphics) {
-      this.app.stage.removeChild(drag.graphics)
+      this._removeDragGraphics(drag.graphics)
       drag.graphics = null
     }
   }
@@ -286,7 +303,7 @@ class InputSystem {
     }
 
     if (drag.graphics) {
-      this.app.stage.removeChild(drag.graphics)
+      this._removeDragGraphics(drag.graphics)
       drag.graphics = null
     }
   }
