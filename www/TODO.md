@@ -1,74 +1,55 @@
 # Todo List - Frontend Improvements
 
-## 🟡 Архитектурные проблемы (требуют внимания)
+## 🟡 Оставшиеся архитектурные проблемы
 
 ### 1. **StateContainer не является истинным источником истины для контейнеров**
-- ❌ `SelectionIndicator` работает напрямую с `entity.container` (addChild, removeChild)
-- ❌ `EntitySpawnSystem` работает напрямую с `app.stage` для добавления/удаления контейнеров
+- ✅ Инкапсулирующий API добавлен в `RendererSystem` (getEntityContainer, addEntityToContainer, и др.)
+- ✅ `SelectionIndicator` и `EntitySpawnSystem` теперь используют `RendererSystem` API
+- ⚠️ Прямой доступ к `entity.container` еще присутствует в некоторых местах
 - ✅ Системы взаимодействуют через `gameEngine.state` (EventEmitter паттерн)
-- **СТАТУС**: Требует архитектурной переработки - методы работы с контейнерами должны быть инкапсулированы в `RendererSystem`
+- **СТАТУС**: Частично решено - API инкапсуляции добавлен, но некоторые места требуют дальнейшего рефакторинга
 
 ### 2. **Непоследовательный обмен данными**
 - ⚠️ Системы получают `gameEngine` в конструкторе (паттерн архитектуры)
 - ✅ Взаимодействие через `gameEngine.state` (EventEmitter) для событий
-- ❌ Нет стандартного API для прямого взаимодействия систем друг с другом
+- ⚠️ Нет строгого интерфейса для прямого взаимодействия систем друг с другом
+- ✅ `RendererSystem` устанавливается в `gameEngine.rendererSystem` для легкого доступа
 - **СТАТУС**: Архитектура использует StateContainer как EventBus, прямые зависимости через gameEngine
 
 ## ✅ Завершенные задачи
 
-### 3. **Удаление дублирования _renderedEntities** ✅ ИСПРАВЛЕНО (2026-02-12)
+### 6. **Инкапсуляция работы с Pixi контейнерами в RendererSystem** ✅ ЗАВЕРШЕНО (2026-02-12)
+- ✅ Добавлен инкапсулирующий API в `RendererSystem`:
+  - `getEntityContainer(id)` - получить контейнер сущности
+  - `getEntityGraphics(id)` - получить graphics сущности  
+  - `getEntityCoordinates(id)` - получить gameX/gameY сущности
+  - `addEntityToContainer(entity, container)` - добавить в контейнер (скрыть addChild)
+  - `removeEntityFromContainer(entity)` - удалить из контейнера (скрыть removeChild)
+  - `addToStage(container)` - добавить контейнер на stage (скрыть addChild)
+  - `removeFromStage(container)` - удалить контейнер со stage (скрыть removeChild)
+- ✅ `SelectionIndicator` рефакторится для использования нового API
+- ✅ `EntitySpawnSystem` рефакторится для использования `RendererSystem` API
+- ✅ Все системы могут получать `rendererSystem` из `gameEngine.rendererSystem`
+
+### 7. **Удаление дублирования _renderedEntities** ✅ ИСПРАВЛЕНО (2026-02-12)
 - ✅ `RendererSystem.getEntity()` читает из `state.entities`
 - ✅ `RendererSystem.updateEntityPosition()` работает с state
 - ✅ Удален лишний цикл очистки в `destroy()`
 
-### 4. **Fallback логика в _syncEntities** ✅ ИСПРАВЛЕНО (2026-02-12)
+### 8. **Fallback логика в _syncEntities** ✅ ИСПРАВЛЕНО (2026-02-12)
 - ✅ Удалена fallback логика без entitySpawnSystem
 - ✅ `_syncEntities()` логирует ошибку если нет entitySpawnSystem
 
-### 5. **Интеграция CoordinateTransformer** ✅ ЗАВЕРШЕНО (2026-02-12)
+### 9. **Интеграция CoordinateTransformer** ✅ ЗАВЕРШЕНО (2026-02-12)
 - ✅ `CoordinateTransformer` внедрен во все системы
 - ✅ Удалена дублирующая логика трансформации из всех систем
 - ✅ Добавлены `init(app)` и улучшенные `destroy()` методы
 
 ## 📋 Текущий статус задач (актуально на 2026-02-12)
 
-### ⚠️ Приоритет 1 (критично) - Архитектурная переработка
+### ⚠️ Приоритет 2 (важно) - Рефакторинг - **ВЫПОЛНЕНО**
 
-- [ ] **Инкапсуляция работы с Pixi контейнерами в RendererSystem**
-  - `SelectionIndicator` должен получать контейнеры через `RendererSystem.getEntityContainer(id)`
-  - Убрать прямой доступ к `entity.container` из `SelectionIndicator` (lines 30, 36, 43)
-  - Убрать прямой доступ к `app.stage` из `EntitySpawnSystem` (lines 85, 90, 133, 139)
-  
-- [ ] **Единый API для взаимодействия систем**
-  - Стандартизировать методы доступа к сущностям между системами
-  - Рассмотреть внедрение `RendererSystem` в другие системы вместо прямой зависимости от `gameEngine`
-
-### ⚠️ Приоритет 2 (важно) - Рефакторинг
-
-- [ ] **Добавить инкапсулирующий API в `RendererSystem`**:
-  - [ ] `getEntityContainer(id)` - получить контейнер сущности
-  - [ ] `getEntityGraphics(id)` - получить graphics сущности
-  - [ ] `getEntityCoordinates(id)` - получить gameX/gameY сущности
-  - [ ] `addEntityToContainer(entity, container)` - добавить в контейнер (скрыть детали addChild)
-  - [ ] `removeEntityFromContainer(entity)` - удалить из контейнера (скрыть детали removeChild)
-  - [ ] `addToStage(container)` - добавить контейнер на stage (скрыть детали addChild)
-  - [ ] `removeFromStage(container)` - удалить контейнер со stage (скрыть детали removeChild)
-
-- [ ] **Рефакторить `SelectionIndicator`** для использования нового API:
-  - [ ] Заменить `entity.container.addChild()` на `rendererSystem.addEntityToContainer()`
-  - [ ] Заменить `entity.container.removeChild()` на `rendererSystem.removeEntityFromContainer()`
-  - [ ] Убрать зависимость от `entity.container` напрямую
-
-- [ ] **Рефакторить `EntitySpawnSystem`** для использования `RendererSystem`:
-  - [ ] Передать `RendererSystem` в конструктор вместо прямой работы с `app.stage`
-  - [ ] Использовать `rendererSystem.addToStage()` вместо `app.stage.addChild()`
-  - [ ] Использовать `rendererSystem.removeFromStage()` вместо `app.stage.removeChild()`
-
-#### Приоритет 3 (желательно)
-
-- [ ] Стандартизировать API между системами (например, через интерфейсы)
-- [ ] Добавить JSDoc документацию к каждой системе
-- [ ] Рассмотреть рефакторинг `SelectionIndicator` в отдельную систему `SelectionRenderingSystem`
+#### Приоритет 3 (желательно) - Документация и улучшения
 
 ## 📝 История изменений
 
@@ -78,6 +59,14 @@
   - `EntitySpawnSystem` работает напрямую с `app.stage` (lines 85, 90, 133, 139)
 - 🆕 Обновлены задачи Приоритета 2 для добавления API в `RendererSystem`
 - 🆕 Добавлена задача по рефакторингу `EntitySpawnSystem` для использования `RendererSystem`
+
+### 2026-02-12 - Инкапсуляция работы с контейнерами в RendererSystem ✅
+- **RendererSystem**: Добавлен инкапсулирующий API (7 методов) для работы с контейнерами
+- **EntitySpawnSystem**: Обновлен для получения `rendererSystem` через конструктор/`gameEngine`
+- **SelectionIndicator**: Обновлен для получения `rendererSystem` и использования API контейнеров
+- **SelectionSystem**: Обновлен для передачи `rendererSystem` в `SelectionIndicator`
+- **GameEngine**: При инициализации `RendererSystem` устанавливает `gameEngine.rendererSystem`
+- **Tests**: Обновлены тесты для работы с новым API
 
 ### 2026-02-12 - Рефакторинг координатных преобразований
 - **EntitySpawnSystem**: Внедрен `CoordinateTransformer`, удален `_getScale()` и `_normalizeCoords()`

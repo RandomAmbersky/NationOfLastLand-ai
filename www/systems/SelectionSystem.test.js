@@ -26,8 +26,9 @@ const GAME_CONFIG = {
 
 // Mock SelectionIndicator
 class MockSelectionIndicator {
-  constructor(gameEngine) {
+  constructor(gameEngine, rendererSystem = null) {
     this.gameEngine = gameEngine
+    this.rendererSystem = rendererSystem
     this.updateIndicators = jest.fn()
     this.destroy = jest.fn()
   }
@@ -59,7 +60,8 @@ class SelectionSystem {
 
   init(app) {
     this.app = app
-    this.selectionIndicator = new MockSelectionIndicator(this.gameEngine)
+    this.rendererSystem = this.gameEngine.rendererSystem || null
+    this.selectionIndicator = new MockSelectionIndicator(this.gameEngine, this.rendererSystem)
     this.entityService = new MockEntityService(this.gameEngine)
     this._buildIndices()
   }

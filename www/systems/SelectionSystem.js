@@ -22,7 +22,9 @@ export class SelectionSystem {
 
   init(app) {
     this.app = app
-    this.selectionIndicator = new SelectionIndicator(this.gameEngine)
+    // Получаем rendererSystem из gameEngine (устанавливается при инициализации RendererSystem)
+    this.rendererSystem = this.gameEngine.rendererSystem || null
+    this.selectionIndicator = new SelectionIndicator(this.gameEngine, this.rendererSystem)
     this.entityService = new EntityService(this.gameEngine)
     this.transformer = createCoordinateTransformer(app)
     this._buildIndices()

@@ -7,9 +7,10 @@ import { EntityService } from '../entity-service.js'
 import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
 
 export class EntitySpawnSystem {
-  constructor(gameEngine) {
+  constructor(gameEngine, rendererSystem = null) {
     this.gameEngine = gameEngine
     this.entityService = new EntityService(gameEngine)
+    this.rendererSystem = rendererSystem
     this.transformer = null
     this.isDestroyed = false
   }
@@ -17,6 +18,11 @@ export class EntitySpawnSystem {
   init(app) {
     this.app = app
     this.transformer = createCoordinateTransformer(app)
+    
+    // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
+    if (!this.rendererSystem && this.gameEngine.rendererSystem) {
+      this.rendererSystem = this.gameEngine.rendererSystem
+    }
   }
 
   /**
@@ -69,7 +75,13 @@ export class EntitySpawnSystem {
     container.y = screenY
     container.gameX = x
     container.gameY = y
-    app.stage.addChild(container)
+    
+    // Используем RendererSystem для добавления на stage (если доступен)
+    if (this.rendererSystem && this.rendererSystem.addToStage) {
+      this.rendererSystem.addToStage(container)
+    } else {
+      app.stage.addChild(container)
+    }
 
     const entity = {
       id,
@@ -101,11 +113,14 @@ export class EntitySpawnSystem {
     const entity = entities.get(id)
     if (!entity || !entity.container) return
 
-    // Remove from stage
-    if (this.gameEngine.app) {
+    // Remove from stage using RendererSystem API (если доступен)
+    if (this.rendererSystem && this.rendererSystem.removeFromStage) {
+      this.rendererSystem.removeFromStage(entity.container)
+    } else if (this.gameEngine.app) {
       this.gameEngine.app.stage.removeChild(entity.container)
-      entity.container.destroy({ children: true, texture: true, baseTexture: true })
     }
+    
+    entity.container.destroy({ children: true, texture: true, baseTexture: true })
 
     // Remove from state
     entities.delete(id)

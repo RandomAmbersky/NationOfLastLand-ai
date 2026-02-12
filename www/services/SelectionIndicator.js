@@ -8,39 +8,64 @@ import { GAME_CONFIG } from '../config/game-config.js'
 import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
 
 export class SelectionIndicator {
-  constructor(gameEngine) {
+  constructor(gameEngine, rendererSystem = null) {
     this.gameEngine = gameEngine
+    this.rendererSystem = rendererSystem
     this.transformer = null
     this.isDestroyed = false
   }
 
   init(app) {
     this.transformer = createCoordinateTransformer(app)
+    
+    // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
+    if (!this.rendererSystem && this.gameEngine.rendererSystem) {
+      this.rendererSystem = this.gameEngine.rendererSystem
+    }
   }
 
   createSelectionIndicator(entity, isEnemy = false) {
      if (!this.transformer) return
      if (!entity || !entity.container) return
-     const graphics = new PIXI.Graphics()
+     
+     const indicatorGraphics = new PIXI.Graphics()
      const color = isEnemy
        ? GAME_CONFIG.COLORS.selection.enemy
        : GAME_CONFIG.COLORS.selection.player
-     graphics.lineStyle(3, color, 1)
-     graphics.drawCircle(0, 0, 12)
-     entity.container.addChild(graphics)
-     entity.selectionIndicator = graphics
+     indicatorGraphics.lineStyle(3, color, 1)
+     indicatorGraphics.drawCircle(0, 0, 12)
+     
+     // Используем RendererSystem для добавления в контейнер (если доступен)
+     if (this.rendererSystem && this.rendererSystem.addEntityToContainer) {
+       this.rendererSystem.addEntityToContainer({ container: indicatorGraphics }, entity.container)
+     } else {
+       entity.container.addChild(indicatorGraphics)
+     }
+     
+     entity.selectionIndicator = indicatorGraphics
    }
 
   removeSelectionIndicator(entity) {
     if (entity && entity.selectionIndicator) {
-      entity.container.removeChild(entity.selectionIndicator)
+      // Используем RendererSystem для удаления из контейнера (если доступен)
+      if (this.rendererSystem && this.rendererSystem.removeEntityFromContainer) {
+        this.rendererSystem.removeEntityFromContainer({ container: entity.selectionIndicator })
+      } else if (entity.container && entity.selectionIndicator.parent) {
+        entity.container.removeChild(entity.selectionIndicator)
+      }
       entity.selectionIndicator = null
     }
   }
 
   removeInfoIndicator(entity) {
     if (entity && entity.infoIndicator) {
-      entity.container.removeChild(entity.infoIndicator)
+      // Используем RendererSystem для удаления из контейнера (если доступен)
+      if (this.rendererSystem && this.rendererSystem.removeEntityFromContainer) {
+        this.rendererSystem.removeEntityFromContainer({ container: entity.infoIndicator })
+      } else if (entity.container && entity.infoIndicator.parent) {
+        entity.container.removeChild(entity.infoIndicator)
+      }
+      
       if (entity.infoIndicator.destroy) {
         entity.infoIndicator.destroy({ children: true, texture: true, baseTexture: true })
       }

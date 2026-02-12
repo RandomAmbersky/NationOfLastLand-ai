@@ -25,6 +25,8 @@ export class RendererSystem {
      this.setupGrid()
      // Добавляем app в gameEngine для использования другими системами
      this.gameEngine.app = app
+     // Устанавливаем ссылку на себя в gameEngine для других систем
+     this.gameEngine.rendererSystem = this
    }
 
   /**
@@ -49,6 +51,80 @@ export class RendererSystem {
       return this.transformer
     }
     return null
+  }
+
+  // ============== Инкапсулирующий API для работы с контейнерами ==============
+
+  /**
+   * Get container for an entity
+   * @param {number} id - Entity ID
+   * @returns {PIXI.Container|null} Entity container or null
+   */
+  getEntityContainer(id) {
+    const entity = this.getEntity(id)
+    return entity ? entity.container : null
+  }
+
+  /**
+   * Get graphics for an entity
+   * @param {number} id - Entity ID
+   * @returns {PIXI.Graphics|null} Entity graphics or null
+   */
+  getEntityGraphics(id) {
+    const entity = this.getEntity(id)
+    return entity ? entity.graphics : null
+  }
+
+  /**
+   * Get game coordinates for an entity
+   * @param {number} id - Entity ID
+   * @returns {{gameX: number, gameY: number}|null} Game coordinates or null
+   */
+  getEntityCoordinates(id) {
+    const entity = this.getEntity(id)
+    if (!entity) return null
+    return { gameX: entity.gameX, gameY: entity.gameY }
+  }
+
+  /**
+   * Add entity to container (abstracts addChild)
+   * @param {Object} entity - Entity object
+   * @param {PIXI.Container} container - Parent container
+   */
+  addEntityToContainer(entity, container) {
+    if (!entity || !entity.container || !container) return
+    container.addChild(entity.container)
+  }
+
+  /**
+   * Remove entity from its container (abstracts removeChild)
+   * @param {Object} entity - Entity object
+   */
+  removeEntityFromContainer(entity) {
+    if (!entity || !entity.container) return
+    if (entity.container.parent) {
+      entity.container.parent.removeChild(entity.container)
+    }
+  }
+
+  /**
+   * Add container to stage (abstracts addChild)
+   * @param {PIXI.Container} container - Container to add
+   */
+  addToStage(container) {
+    if (!container || !this.app) return
+    this.app.stage.addChild(container)
+  }
+
+  /**
+   * Remove container from stage (abstracts removeChild)
+   * @param {PIXI.Container} container - Container to remove
+   */
+  removeFromStage(container) {
+    if (!container || !this.app) return
+    if (container.parent) {
+      container.parent.removeChild(container)
+    }
   }
 
   /**
