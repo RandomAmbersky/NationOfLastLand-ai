@@ -31,39 +31,37 @@ export class RendererSystem {
     return this._renderedEntities.get(id)
   }
 
-  /**
-   * Обновить позицию сущности на основе данных из state.entities
-   */
-  updateEntityPosition (id, gameX, gameY) {
-    const entity = this._renderedEntities.get(id)
-    if (!entity || !entity.container) return
+   /**
+    * Обновить позицию сущности на основе данных из state.entities
+    */
+   updateEntityPosition (id, gameX, gameY) {
+     const entity = this._renderedEntities.get(id)
+     if (!entity || !entity.container) return
 
-    const { x: scaleX, y: scaleY } = this._getScale()
-    // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
-    const x = (Array.isArray(gameX) ? gameX[0] : gameX?.x) ?? gameX ?? 0
-    const y = (Array.isArray(gameY) ? gameY[1] : gameY?.y) ?? gameY ?? 0
-    const screenX = x * scaleX
-    const screenY = y * scaleY
+     const { x: scaleX, y: scaleY } = this._getScale()
+     // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
+     const { x, y } = this.gameEngine.coordinateService?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
+     const screenX = x * scaleX
+     const screenY = y * scaleY
 
-    entity.container.x = screenX
-    entity.container.y = screenY
-    entity.x = screenX
-    entity.y = screenY
-    entity.gameX = x
-    entity.gameY = y
-  }
+     entity.container.x = screenX
+     entity.container.y = screenY
+     entity.x = screenX
+     entity.y = screenY
+     entity.gameX = x
+     entity.gameY = y
+   }
 
-  /**
-   * Создать спрайт сущности и добавить в state.entities
-   * Возвращает объект сущности с container и graphics
-   */
-  createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
-    const { x: scaleX, y: scaleY } = this._getScale()
-    // x и y могут быть массивом [x, y], объектом {x, y} или просто числами
-    const posX = (Array.isArray(x) ? x[0] : x?.x) ?? x ?? 0
-    const posY = (Array.isArray(y) ? y[1] : y?.y) ?? y ?? 0
-    const screenX = posX * scaleX
-    const screenY = posY * scaleY
+   /**
+    * Создать спрайт сущности и добавить в state.entities
+    * Возвращает объект сущности с container и graphics
+    */
+   createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
+     const { x: scaleX, y: scaleY } = this._getScale()
+     // x и y могут быть массивом [x, y], объектом {x, y} или просто числами
+     const { x: posX, y: posY } = this.gameEngine.coordinateService?.normalizeCoords(x, y) ?? { x: 0, y: 0 }
+     const screenX = posX * scaleX
+     const screenY = posY * scaleY
 
     const graphics = new PIXI.Graphics()
     let color
@@ -183,18 +181,17 @@ export class RendererSystem {
     }
   }
 
-  showTargetIndicator (gameX, gameY) {
-    if (this.targetIndicator) {
-      this.app.stage.removeChild(this.targetIndicator)
-      this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
-    }
+   showTargetIndicator (gameX, gameY) {
+     if (this.targetIndicator) {
+       this.app.stage.removeChild(this.targetIndicator)
+       this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
+     }
 
-    const { x: scaleX, y: scaleY } = this._getScale()
-    // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
-    const x = (Array.isArray(gameX) ? gameX[0] : gameX?.x) ?? gameX ?? 0
-    const y = (Array.isArray(gameY) ? gameY[1] : gameY?.y) ?? gameY ?? 0
-    const screenX = x * scaleX
-    const screenY = y * scaleY
+     const { x: scaleX, y: scaleY } = this._getScale()
+     // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
+     const { x, y } = this.gameEngine.coordinateService?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
+     const screenX = x * scaleX
+     const screenY = y * scaleY
 
     const container = new PIXI.Container()
     const graphics = new PIXI.Graphics()

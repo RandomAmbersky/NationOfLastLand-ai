@@ -57,12 +57,11 @@ export class GameStateSystem {
       return { success: false, error: 'No base selected' }
     }
 
-    const distance = 10 + Math.random() * 30
-    const angle = Math.random() * Math.PI * 2
+     const distance = 10 + Math.random() * 30
+     const angle = Math.random() * Math.PI * 2
 
-    // Rust Position struct serializes as { x, y } object
-    const baseX = baseEntity.position?.x ?? baseEntity.gameX ?? 0
-    const baseY = baseEntity.position?.y ?? baseEntity.gameY ?? 0
+     // Rust Position struct serializes as { x, y } object
+     const { x: baseX, y: baseY } = this.gameEngine.coordinateService?.normalizeCoords(baseEntity.position, baseEntity.gameX) ?? { x: 0, y: 0 }
 
     const spawnX = baseX + Math.cos(angle) * distance
     const spawnY = baseY + Math.sin(angle) * distance

@@ -57,10 +57,9 @@ export class EntityService {
       }
     }
 
-    // Создаем объект сущности с координатами игры
-    // Rust Position struct serializes as { x, y } object
-    const posX = entityData.position?.x ?? 0
-    const posY = entityData.position?.y ?? 0
+     // Создаем объект сущности с координатами игры
+     // Rust Position struct serializes as { x, y } object
+     const { x: posX, y: posY } = this.gameDemo.coordinateService?.normalizeCoords(entityData.position) ?? { x: 0, y: 0 }
 
     return {
       id: entityData.id,

@@ -74,15 +74,35 @@ export class CoordinateService {
     }
   }
 
-  /**
-     * Конвертирует игровые координаты в экранные с учетом контейнера
-     * @param {number} gameX - Игровая координата X
-     * @param {number} gameY - Игровая координата Y
-     * @returns {Object} Экранные координаты
-     */
-  getScreenCoords(gameX, gameY) {
-    return this.gameToScreen(gameX, gameY)
-  }
+   /**
+      * Нормализует координаты в объект {x, y}
+      * Поддерживает: число, массив [x, y], объект {x, y}
+      * @param {*} gameX - Игровая координата X (число, массив или объект)
+      * @param {*} gameY - Игровая координата Y (опционально)
+      * @returns {Object} Нормализованные координаты {x, y}
+      */
+   normalizeCoords(gameX, gameY) {
+     // Если gameX - массив [x, y]
+     if (Array.isArray(gameX)) {
+       return { x: gameX[0] ?? 0, y: gameX[1] ?? 0 }
+     }
+     // Если gameX - объект {x, y}
+     if (gameX && typeof gameX === 'object' && !Array.isArray(gameX)) {
+       return { x: gameX.x ?? 0, y: gameY?.y ?? gameX.y ?? 0 }
+     }
+     // Если gameX - число, gameY - число
+     return { x: gameX ?? 0, y: gameY ?? 0 }
+   }
+
+   /**
+      * Конвертирует игровые координаты в экранные с учетом контейнера
+      * @param {number} gameX - Игровая координата X
+      * @param {number} gameY - Игровая координата Y
+      * @returns {Object} Экранные координаты
+      */
+   getScreenCoords(gameX, gameY) {
+     return this.gameToScreen(gameX, gameY)
+   }
 
   /**
      * Получает координаты клика относительно канваса
