@@ -45,13 +45,21 @@
 - ✅ Удалена дублирующая логика трансформации из всех систем
 - ✅ Добавлены `init(app)` и улучшенные `destroy()` методы
 
-## 📋 Текущий статус задач (актуально на 2026-02-12)
+## 📝 Актуальные задачи (проверено 2026-02-12)
 
-### ⚠️ Приоритет 2 (важно) - Рефакторинг - **ВЫПОЛНЕНО**
+### ⚠️ Приоритет 2 - Рефакторинг
 
-#### Приоритет 3 (желательно) - Документация и улучшения
+#### 10. **Удалить прямой доступ к entity.container из SelectionIndicator**
+**Файл:** `www/services/SelectionIndicator.js`
+- [ ] Строка 30: `entity.container.addChild(indicatorGraphics)` → использовать `RendererSystem.addEntityToContainer()`
+- [ ] Строка 36: `entity.container.removeChild(entity.selectionIndicator)` → использовать `RendererSystem.removeEntityFromContainer()`
 
-## 📝 История изменений
+#### 11. **Проверить и зафиксить remaining direct app.stage access**
+**Файлы:** `www/systems/EntitySpawnSystem.js`
+- [ ] Строка 85: `app.stage.addChild(container)` → уже использует `RendererSystem.addToStage()` ✅
+- [ ] Строка 90: `app.stage.addChild(container)` → уже использует `RendererSystem.addToStage()` ✅
+
+## 📋 История изменений
 
 ### 2026-02-12 - Проверка актуальности TODO.md
 - ✅ Выявлены АКТУАЛЬНЫЕ проблемы:
