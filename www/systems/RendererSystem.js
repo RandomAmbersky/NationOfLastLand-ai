@@ -36,44 +36,70 @@ export class RendererSystem {
     return this._renderedEntities.get(id)
   }
 
-    /**
-     * Обновить позицию сущности на основе данных из state.entities
-     */
-    updateEntityPosition (id, gameX, gameY) {
-      const entity = this._renderedEntities.get(id)
-      if (!entity || !entity.container) return
-
-      const { x, y } = this.transformer?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
-      const { x: scaleX, y: scaleY } = this.transformer?.getScale() ?? { x: 1, y: 1 }
-      const screenX = x * scaleX
-      const screenY = y * scaleY
-
-      entity.container.x = screenX
-      entity.container.y = screenY
-      entity.x = screenX
-      entity.y = screenY
-      entity.gameX = x
-      entity.gameY = y
+  /**
+   * Get the coordinate transformer instance
+   */
+  _getTransformer() {
+    if (this.transformer) return this.transformer
+    if (this.coordinateService && this.coordinateService.getTransformer) {
+      return this.coordinateService.getTransformer()
     }
-
-    /**
-     * Установить систему для спавна сущностей
-     */
-    setEntitySpawnSystem(entitySpawnSystem) {
-      this.entitySpawnSystem = entitySpawnSystem
+    if (this.app) {
+      this.transformer = createCoordinateTransformer(this.app)
+      return this.transformer
     }
+    return null
+  }
 
-    /**
-     * Создать спрайт сущности и добавить в state.entities
-     * Возвращает объект сущности с container и graphics
-     */
-    createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
-      const { x: scaleX, y: scaleY } = this.transformer?.getScale() ?? { x: 1, y: 1 }
-      // x и y могут быть массивом [x, y], объектом {x, y} или просто числами
-      const { x: posX, y: posY } = this.transformer?.normalizeCoords(x, y) ?? { x: 0, y: 0 }
-      // Преобразуем игровые координаты в экранные
-      const screenX = posX * scaleX
-      const screenY = posY * scaleY
+  /**
+   * Transform game coordinates to screen coordinates
+   * Returns { x, y, scaleX, scaleY }
+   */
+  _toScreenCoords(gameX, gameY) {
+    const transformer = this._getTransformer()
+    if (!transformer) return { x: 0, y: 0, scaleX: 1, scaleY: 1 }
+    
+    const { x, y } = transformer.normalizeCoords(gameX, gameY)
+    const { x: scaleX, y: scaleY } = transformer.getScale()
+    return { x: x * scaleX, y: y * scaleY, scaleX, scaleY }
+  }
+
+  /**
+   * Обновить позицию сущности на основе данных из state.entities
+   */
+  updateEntityPosition (id, gameX, gameY) {
+    const entity = this._renderedEntities.get(id)
+    if (!entity || !entity.container) return
+
+    const coords = this._toScreenCoords(gameX, gameY)
+
+    entity.container.x = coords.x
+    entity.container.y = coords.y
+    entity.x = coords.x
+    entity.y = coords.y
+    entity.gameX = gameX
+    entity.gameY = gameY
+  }
+
+  /**
+   * Установить систему для спавна сущностей
+   */
+  setEntitySpawnSystem(entitySpawnSystem) {
+    this.entitySpawnSystem = entitySpawnSystem
+  }
+
+  /**
+   * Создать спрайт сущности и добавить в state.entities
+   * Возвращает объект сущности с container и graphics
+   */
+  createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
+    const coords = this._toScreenCoords(x, y)
+    const screenX = coords.x
+    const screenY = coords.y
+    const posX = x
+    const posY = y
+    const scaleX = coords.scaleX
+    const scaleY = coords.scaleY
 
     const graphics = new PIXI.Graphics()
     let color
@@ -193,17 +219,15 @@ export class RendererSystem {
     }
   }
 
-    showTargetIndicator (gameX, gameY) {
-      if (this.targetIndicator) {
-        this.app.stage.removeChild(this.targetIndicator)
-        this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
-      }
+  showTargetIndicator (gameX, gameY) {
+    if (this.targetIndicator) {
+      this.app.stage.removeChild(this.targetIndicator)
+      this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
+    }
 
-      const { x: scaleX, y: scaleY } = this.transformer?.getScale() ?? { x: 1, y: 1 }
-      // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
-      const { x, y } = this.transformer?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
-      const screenX = x * scaleX
-      const screenY = y * scaleY
+    const coords = this._toScreenCoords(gameX, gameY)
+    const screenX = coords.x
+    const screenY = coords.y
 
     const container = new PIXI.Container()
     const graphics = new PIXI.Graphics()
@@ -242,7 +266,7 @@ export class RendererSystem {
     gridGraphics.lineStyle(1, 0x444444, 0.5)
 
     const gridSize = 50
-    const { x: scaleX, y: scaleY } = this.transformer?.getScale() ?? { x: 1, y: 1 }
+    const { x: scaleX, y: scaleY } = this._getScale()
 
     for (let x = 0; x <= GAME_CONFIG.WORLD_SIZE.width; x += gridSize) {
       const scaledX = x * scaleX
@@ -284,6 +308,14 @@ export class RendererSystem {
   }
 
   /**
+   * Get scale factors from transformer
+   */
+  _getScale() {
+    const transformer = this._getTransformer()
+    return transformer ? transformer.getScale() : { x: 1, y: 1 }
+  }
+
+  /**
    * Синхронизация отрисованных сущностей с state.entities
    * Создает новые сущности и удаляет удаленные
    */
@@ -311,65 +343,9 @@ export class RendererSystem {
       return
     }
 
-    // Fallback: старая логика без entitySpawnSystem
-    const renderedIds = new Set(this._renderedEntities.keys())
-    let createdCount = 0
-    
-    for (const [id, entityData] of entities) {
-      const hasContainer = entityData.container !== undefined
-      const alreadyRendered = renderedIds.has(id)
-      
-      if (!alreadyRendered && !hasContainer) {
-        // WASM возвращает данные с другими именами полей:
-        // - entity_type: 'base', 'alert', 'vehicle'
-        // - subtype: specific type (e.g., 'floors_1', 'RaiderAlert_Hidden', 'scout')
-        // - fraction: faction name
-        // - position: Rust Position struct serialized as { x, y }
-        
-        const entityType = entityData.entity_type || entityData.type || 'vehicle'
-        const vehicleType = entityData.subtype || entityData.vehicleType
-        const faction = entityData.fraction
-        // Rust Position struct serializes as { x, y } object
-        const x = entityData.position?.x ?? entityData.gameX ?? 0
-        const y = entityData.position?.y ?? entityData.gameY ?? 0
-        
-        // Используем EntityService для обработки данных сущности
-        const entityDataProcessed = this.entityService.createEntity({
-          id: entityData.id,
-          entity_type: entityType,
-          subtype: vehicleType,
-          fraction: faction,
-          position: { x, y }
-        })
-        
-        // Сущность есть в state.entities, но не отрисована
-        // Создаем спрайт для нее
-        this.createEntitySprite(
-          entityDataProcessed.id,
-          entityDataProcessed.gameX,
-          entityDataProcessed.gameY,
-          entityDataProcessed.vehicleType,
-          entityDataProcessed.fraction,
-          entityDataProcessed.entityType
-        )
-        createdCount++
-      }
-    }
-
-    // Удаляем сущности, которые отрисованы, но нет в state.entities
-    let removedCount = 0
-    for (const [id, renderedEntity] of this._renderedEntities) {
-      if (!entities.has(id)) {
-        this.removeEntity(id)
-        removedCount++
-      }
-    }
-
-    console.log('RendererSystem._syncEntities:', {
+    console.log('RendererSystem._syncEntities (fallback):', {
       entitiesCount,
-      renderedCount,
-      createdCount,
-      removedCount
+      renderedCount
     })
   }
 
