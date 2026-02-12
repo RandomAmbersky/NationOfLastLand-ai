@@ -5,6 +5,7 @@
 
 import { GAME_CONFIG } from '../config/game-config.js'
 import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
+import { EntityService } from '../entity-service.js'
 
 export class RendererSystem {
   constructor (gameEngine, coordinateService = null) {
@@ -18,6 +19,7 @@ export class RendererSystem {
     this.isDestroyed = false
     // Следим за сущностями, которые отрисовали (для очистки при удалении)
     this._renderedEntities = new Map()
+    this.entityService = new EntityService(gameEngine)
   }
 
   init (app) {
@@ -311,15 +313,24 @@ export class RendererSystem {
         const x = entityData.position?.x ?? entityData.gameX ?? 0
         const y = entityData.position?.y ?? entityData.gameY ?? 0
         
+        // Используем EntityService для обработки данных сущности
+        const entityDataProcessed = this.entityService.createEntity({
+          id: entityData.id,
+          entity_type: entityType,
+          subtype: vehicleType,
+          fraction: faction,
+          position: { x, y }
+        })
+        
         // Сущность есть в state.entities, но не отрисована
         // Создаем спрайт для нее
         this.createEntitySprite(
-          entityData.id,
-          x,
-          y,
-          vehicleType,
-          faction,
-          entityType
+          entityDataProcessed.id,
+          entityDataProcessed.gameX,
+          entityDataProcessed.gameY,
+          entityDataProcessed.vehicleType,
+          entityDataProcessed.fraction,
+          entityDataProcessed.entityType
         )
         createdCount++
       }

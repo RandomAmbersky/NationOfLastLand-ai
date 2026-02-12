@@ -1,6 +1,6 @@
 /* eslint-env jest */
 /**
- * Tests for game-demo.js
+ * Tests for game-engine.js (GameDemo)
  */
 // Mock WASM imports before importing GameDemo
 // This must be done before any imports that depend on WASM
@@ -23,7 +23,7 @@ jest.mock('../www/wasm-imports.js', () => ({
 }))
 
 // Mock PIXI before importing
-import { GameDemo } from '../www/game-demo.js'
+import { GameDemo } from '../www/game-engine.js'
 
 global.PIXI = {
   Application: class {

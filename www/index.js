@@ -16,11 +16,10 @@ export { SelectionSystem, createSelectionSystem } from './systems/SelectionSyste
 export { GameStateSystem, createGameStateSystem } from './systems/GameStateSystem.js'
 
 // Game demo
-export { GameDemo } from './game-demo.js'
+export { GameDemo } from './game-engine.js'
 export { GameDemo as GameEngineDemo, createGameDemo as createGameEngineDemo } from './game-engine.js'
 
 // Service modules
-export { CoordinateService } from './coordinate-service.js'
 export { EntityService } from './entity-service.js'
 
 // Utils
