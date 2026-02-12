@@ -35,36 +35,24 @@ export class SelectionIndicator {
      indicatorGraphics.lineStyle(3, color, 1)
      indicatorGraphics.drawCircle(0, 0, 12)
      
-     // Используем RendererSystem для добавления в контейнер (если доступен)
-     if (this.rendererSystem && this.rendererSystem.addEntityToContainer) {
-       this.rendererSystem.addEntityToContainer({ container: indicatorGraphics }, entity.container)
-     } else {
-       entity.container.addChild(indicatorGraphics)
-     }
+     // Используем RendererSystem для добавления в контейнер
+     this.rendererSystem.addEntityToContainer({ container: indicatorGraphics }, entity.container)
      
      entity.selectionIndicator = indicatorGraphics
    }
 
   removeSelectionIndicator(entity) {
     if (entity && entity.selectionIndicator) {
-      // Используем RendererSystem для удаления из контейнера (если доступен)
-      if (this.rendererSystem && this.rendererSystem.removeEntityFromContainer) {
-        this.rendererSystem.removeEntityFromContainer({ container: entity.selectionIndicator })
-      } else if (entity.container && entity.selectionIndicator.parent) {
-        entity.container.removeChild(entity.selectionIndicator)
-      }
+      // Используем RendererSystem для удаления из контейнера
+      this.rendererSystem.removeEntityFromContainer({ container: entity.selectionIndicator })
       entity.selectionIndicator = null
     }
   }
 
   removeInfoIndicator(entity) {
     if (entity && entity.infoIndicator) {
-      // Используем RendererSystem для удаления из контейнера (если доступен)
-      if (this.rendererSystem && this.rendererSystem.removeEntityFromContainer) {
-        this.rendererSystem.removeEntityFromContainer({ container: entity.infoIndicator })
-      } else if (entity.container && entity.infoIndicator.parent) {
-        entity.container.removeChild(entity.infoIndicator)
-      }
+      // Используем RendererSystem для удаления из контейнера
+      this.rendererSystem.removeEntityFromContainer({ container: entity.infoIndicator })
       
       if (entity.infoIndicator.destroy) {
         entity.infoIndicator.destroy({ children: true, texture: true, baseTexture: true })

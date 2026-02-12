@@ -45,21 +45,27 @@
 - ✅ Удалена дублирующая логика трансформации из всех систем
 - ✅ Добавлены `init(app)` и улучшенные `destroy()` методы
 
-## 📝 Актуальные задачи (проверено 2026-02-12)
+## 📝 Актуальные задачи (обновлено 2026-02-12)
 
-### ⚠️ Приоритет 2 - Рефакторинг
+### ✅ Приоритет 2 - Рефакторинг (ВЫПОЛНЕНО)
 
-#### 10. **Удалить прямой доступ к entity.container из SelectionIndicator**
-**Файл:** `www/services/SelectionIndicator.js`
-- [ ] Строка 30: `entity.container.addChild(indicatorGraphics)` → использовать `RendererSystem.addEntityToContainer()`
-- [ ] Строка 36: `entity.container.removeChild(entity.selectionIndicator)` → использовать `RendererSystem.removeEntityFromContainer()`
+#### 10. **Удалить прямой доступ к entity.container из SelectionIndicator** ✅ ЗАВЕРШЕНО (2026-02-12)
+- ✅ `SelectionIndicator.js`: Удалены fallback ветки с прямым доступом к `entity.container`
+- ✅ Теперь используется только `RendererSystem.addEntityToContainer()` и `removeEntityFromContainer()`
+- ✅ Все тесты проходят (151/151)
 
-#### 11. **Проверить и зафиксить remaining direct app.stage access**
-**Файлы:** `www/systems/EntitySpawnSystem.js`
-- [ ] Строка 85: `app.stage.addChild(container)` → уже использует `RendererSystem.addToStage()` ✅
-- [ ] Строка 90: `app.stage.addChild(container)` → уже использует `RendererSystem.addToStage()` ✅
+#### 11. **Проверить и зафиксить remaining direct app.stage access** ✅ ВЕРIFIЦИРОВАНО (2026-02-12)
+- ✅ `EntitySpawnSystem`: Использует `RendererSystem.addToStage()` и `removeFromStage()`
+- ✅ `RendererSystem`: Использует `app.stage` только внутри инкапсулированных методов
+
+### ⚠️ Приоритет 3 - Документация и улучшения
 
 ## 📋 История изменений
+
+### 2026-02-12 - Рефакторинг SelectionIndicator ✅
+- **SelectionIndicator.js**: Удалены fallback ветки с прямым доступом к `entity.container`
+- **SelectionIndicator**: Теперь использует только `RendererSystem` API
+- **Tests**: Все 151 тестов проходят успешно
 
 ### 2026-02-12 - Проверка актуальности TODO.md
 - ✅ Выявлены АКТУАЛЬНЫЕ проблемы:
