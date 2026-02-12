@@ -6,12 +6,12 @@
 import { GAME_CONFIG } from '../config/game-config.js'
 
 export class SelectionIndicator {
-  constructor (gameDemo) {
-    this.gameDemo = gameDemo
+  constructor(gameEngine) {
+    this.gameEngine = gameEngine
     this.isDestroyed = false
   }
 
-  createSelectionIndicator (entity, isEnemy = false) {
+  createSelectionIndicator(entity, isEnemy = false) {
     const graphics = new PIXI.Graphics()
     const color = isEnemy
       ? GAME_CONFIG.COLORS.selection.enemy
@@ -22,14 +22,14 @@ export class SelectionIndicator {
     entity.selectionIndicator = graphics
   }
 
-  removeSelectionIndicator (entity) {
+  removeSelectionIndicator(entity) {
     if (entity && entity.selectionIndicator) {
       entity.container.removeChild(entity.selectionIndicator)
       entity.selectionIndicator = null
     }
   }
 
-  removeInfoIndicator (entity) {
+  removeInfoIndicator(entity) {
     if (entity && entity.infoIndicator) {
       entity.container.removeChild(entity.infoIndicator)
       if (entity.infoIndicator.destroy) {
@@ -39,22 +39,25 @@ export class SelectionIndicator {
     }
   }
 
-  updateIndicators (selections) {
+  updateIndicators(selections) {
+    // Get entities from gameEngine state
+    const entities = this.gameEngine.state.get('entities')
+
     // Remove infoIndicator from all entities
-    for (const [, entity] of this.gameDemo.entities) {
+    for (const [, entity] of entities) {
       if (entity.infoIndicator) {
         this.removeInfoIndicator(entity)
       }
     }
 
-    for (const [entityId, entity] of this.gameDemo.entities) {
+    for (const [entityId, entity] of entities) {
       if (entity.selectionIndicator && !selections.has(entityId)) {
         this.removeSelectionIndicator(entity)
       }
     }
 
     for (const entityId of selections) {
-      const entity = this.gameDemo.entities.get(entityId)
+      const entity = entities.get(entityId)
       if (entity && !entity.selectionIndicator) {
         const isEnemy =
           entity.fraction === 'Enemy' ||
@@ -65,11 +68,12 @@ export class SelectionIndicator {
     }
   }
 
-  destroy () {
+  destroy() {
     if (this.isDestroyed) return
     this.isDestroyed = true
 
-    for (const [_entityId, entity] of this.gameDemo.entities) {
+    const entities = this.gameEngine.state.get('entities')
+    for (const [_entityId, entity] of entities) {
       if (entity && entity.selectionIndicator) {
         this.removeSelectionIndicator(entity)
       }
@@ -78,14 +82,15 @@ export class SelectionIndicator {
       }
     }
 
-    this.gameDemo = null
+    this.gameEngine = null
   }
 
-  validateAndFixSelectionState () {
-    const selections = this.gameDemo.gameEngine.state.get('selections')
+  validateAndFixSelectionState() {
+    const selections = this.gameEngine.state.get('selections')
+    const entities = this.gameEngine.state.get('entities')
     let hadFixes = false
 
-    for (const [entityId, entity] of this.gameDemo.entities) {
+    for (const [entityId, entity] of entities) {
       if (entity.selectionIndicator && !selections.has(entityId)) {
         console.warn('Entity ' + entityId + ' has indicator but not in selection - removing')
         this.removeSelectionIndicator(entity)
@@ -94,7 +99,7 @@ export class SelectionIndicator {
     }
 
     for (const entityId of selections) {
-      const entity = this.gameDemo.entities.get(entityId)
+      const entity = entities.get(entityId)
       if (entity && !entity.selectionIndicator) {
         console.warn('Entity ' + entityId + ' is selected but missing indicator - adding')
         const isEnemy =
@@ -107,7 +112,7 @@ export class SelectionIndicator {
     }
 
     for (const entityId of selections) {
-      if (!this.gameDemo.entities.has(entityId)) {
+      if (!entities.has(entityId)) {
         console.warn('Entity ' + entityId + ' in selection but no longer exists - removing from selection')
         selections.delete(entityId)
         hadFixes = true
@@ -118,6 +123,6 @@ export class SelectionIndicator {
   }
 }
 
-export function createSelectionIndicator (gameDemo) {
-  return new SelectionIndicator(gameDemo)
+export function createSelectionIndicator(gameEngine) {
+  return new SelectionIndicator(gameEngine)
 }

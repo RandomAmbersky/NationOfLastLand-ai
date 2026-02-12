@@ -1,10 +1,10 @@
-import { GAME_CONFIG } from './game-config.js'
+import { GAME_CONFIG } from './config/game-config.js'
 
 /**
  * Сервис для работы с координатами и масштабированием
  */
 export class CoordinateService {
-  constructor (gameDemo) {
+  constructor(gameDemo) {
     this.gameDemo = gameDemo
     this._scaleCache = null
     this.isDestroyed = false
@@ -13,7 +13,7 @@ export class CoordinateService {
   /**
    * Cleanup метод для очистки ресурсов
    */
-  destroy () {
+  destroy() {
     if (this.isDestroyed) return
     this.isDestroyed = true
 
@@ -28,7 +28,7 @@ export class CoordinateService {
      * Получает кэшированные значения масштаба
      * @returns {Object} Объект с значениями масштаба по X и Y
      */
-  getScale () {
+  getScale() {
     if (!this._scaleCache) {
       this._scaleCache = {
         x: this.gameDemo.app.screen.width / GAME_CONFIG.WORLD_SIZE.width,
@@ -41,7 +41,7 @@ export class CoordinateService {
   /**
      * Невалидирует кэш масштаба (вызывать при изменении размера)
      */
-  invalidateScaleCache () {
+  invalidateScaleCache() {
     this._scaleCache = null
   }
 
@@ -51,7 +51,7 @@ export class CoordinateService {
      * @param {number} y - Экранная координата Y
      * @returns {Object} Игровые координаты
      */
-  screenToGame (x, y) {
+  screenToGame(x, y) {
     const width = this.gameDemo.app.screen.width
     const height = this.gameDemo.app.screen.height
     return {
@@ -66,7 +66,7 @@ export class CoordinateService {
      * @param {number} y - Игровая координата Y
      * @returns {Object} Экранные координаты
      */
-  gameToScreen (x, y) {
+  gameToScreen(x, y) {
     const scale = this.getScale()
     return {
       x: x * scale.x,
@@ -80,7 +80,7 @@ export class CoordinateService {
      * @param {number} gameY - Игровая координата Y
      * @returns {Object} Экранные координаты
      */
-  getScreenCoords (gameX, gameY) {
+  getScreenCoords(gameX, gameY) {
     return this.gameToScreen(gameX, gameY)
   }
 
@@ -89,7 +89,7 @@ export class CoordinateService {
      * @param {MouseEvent} event - Событие мыши
      * @returns {Object} Координаты клика
      */
-  getCanvasCoords (event) {
+  getCanvasCoords(event) {
     const rect = this.gameDemo.app.view.getBoundingClientRect()
     return {
       screenX: event.clientX - rect.left,

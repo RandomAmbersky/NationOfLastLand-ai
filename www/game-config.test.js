@@ -1,4 +1,4 @@
-const { GAME_CONFIG } = require('./game-config.js')
+const { GAME_CONFIG } = require('./config/game-config.js')
 
 describe('GAME_CONFIG', () => {
   describe('WORLD_SIZE', () => {

@@ -1,4 +1,4 @@
-const { calculateDistance, calculateDistanceBetween } = require('./utils.js')
+const { calculateDistance, calculateDistanceBetween } = require('./utils/math.js')
 
 describe('utils.js - Distance calculations', () => {
   describe('calculateDistance', () => {
