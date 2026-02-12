@@ -143,13 +143,8 @@ export class InputSystem {
           gameY
         })
       } else {
-       // Клик по пустому месту
-       const selections = this.gameEngine.state.get('selections')
-       if (selections.size > 0) {
-         this.gameEngine.state.emit('groupTargetSet', { gameX, gameY })
-       } else {
-         this.gameEngine.state.emit('selectionCleared')
-       }
+       // Клик по пустому месту - сбрасываем выделение
+       this.gameEngine.state.emit('selectionCleared')
      }
    }
 
