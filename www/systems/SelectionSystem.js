@@ -69,6 +69,8 @@ export class SelectionSystem {
     if (entity.entityType === 'base') return false
     // Алерты не могут двигаться
     if (entity.entityType === 'alert') return false
+    // Если есть флаг movement, проверяем его
+    if (entity.movement && entity.movement.canMove === false) return false
     // По умолчанию юниты могут двигаться
     return true
   }
@@ -77,7 +79,7 @@ export class SelectionSystem {
    * Проверяет, принадлежит ли юнит игроку
    */
   _isPlayerUnit(entity) {
-    return entity.fraction === 'Player'
+    return entity.fraction === 'Player' && entity.entityType !== 'base'
   }
 
   /**
@@ -229,25 +231,31 @@ export class SelectionSystem {
     const selections = state.get('selections')
     const maxGroupSize = GAME_CONFIG.LIMITS.maxGroupSize
 
-    const entitiesInRect = []
+    // Правило 4: при групповом выделении должны выбираться только юниты игрока и только те которые могут двигаться
+    // Если в выделении есть юниты чужой фракции, сбрасываем выделение перед новым выбором
+    const firstSelectedId = Array.from(selections)[0]
+    const firstSelectedEntity = firstSelectedId ? entities.get(firstSelectedId) : null
+    if (firstSelectedEntity && !this._isPlayerUnit(firstSelectedEntity)) {
+      selections.clear()
+    }
+
+    let addedCount = 0
     for (const [id, entity] of entities) {
       if (this._isEntityInBounds(entity, bounds)) {
         // Добавляем только юниты игрока, которые могут двигаться
-        if (this._isPlayerUnit(entity) && this._canMove(entity)) {
-          entitiesInRect.push(id)
+        if (this._isPlayerUnit(entity) && this._canMove(entity) && !selections.has(id)) {
+          if (selections.size + addedCount >= maxGroupSize) break
+          selections.add(id)
+          addedCount++
         }
       }
     }
 
-    const limitedEntities = entitiesInRect.slice(0, maxGroupSize)
-
-    for (const id of limitedEntities) {
-      selections.add(id)
+    if (addedCount > 0) {
+      state.merge({ selections }, 'selectionsChanged')
+      this.selectionIndicator.updateIndicators(selections)
     }
-
-    state.merge({ selections }, 'selectionsChanged')
-    this.selectionIndicator.updateIndicators(selections)
-    return limitedEntities.length
+    return addedCount
   }
 
   selectEntity(entityId, isMultiSelect = false) {
@@ -376,20 +384,26 @@ export class SelectionSystem {
     const targetType = entity.vehicleType || entity.type
     const sameTypeEntities = this._getIndex('type', targetType)
 
-    let count = 0
+    let addedCount = 0
     for (const id of sameTypeEntities) {
-      if (count >= maxGroupSize) break
-      if (!selections.has(id)) {
-        selections.add(id)
-        count++
+      if (addedCount >= maxGroupSize) break
+      const entityToAdd = this.gameEngine.state.get('entities').get(id)
+      if (entityToAdd && !selections.has(id)) {
+        // Проверяем, что юнит принадлежит игроку и может двигаться
+        if (this._isPlayerUnit(entityToAdd) && this._canMove(entityToAdd)) {
+          selections.add(id)
+          addedCount++
+        }
       }
     }
 
-    state.merge({ selections }, 'selectionsChanged')
-    if (this.selectionIndicator) {
-      this.selectionIndicator.updateIndicators(selections)
+    if (addedCount > 0) {
+      state.merge({ selections }, 'selectionsChanged')
+      if (this.selectionIndicator) {
+        this.selectionIndicator.updateIndicators(selections)
+      }
     }
-    return count
+    return addedCount
   }
 
   setGroupTarget(gameX, gameY) {
