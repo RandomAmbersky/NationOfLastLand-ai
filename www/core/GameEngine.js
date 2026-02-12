@@ -100,7 +100,7 @@ export class GameEngine {
   }
 
   _loop (now) {
-    if (!this.state.get('isRunning')) return
+    if (!this.state || !this.state.get('isRunning')) return
 
     const dt = (now - this._lastFrameTime) / 1000
     this._lastFrameTime = now
