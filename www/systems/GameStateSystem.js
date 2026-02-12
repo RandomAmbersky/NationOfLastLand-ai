@@ -22,35 +22,54 @@ export class GameStateSystem {
   }
 
   async initializeGame () {
-    try {
-      // Initialize WASM if not already initialized
-      await initWasm()
-      const result = gameInit()
-      const gameState = JSON.parse(result)
-      
+     try {
+       // Initialize WASM if not already initialized
+       await initWasm()
+       const result = gameInit()
+       const gameState = JSON.parse(result)
+       
+       this.gameEngine.state.merge({
+         isRunning: false,
+         lastUpdate: Date.now(),
+         time: gameState.time,
+         entitiesCount: gameState.entities_count,
+         alertsCount: gameState.alerts_count
+       }, 'gameInitialized')
 
-      this.gameEngine.state.merge({
-        isRunning: false,
-        lastUpdate: Date.now(),
-        time: gameState.time,
-        entitiesCount: gameState.entities_count,
-        alertsCount: gameState.alerts_count
-      }, 'gameInitialized')
+       if (gameState.entities) {
+         const existingEntities = this.gameEngine.state.get('entities')
+         const entitiesMap = existingEntities instanceof Map ? existingEntities : new Map()
+         for (const entity of gameState.entities) {
+           entitiesMap.set(entity.id, entity)
+         }
+         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
+       }
 
-      if (gameState.entities) {
-        const existingEntities = this.gameEngine.state.get('entities')
-        const entitiesMap = existingEntities instanceof Map ? existingEntities : new Map()
-        for (const entity of gameState.entities) {
-          entitiesMap.set(entity.id, entity)
-        }
-        this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
-      }
+        // Подписываемся на событие клика по юниту
+        this.gameEngine.state.subscribe('entityClicked', (data) => {
+          this.selectionSystem?.handleEntityClicked(data)
+        })
 
-      return { success: true, data: gameState }
-    } catch (error) {
-      return { success: false, error: error.message }
-    }
-  }
+        // Подписываемся на событие выбора юнита (правая кнопка мыши)
+        this.gameEngine.state.subscribe('entitySelected', (data) => {
+          this.selectionSystem?.handleEntitySelected(data)
+        })
+
+        // Подписываемся на событие сброса выделения
+        this.gameEngine.state.subscribe('selectionCleared', (data) => {
+          this.selectionSystem?.handleSelectionCleared(data)
+        })
+
+        // Подписываемся на событие выделения прямоугольником
+        this.gameEngine.state.subscribe('rectangleSelection', (data) => {
+          this.selectionSystem?.handleRectangleSelection(data)
+        })
+
+        return { success: true, data: gameState }
+     } catch (error) {
+       return { success: false, error: error.message }
+     }
+   }
 
   async spawnVehicle (vehicleType, baseEntity) {
     if (!baseEntity) {
@@ -171,12 +190,40 @@ export class GameStateSystem {
   }
 
   clearSelection () {
-    try {
-      return _clearSelection()
-    } catch (error) {
-      return null
-    }
-  }
+     try {
+       return _clearSelection()
+     } catch (error) {
+       return null
+     }
+   }
+
+  _handleEntityClicked (data) {
+     const { entityId, isMultiSelect, gameX, gameY } = data
+     const entities = this.gameEngine.state.get('entities')
+     const entity = entities.get(entityId)
+     
+     if (entity) {
+       console.log('Entity clicked:', entity)
+       // Здесь можно добавить отображение параметров юнита в UI
+       // Например, обновить элемент DOM с информацией о юните
+       this._showEntityInfo(entity)
+     }
+   }
+
+  _showEntityInfo (entity) {
+     // Пытаемся найти элемент для отображения информации
+     const entityInfoEl = document.getElementById('entity-info')
+     if (entityInfoEl) {
+       const info = `
+ID: ${entity.id}
+Тип: ${entity.vehicleType || entity.type}
+Фракция: ${entity.fraction || 'N/A'}
+Позиция: (${entity.gameX?.toFixed(1) ?? 0}, ${entity.gameY?.toFixed(1) ?? 0})
+       `
+       entityInfoEl.textContent = info
+       entityInfoEl.style.display = 'block'
+     }
+   }
 }
 
 export function createGameStateSystem (gameEngine) {

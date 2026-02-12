@@ -119,20 +119,21 @@ export class InputSystem {
   }
 
   handleCanvasClick (event) {
-    if (!this.gameEngine.state.get('isRunning')) return
+     if (!this.gameEngine.state.get('isRunning')) return
 
-    const drag = this.dragState
-    if (drag.justFinishedDrag) {
-      drag.justFinishedDrag = false
-      return
-    }
+     const drag = this.dragState
+     if (drag.justFinishedDrag) {
+       drag.justFinishedDrag = false
+       return
+     }
 
-    const { screenX, screenY } = this._getCanvasCoords(event)
-    const { gameX, gameY } = this._toGameCoords(screenX, screenY)
+     const { screenX, screenY } = this._getCanvasCoords(event)
+     const { gameX, gameY } = this._toGameCoords(screenX, screenY)
 
-    const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
+     const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
 
      if (entityAtPosition !== null) {
+       // Клик по юниту
        const isMultiSelect = event.shiftKey
        this.gameEngine.state.emit('entityClicked', {
          entityId: entityAtPosition,
@@ -141,6 +142,7 @@ export class InputSystem {
          gameY
        })
      } else {
+       // Клик по пустому месту
        const selections = this.gameEngine.state.get('selections')
        if (selections.size > 0) {
          this.gameEngine.state.emit('groupTargetSet', { gameX, gameY })
@@ -148,7 +150,7 @@ export class InputSystem {
          this.gameEngine.state.emit('selectionCleared')
        }
      }
-  }
+   }
 
   handleDoubleClick (event) {
     if (!this.gameEngine.state.get('isRunning')) return
