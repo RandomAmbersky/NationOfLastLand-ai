@@ -9,7 +9,7 @@ import { SelectionIndicator } from '../services/SelectionIndicator.js'
 import { EntityService } from '../entity-service.js'
 
 export class SelectionSystem {
-  constructor (gameEngine) {
+  constructor(gameEngine) {
     this.gameEngine = gameEngine
     this.selectionIndicator = null
     this.entityService = null
@@ -18,14 +18,14 @@ export class SelectionSystem {
     this._factionIndex = new Map()
   }
 
-  init (app) {
+  init(app) {
     this.app = app
     this.selectionIndicator = new SelectionIndicator(this.gameEngine)
     this.entityService = new EntityService(this.gameEngine)
     this._buildIndices()
   }
 
-  _buildIndices () {
+  _buildIndices() {
     const entities = this.gameEngine.state.get('entities')
     this._typeIndex.clear()
     this._factionIndex.clear()
@@ -47,13 +47,13 @@ export class SelectionSystem {
     }
   }
 
-  _getIndex (key, value) {
+  _getIndex(key, value) {
     if (key === 'type') return this._typeIndex.get(value) || []
     if (key === 'faction') return this._factionIndex.get(value) || []
     return []
   }
 
-  _getScale () {
+  _getScale() {
     if (!this.gameEngine.app) return { x: 1, y: 1 }
     return {
       x: this.gameEngine.app.screen.width / GAME_CONFIG.WORLD_SIZE.width,
@@ -64,7 +64,7 @@ export class SelectionSystem {
   /**
    * Проверяет, может ли юнит двигаться
    */
-  _canMove (entity) {
+  _canMove(entity) {
     // Базы не могут двигаться
     if (entity.entityType === 'base') return false
     // Алерты не могут двигаться
@@ -76,118 +76,120 @@ export class SelectionSystem {
   /**
    * Проверяет, принадлежит ли юнит игроку
    */
-  _isPlayerUnit (entity) {
+  _isPlayerUnit(entity) {
     return entity.fraction === 'Player'
   }
 
-   /**
-    * Обработка клика по юниту (правила из units_moving_rules.md)
-    */
-   handleEntityClicked (data) {
-     const { entityId, isMultiSelect, gameX, gameY } = data
-     console.log('SelectionSystem.handleEntityClicked:', data)
-     const state = this.gameEngine.state
-     const selections = state.get('selections')
-     const entities = state.get('entities')
-     const clickedEntity = entities.get(entityId)
-     console.log('clickedEntity:', clickedEntity)
+  /**
+   * Обработка клика по юниту (правила из units_moving_rules.md)
+   */
+  handleEntityClicked(data) {
+    const { entityId, isMultiSelect, gameX, gameY } = data
+    console.log('SelectionSystem.handleEntityClicked:', data)
+    const state = this.gameEngine.state
+    const selections = state.get('selections')
+    const entities = state.get('entities')
+    const clickedEntity = entities.get(entityId)
+    console.log('clickedEntity:', clickedEntity)
 
-     if (!clickedEntity) {
-       console.warn('handleEntityClicked: clickedEntity not found for id', entityId)
-       return
-     }
+    if (!clickedEntity) {
+      console.warn('handleEntityClicked: clickedEntity not found for id', entityId)
+      return
+    }
 
-     // Правило 1: Если ничего не выбрано - просто выбираем юнит
-     if (selections.size === 0) {
-       selections.add(entityId)
-       state.merge({ selections }, 'selectionsChanged')
-       this.selectionIndicator.updateIndicators(selections)
-       return
-     }
+    // Правило 1: Если ничего не выбрано - просто выбираем юнит
+    if (selections.size === 0) {
+      selections.add(entityId)
+      state.merge({ selections }, 'selectionsChanged')
+      this.selectionIndicator.updateIndicators(selections)
+      return
+    }
 
-     // Правило 7: Если выбран юнит игрока который не может двигаться и происходит клик на другом юните
-     // сбрасываем выделение с первого юнита и выбираем другой
-     const firstSelectedId = Array.from(selections)[0]
-     const firstSelectedEntity = entities.get(firstSelectedId)
-     
-     if (firstSelectedEntity && this._isPlayerUnit(firstSelectedEntity) && !this._canMove(firstSelectedEntity)) {
-       // Если кликнули на другого юнита - сбрасываем и выбираем нового
-       if (entityId !== firstSelectedId) {
-         selections.clear()
-         selections.add(entityId)
-         state.merge({ selections }, 'selectionsChanged')
-         this.selectionIndicator.updateIndicators(selections)
-         return
-       }
-     }
+    // Правило 8: Если выбран юнит фракции не игрока и происходит клик по другому юниту
+    const firstSelectedId = Array.from(selections)[0]
+    const firstSelectedEntity = entities.get(firstSelectedId)
 
-     // Правило 8: Если выбран юнит фракции не игрока и происходит клик по другому юниту
-     if (firstSelectedEntity && !this._isPlayerUnit(firstSelectedEntity)) {
-       selections.clear()
-       selections.add(entityId)
-       state.merge({ selections }, 'selectionsChanged')
-       this.selectionIndicator.updateIndicators(selections)
-       return
-     }
+    if (firstSelectedEntity && !this._isPlayerUnit(firstSelectedEntity)) {
+      selections.clear()
+      selections.add(entityId)
+      state.merge({ selections }, 'selectionsChanged')
+      this.selectionIndicator.updateIndicators(selections)
+      return
+    }
 
-     // Правило 6: Если выбран один подвижный юнит или группа подвижных юнитов игрока
-     // и происходит клик на юните принадлежащем не фракции игрока - он назначается целью
-     const allSelectedCanMove = Array.from(selections).every(id => {
-       const entity = entities.get(id)
-       return entity && this._canMove(entity)
-     })
+    // Правило 7: Если выбран юнит игрока который не может двигаться и происходит клик на другом юните
+    if (firstSelectedEntity && this._isPlayerUnit(firstSelectedEntity) && !this._canMove(firstSelectedEntity)) {
+      // Если кликнули на другого юнита - сбрасываем и выбираем нового
+      if (entityId !== firstSelectedId) {
+        selections.clear()
+        selections.add(entityId)
+        state.merge({ selections }, 'selectionsChanged')
+        this.selectionIndicator.updateIndicators(selections)
+        return
+      }
+    }
 
-     if (allSelectedCanMove && !this._isPlayerUnit(clickedEntity)) {
-       state.emit('groupTargetSet', { targetX: gameX, targetY: gameY, selections: Array.from(selections) })
-       return
-     }
+    // Правило 6: Если выбран один подвижный юнит или группа подвижных юнитов игрока
+    // и происходит клик на юните принадлежащем не фракции игрока - он назначается целью
+    const allSelectedCanMove = Array.from(selections).every(id => {
+      const entity = entities.get(id)
+      return entity && this._canMove(entity)
+    })
 
-     // Правило 4: При групповом выделении должны выбираться только юниты игрока и только те которые могут двигаться
-     // Правило 5: Если предварительно выбран юнит чужой фракции, он не должен оставаться при групповом выделении
-     if (isMultiSelect) {
-       // Добавляем только юниты игрока, которые могут двигаться
-       if (this._isPlayerUnit(clickedEntity) && this._canMove(clickedEntity)) {
-         if (selections.size < GAME_CONFIG.LIMITS.maxGroupSize) {
-           selections.add(entityId)
-           state.merge({ selections }, 'selectionsChanged')
-           this.selectionIndicator.updateIndicators(selections)
-         }
-       }
-       return
-     }
+    if (allSelectedCanMove && !this._isPlayerUnit(clickedEntity)) {
+      state.emit('groupTargetSet', { targetX: gameX, targetY: gameY, selections: Array.from(selections) })
+      return
+    }
 
-     // Правило 2: Если в группе выбран только один юнит и клик по другому юниту игрока
-     if (selections.size === 1 && this._isPlayerUnit(clickedEntity) && this._canMove(clickedEntity)) {
-       selections.add(entityId)
-       state.merge({ selections }, 'selectionsChanged')
-       this.selectionIndicator.updateIndicators(selections)
-       return
-     }
+    // Правило 4: При групповом выделении должны выбираться только юниты игрока и только те которые могут двигаться
+    if (isMultiSelect) {
+      // Добавляем только юниты игрока, которые могут двигаться
+      if (this._isPlayerUnit(clickedEntity) && this._canMove(clickedEntity)) {
+        if (selections.size < GAME_CONFIG.LIMITS.maxGroupSize) {
+          selections.add(entityId)
+          state.merge({ selections }, 'selectionsChanged')
+          this.selectionIndicator.updateIndicators(selections)
+        }
+      }
+      return
+    }
 
-     // Правило 7: Если выбран юнит игрока и кликнули на юнита не игрока (который не может быть целью)
-     // сбрасываем выделение и выбираем нового
-     if (this._isPlayerUnit(firstSelectedEntity) && !this._isPlayerUnit(clickedEntity)) {
-       selections.clear()
-       selections.add(entityId)
-       state.merge({ selections }, 'selectionsChanged')
-       this.selectionIndicator.updateIndicators(selections)
-       return
-     }
+    // Если кликнули на уже выбранный юнит - ничего не делаем
+    if (selections.has(entityId)) {
+      return
+    }
 
-     // Правило 8: Если выбран юнит не игрока и кликнули на другого - сбрасываем и выбираем нового
-     if (!this._isPlayerUnit(firstSelectedEntity)) {
-       selections.clear()
-       selections.add(entityId)
-       state.merge({ selections }, 'selectionsChanged')
-       this.selectionIndicator.updateIndicators(selections)
-       return
-     }
-   }
+    // Правило 2: Если в группе выбран только один юнит и клик по другому юниту игрока
+    if (selections.size === 1 && this._isPlayerUnit(clickedEntity) && this._canMove(clickedEntity)) {
+      selections.add(entityId)
+      state.merge({ selections }, 'selectionsChanged')
+      this.selectionIndicator.updateIndicators(selections)
+      return
+    }
+
+    // Если кликнули на юнита не игрока и он не может быть целью (нет подвижных юнитов в выделении)
+    if (!this._isPlayerUnit(clickedEntity)) {
+      selections.clear()
+      selections.add(entityId)
+      state.merge({ selections }, 'selectionsChanged')
+      this.selectionIndicator.updateIndicators(selections)
+      return
+    }
+
+    // Правило 8: Если выбран юнит не игрока и кликнули на другого - сбрасываем и выбираем нового
+    if (!this._isPlayerUnit(firstSelectedEntity)) {
+      selections.clear()
+      selections.add(entityId)
+      state.merge({ selections }, 'selectionsChanged')
+      this.selectionIndicator.updateIndicators(selections)
+      return
+    }
+  }
 
   /**
    * Обработка клика правой кнопкой мыши на юните
    */
-  handleEntitySelected (data) {
+  handleEntitySelected(data) {
     const { entityId } = data
     const state = this.gameEngine.state
     const selections = state.get('selections')
@@ -206,7 +208,7 @@ export class SelectionSystem {
   /**
    * Обработка клика правой кнопкой мыши на пустом месте
    */
-  handleSelectionCleared () {
+  handleSelectionCleared() {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -220,7 +222,7 @@ export class SelectionSystem {
   /**
    * Обработка группового выделения прямоугольником
    */
-  handleRectangleSelection (data) {
+  handleRectangleSelection(data) {
     const { bounds } = data
     const state = this.gameEngine.state
     const entities = state.get('entities')
@@ -248,7 +250,7 @@ export class SelectionSystem {
     return limitedEntities.length
   }
 
-  selectEntity (entityId, isMultiSelect = false) {
+  selectEntity(entityId, isMultiSelect = false) {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -267,7 +269,7 @@ export class SelectionSystem {
     return true
   }
 
-  deselectEntity (entityId) {
+  deselectEntity(entityId) {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -282,7 +284,7 @@ export class SelectionSystem {
     return false
   }
 
-  clearAll () {
+  clearAll() {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -297,7 +299,7 @@ export class SelectionSystem {
     return false
   }
 
-  selectAllPlayerUnits () {
+  selectAllPlayerUnits() {
     const state = this.gameEngine.state
     const selections = state.get('selections')
     const maxGroupSize = GAME_CONFIG.LIMITS.maxGroupSize
@@ -319,7 +321,7 @@ export class SelectionSystem {
     return count
   }
 
-  selectEntitiesInRectangle (bounds) {
+  selectEntitiesInRectangle(bounds) {
     const state = this.gameEngine.state
     const entities = state.get('entities')
     const selections = state.get('selections')
@@ -345,7 +347,7 @@ export class SelectionSystem {
     return limitedEntities.length
   }
 
-  _isEntityInBounds (entity, bounds) {
+  _isEntityInBounds(entity, bounds) {
     if (!entity) return false
 
     // Используем gameX/gameY из state.entities (координаты в игровом мире)
@@ -358,12 +360,12 @@ export class SelectionSystem {
     const entityScreenY = gameY * scaleY
 
     return entityScreenX >= bounds.x &&
-           entityScreenY >= bounds.y &&
-           entityScreenX <= bounds.x + bounds.width &&
-           entityScreenY <= bounds.y + bounds.height
+      entityScreenY >= bounds.y &&
+      entityScreenX <= bounds.x + bounds.width &&
+      entityScreenY <= bounds.y + bounds.height
   }
 
-  selectSameType (entityId) {
+  selectSameType(entityId) {
     const state = this.gameEngine.state
     const selections = state.get('selections')
     const maxGroupSize = GAME_CONFIG.LIMITS.maxGroupSize
@@ -390,7 +392,7 @@ export class SelectionSystem {
     return count
   }
 
-  setGroupTarget (gameX, gameY) {
+  setGroupTarget(gameX, gameY) {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -401,19 +403,19 @@ export class SelectionSystem {
     })
   }
 
-  updateIndicators (selections) {
+  updateIndicators(selections) {
     if (this.selectionIndicator) {
       this.selectionIndicator.updateIndicators(selections)
     }
   }
 
-  update (_dt) {
+  update(_dt) {
     this._buildIndices()
   }
 
-  render () {}
+  render() { }
 
-  destroy () {
+  destroy() {
     if (this.isDestroyed) return
     this.isDestroyed = true
 
@@ -427,6 +429,6 @@ export class SelectionSystem {
   }
 }
 
-export function createSelectionSystem (gameEngine) {
+export function createSelectionSystem(gameEngine) {
   return new SelectionSystem(gameEngine)
 }
