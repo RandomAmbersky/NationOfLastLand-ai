@@ -8,11 +8,7 @@ import { createRepository } from '../core/EntityRepository.js'
 import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
 import { drawEntity, createEntitySprite } from '../utils/entity-drawer.js'
 
-export class RendererSystem {
-  constructor (gameEngine, coordinateService = null) {
-    this.gameEngine = gameEngine
-    this.coordinateService = coordinateService
-    this.transformer = null
+export class RendererSystem {\n  constructor (gameEngine, coordinateService = null) {\n    this.gameEngine = gameEngine\n    this.coordinateService = coordinateService\n    this.transformer = null
     this.app = null
     this.targetIndicator = null
     this.alertHighlight = null
@@ -21,18 +17,9 @@ export class RendererSystem {
     this.entityRepository = null
   }
 
-  setTransformer (transformer) {
-    this.transformer = transformer
-  }
-
   init (app) {
      this.app = app
-     // Use transformer from GameEngine if available
-     if (this.gameEngine && this.gameEngine.transformer) {
-       this.transformer = this.gameEngine.transformer
-     } else {
-       this.transformer = createCoordinateTransformer(app)
-     }
+     this.transformer = createCoordinateTransformer(app)
      this.entityRepository = createRepository(this.gameEngine.state)
      this.setupGrid()
      // Добавляем app в gameEngine для использования другими системами
@@ -170,9 +157,7 @@ export class RendererSystem {
   /**
    * Установить систему для спавна сущностей
    */
-  setEntitySpawnSystem(entitySpawnSystem) {
-    this.entitySpawnSystem = entitySpawnSystem
-  }
+  setEntitySpawnSystem(entitySpawnSystem) {\n    this.entitySpawnSystem = entitySpawnSystem\n  }
 
   /**
    * Создать спрайт сущности и добавить в state.entities
@@ -206,7 +191,7 @@ export class RendererSystem {
   /**
    * Удалить сущность из state.entities
    */
-  removeEntity (id) {
+  removeEntity(id) {
     this.entityRepository.remove(id)
     
     // Also remove from stage if exists

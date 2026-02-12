@@ -16,6 +16,15 @@ export class EntitySpawnSystem {
     this.isDestroyed = false
   }
 
+  setTransformer (transformer) {
+    // Use transformer from RendererSystem if available
+    if (this.rendererSystem && this.rendererSystem.transformer) {
+      this.transformer = this.rendererSystem.transformer
+    } else if (transformer) {
+      this.transformer = transformer
+    }
+  }
+
   init(app) {
     this.app = app
     this.renderer = this.app || null
@@ -24,6 +33,13 @@ export class EntitySpawnSystem {
     // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {
       this.rendererSystem = this.gameEngine.rendererSystem
+    }
+    
+    // Get transformer from RendererSystem or GameEngine
+    if (this.rendererSystem && this.rendererSystem.transformer) {
+      this.transformer = this.rendererSystem.transformer
+    } else if (this.gameEngine && this.gameEngine.transformer) {
+      this.transformer = this.gameEngine.transformer
     }
   }
 
@@ -114,8 +130,8 @@ export class EntitySpawnSystem {
    */
   _createEntity(entityData) {
     const renderer = this.rendererSystem || this.renderer
-    if (!renderer) {
-      console.error('EntitySpawnSystem: renderer not initialized')
+    if (!renderer || !renderer.transformer) {
+      console.error('EntitySpawnSystem: renderer not initialized or no transformer')
       return null
     }
 
@@ -169,6 +185,7 @@ export class EntitySpawnSystem {
     this.gameEngine = null
     this.app = null
     this.rendererSystem = null
+    this.transformer = null
   }
 }
 

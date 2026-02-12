@@ -37,7 +37,19 @@ export class GameEngine {
      this._loopId = null
      this._lastFrameTime = 0
      this.app = null
+     this.transformer = null
    }
+
+  setApp (app) {
+    this.app = app
+    // Create transformer once and share across systems
+    const { createCoordinateTransformer } = require('../utils/coordinate-transformer.js')
+    this.transformer = createCoordinateTransformer(app)
+  }
+
+  getTransformer () {
+    return this.transformer
+  }
 
   addSystem (system) {
     if (!system || typeof system.update !== 'function') {
@@ -46,6 +58,10 @@ export class GameEngine {
     this.systems.push(system)
     system.update = system.update.bind(system)
     system.render = system.render.bind(system)
+    // Pass shared transformer to system if it has setTransformer method
+    if (typeof system.setTransformer === 'function' && this.transformer) {
+      system.setTransformer(this.transformer)
+    }
   }
 
   removeSystem (system) {
@@ -129,6 +145,7 @@ export class GameEngine {
     }
 
     this.systems = []
+    this.transformer = null
     try {
       this.state.destroy()
     } catch (error) {

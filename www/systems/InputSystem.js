@@ -16,9 +16,18 @@ export class InputSystem {
     this.isDestroyed = false
   }
 
+  setTransformer (transformer) {
+    this.transformer = transformer
+  }
+
   init (app) {
     this.app = app
-    this.transformer = createCoordinateTransformer(app)
+    // Use transformer from GameEngine if available
+    if (this.gameEngine && this.gameEngine.transformer) {
+      this.transformer = this.gameEngine.transformer
+    } else {
+      this.transformer = createCoordinateTransformer(app)
+    }
     
     // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {
