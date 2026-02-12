@@ -186,6 +186,13 @@ export class GameEngineDemo {
   }
 
   /**
+   * Initialize demo (alias for initializeGame)
+   */
+  async initializeDemo () {
+    return this.initializeGame()
+  }
+
+  /**
    * Cleanup resources
    */
   destroy () {

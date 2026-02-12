@@ -160,6 +160,15 @@ export class GameStateSystem {
     this.isDestroyed = true
     this.gameEngine = null
   }
+
+  update (dt) {
+    // Call updateGameLoop for game state updates
+    return this.updateGameLoop(dt)
+  }
+
+  render () {
+    // GameStateSystem does not render anything
+  }
 }
 
 export function createGameStateSystem (gameEngine) {
