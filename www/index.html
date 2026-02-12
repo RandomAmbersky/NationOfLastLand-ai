@@ -175,8 +175,98 @@
     <script type="module">
         // Create and initialize the game demo
         import { GameDemo } from './game-demo.js';
+        
+        console.log('index.html inline script: GameDemo imported');
+        
         const demo = new GameDemo();
-        demo.initializeDemo();
+        console.log('index.html inline script: GameDemo created');
+        
+        // Initialize demo
+        demo.initializeDemo()
+          .then(result => {
+            console.log('index.html inline script: initializeDemo result =', result);
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+              statusEl.textContent = result.success ? 'Game initialized successfully!' : `Error: ${result.error}`;
+            }
+          })
+          .catch(error => {
+            console.error('index.html inline script: initializeDemo error =', error);
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+              statusEl.textContent = `Error: ${error.message}`;
+            }
+          });
+        
+        // Setup button event listeners
+        document.getElementById('init-btn').addEventListener('click', async () => {
+            const statusEl = document.getElementById('status');
+            try {
+                await demo.initializeDemo();
+                statusEl.textContent = 'Game initialized successfully!';
+            } catch (error) {
+                statusEl.textContent = `Error: ${error.message}`;
+            }
+        });
+        
+        document.getElementById('start-auto-update-btn').addEventListener('click', () => {
+            demo.startAutoUpdate();
+            document.getElementById('status').textContent = 'Auto update started';
+        });
+        
+        document.getElementById('stop-auto-update-btn').addEventListener('click', () => {
+            demo.stopAutoUpdate();
+            document.getElementById('status').textContent = 'Auto update stopped';
+        });
+        
+        document.getElementById('update-once-btn').addEventListener('click', () => {
+            demo.updateGameLoop(0.016); // ~60 FPS
+            document.getElementById('status').textContent = 'Game updated once';
+        });
+        
+        document.getElementById('spawn-btn').addEventListener('click', () => {
+            const vehicleType = document.getElementById('vehicle-type').value;
+            const baseEntity = demo.entities.values().next().value;
+            if (baseEntity) {
+                demo.spawnVehicle(vehicleType, baseEntity).then(result => {
+                    document.getElementById('status').textContent = JSON.stringify(result);
+                });
+            } else {
+                document.getElementById('status').textContent = 'No base selected';
+            }
+        });
+        
+        document.getElementById('create-base-btn').addEventListener('click', () => {
+            const x = parseFloat(document.getElementById('base-x').value) || 100;
+            const y = parseFloat(document.getElementById('base-y').value) || 100;
+            demo.createBase(x, y).then(result => {
+                document.getElementById('status').textContent = JSON.stringify(result);
+            });
+        });
+        
+        document.getElementById('build-floor-btn').addEventListener('click', () => {
+            const baseId = 0; // TODO: get from demo
+            const floorType = document.getElementById('floor-type').value;
+            demo.buildFloor(baseId, floorType).then(result => {
+                document.getElementById('status').textContent = JSON.stringify(result);
+            });
+        });
+        
+        document.getElementById('create-alert-btn').addEventListener('click', () => {
+            demo.createRandomAlert().then(result => {
+                document.getElementById('status').textContent = JSON.stringify(result);
+            });
+        });
+        
+        document.getElementById('clear-selection-btn').addEventListener('click', () => {
+            demo.clearSelection();
+            document.getElementById('status').textContent = 'Selection cleared';
+        });
+        
+        document.getElementById('cleanup-btn').addEventListener('click', () => {
+            demo.destroy();
+            document.getElementById('status').textContent = 'Game cleaned up';
+        });
     </script>
 </body>
 </html>

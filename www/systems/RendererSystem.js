@@ -66,7 +66,17 @@ export class RendererSystem {
       color = 0x2196F3
       graphics.beginFill(color)
       graphics.drawRect(-15, -15, 30, 30)
+    } else if (entityType === 'alert') {
+      // Алерты - желтые треугольники
+      color = GAME_CONFIG.COLORS.alert
+      graphics.beginFill(color)
+      graphics.moveTo(0, -8)
+      graphics.lineTo(6, 6)
+      graphics.lineTo(-6, 6)
+      graphics.closePath()
+      graphics.endFill()
     } else {
+      // Виды транспорта: scout, tank, transport
       switch (vehicleType) {
         case 'scout':
           color = faction === 'Neutral'
@@ -96,6 +106,7 @@ export class RendererSystem {
           graphics.drawRect(-12, -10, 24, 20)
           break
         default:
+          // Неизвестный тип транспорта - белый квадрат
           color = 0xFFFFFF
           graphics.beginFill(color)
           graphics.drawRect(-4, -4, 8, 8)
@@ -260,29 +271,57 @@ export class RendererSystem {
    */
   _syncEntities () {
     const entities = this.gameEngine.state.get('entities')
-    if (!(entities instanceof Map)) return
+    if (!(entities instanceof Map)) {
+      console.warn('RendererSystem._syncEntities: entities is not a Map')
+      return
+    }
+
+    const entitiesCount = entities.size
+    const renderedCount = this._renderedEntities.size
 
     // Создаем новые сущности, которые еще не отрисованы
+    const renderedIds = new Set(this._renderedEntities.keys())
+    let createdCount = 0
+    
     for (const [id, entityData] of entities) {
-      if (!this._renderedEntities.has(id) && entityData.container === undefined) {
+      if (!renderedIds.has(id) && entityData.container === undefined) {
+        
+        // WASM возвращает данные с другими именами полей:
+        // - entity_type: 'base', 'alert', 'vehicle'
+        // - subtype: specific type (e.g., 'floors_1', 'RaiderAlert_Hidden', 'scout')
+        // - fraction: faction name
+        // - position: { gameX, gameY }
+        
+        const entityType = entityData.entity_type || entityData.type || 'vehicle'
+        const vehicleType = entityData.subtype || entityData.vehicleType
+        const faction = entityData.fraction
+        const x = entityData.position?.gameX || entityData.gameX || 0
+        const y = entityData.position?.gameY || entityData.gameY || 0
+        
         // Сущность есть в state.entities, но не отрисована
         // Создаем спрайт для нее
         this.createEntitySprite(
           entityData.id,
-          entityData.gameX,
-          entityData.gameY,
-          entityData.vehicleType,
-          entityData.fraction,
-          entityData.entityType
+          x,
+          y,
+          vehicleType,
+          faction,
+          entityType
         )
+        createdCount++
       }
     }
 
     // Удаляем сущности, которые отрисованы, но нет в state.entities
+    let removedCount = 0
     for (const [id, renderedEntity] of this._renderedEntities) {
       if (!entities.has(id)) {
         this.removeEntity(id)
+        removedCount++
       }
+    }
+
+    if (createdCount > 0 || removedCount > 0) {
     }
   }
 

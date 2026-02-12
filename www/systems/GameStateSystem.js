@@ -27,6 +27,7 @@ export class GameStateSystem {
       await initWasm()
       const result = gameInit()
       const gameState = JSON.parse(result)
+      
 
       this.gameEngine.state.merge({
         isRunning: false,
@@ -47,7 +48,6 @@ export class GameStateSystem {
 
       return { success: true, data: gameState }
     } catch (error) {
-      console.error('Game initialization error:', error)
       return { success: false, error: error.message }
     }
   }
@@ -72,7 +72,6 @@ export class GameStateSystem {
       }
       return { success: false, error: creationResult.message }
     } catch (error) {
-      console.error('Vehicle creation error:', error)
       return { success: false, error: error.message }
     }
   }
@@ -83,7 +82,6 @@ export class GameStateSystem {
       const baseInfo = JSON.parse(result)
       return { success: true, data: baseInfo }
     } catch (error) {
-      console.error('Base creation error:', error)
       return { success: false, error: error.message }
     }
   }
@@ -94,7 +92,6 @@ export class GameStateSystem {
       const updatedBase = JSON.parse(result)
       return { success: true, data: updatedBase }
     } catch (error) {
-      console.error('Floor building error:', error)
       return { success: false, error: error.message }
     }
   }
@@ -105,7 +102,6 @@ export class GameStateSystem {
       const alertResult = JSON.parse(result)
       return { success: true, data: alertResult }
     } catch (error) {
-      console.error('Alert creation error:', error)
       return { success: false, error: error.message }
     }
   }
@@ -116,7 +112,6 @@ export class GameStateSystem {
       const groupResult = JSON.parse(result)
       return { success: true, data: groupResult }
     } catch (error) {
-      console.error('Group target setting error:', error)
       return { success: false, error: error.message }
     }
   }
@@ -153,7 +148,6 @@ export class GameStateSystem {
 
       return { success: true, data: gameState }
     } catch (error) {
-      console.error('Game update error:', error)
       return { success: false, error: error.message }
     }
   }
@@ -171,6 +165,14 @@ export class GameStateSystem {
 
   render () {
     // GameStateSystem does not render anything
+  }
+
+  clearSelection () {
+    try {
+      return _clearSelection()
+    } catch (error) {
+      return null
+    }
   }
 }
 

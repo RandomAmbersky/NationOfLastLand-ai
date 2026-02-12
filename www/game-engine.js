@@ -70,6 +70,11 @@ export class GameEngineDemo {
    */
   initPixi () {
     const canvasContainer = document.querySelector('.game-container')
+    if (!canvasContainer) {
+      console.error('GameEngineDemo.initPixi: .game-container not found')
+      return
+    }
+
     const rect = canvasContainer.getBoundingClientRect()
 
     this.app = new PIXI.Application({
@@ -120,9 +125,18 @@ export class GameEngineDemo {
       const result = await this.gameStateSystem.initializeGame()
       this.isInitialized = true
       this.gameEngine.start()
+      // Update status in DOM
+      const statusEl = document.getElementById('status')
+      if (statusEl) {
+        statusEl.textContent = 'Game initialized successfully!'
+      }
       return result
     } catch (error) {
       console.error('Game initialization error:', error)
+      const statusEl = document.getElementById('status')
+      if (statusEl) {
+        statusEl.textContent = `Error: ${error.message}`
+      }
       return { success: false, error: error.message }
     }
   }
@@ -190,6 +204,41 @@ export class GameEngineDemo {
    */
   async initializeDemo () {
     return this.initializeGame()
+  }
+
+  /**
+   * Spawn a vehicle
+   */
+  async spawnVehicle (vehicleType, baseEntity) {
+    return this.gameStateSystem.spawnVehicle(vehicleType, baseEntity)
+  }
+
+  /**
+   * Create a base
+   */
+  async createBase (x, y) {
+    return this.gameStateSystem.createBase(x, y)
+  }
+
+  /**
+   * Build a floor on a base
+   */
+  async buildFloor (baseId, floorType) {
+    return this.gameStateSystem.buildFloor(baseId, floorType)
+  }
+
+  /**
+   * Create a random alert
+   */
+  async createRandomAlert () {
+    return this.gameStateSystem.createRandomAlert()
+  }
+
+  /**
+   * Clear selection
+   */
+  clearSelection () {
+    this.gameStateSystem.clearSelection?.()
   }
 
   /**
