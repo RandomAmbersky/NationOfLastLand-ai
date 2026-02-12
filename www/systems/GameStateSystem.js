@@ -14,11 +14,19 @@ import {
   create_random_alert,
   clear_selection as _clearSelection
 } from '../wasm-imports.js'
+import { createRepository } from '../core/EntityRepository.js'
+import { createEntityData } from '../utils/entity-utils.js'
 
 export class GameStateSystem {
   constructor(gameEngine) {
     this.gameEngine = gameEngine
+    this.repository = null
     this.isDestroyed = false
+  }
+
+  init(app) {
+    this.app = app
+    this.repository = createRepository(this.gameEngine.state)
   }
 
   async initializeGame() {
@@ -37,10 +45,10 @@ export class GameStateSystem {
       }, 'gameInitialized')
 
       if (gameState.entities) {
-        const existingEntities = this.gameEngine.state.get('entities')
-        const entitiesMap = existingEntities instanceof Map ? existingEntities : new Map()
+        const entitiesMap = this.repository.getEntities()
         for (const entity of gameState.entities) {
-          entitiesMap.set(entity.id, entity)
+          const normalizedEntity = createEntityData(entity)
+          entitiesMap.set(entity.id, normalizedEntity)
         }
         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
       }
@@ -151,10 +159,10 @@ export class GameStateSystem {
       }, 'gameStateUpdated')
 
       if (gameState.entities) {
-        const existingEntities = this.gameEngine.state.get('entities')
-        const entitiesMap = existingEntities instanceof Map ? existingEntities : new Map()
+        const entitiesMap = this.repository.getEntities()
         for (const entity of gameState.entities) {
-          entitiesMap.set(entity.id, entity)
+          const normalizedEntity = createEntityData(entity)
+          entitiesMap.set(entity.id, normalizedEntity)
         }
         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
       }
@@ -178,6 +186,7 @@ export class GameStateSystem {
   destroy() {
     if (this.isDestroyed) return
     this.isDestroyed = true
+    this.repository = null
     this.gameEngine = null
   }
 

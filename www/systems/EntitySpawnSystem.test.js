@@ -2,6 +2,8 @@
  * Simple tests for EntitySpawnSystem
  */
 
+import { EntitySpawnSystem } from './EntitySpawnSystem.js'
+
 class MockContainer {
   constructor() {
     this.x = 0
@@ -46,7 +48,10 @@ describe('EntitySpawnSystem', () => {
     mockApp = new MockApplication()
     mockRendererSystem = {
       addToStage: jest.fn(),
-      removeFromStage: jest.fn()
+      removeFromStage: jest.fn(),
+      transformer: {
+        gameToScreen: jest.fn((x, y) => ({ x: x, y: y }))
+      }
     }
     
     const mockState = {
@@ -73,34 +78,29 @@ describe('EntitySpawnSystem', () => {
   describe('constructor', () => {
     it('should initialize with gameEngine', () => {
       expect(entitySpawnSystem.gameEngine).toBe(gameEngine)
-      expect(entitySpawnSystem.entityService).toBeDefined()
+      expect(entitySpawnSystem.spawnQueue).toEqual([])
+      expect(entitySpawnSystem.deletionQueue).toEqual(new Set())
     })
   })
 
-  describe('createEntitySprite', () => {
-    it('should create entity sprite', () => {
-      const result = entitySpawnSystem.createEntitySprite(1, 100, 200, 'scout', 'Player')
-      expect(result).toBeDefined()
-      expect(result.id).toBe(1)
-      expect(result.container).toBeDefined()
-      expect(result.graphics).toBeDefined()
+  describe('queueSpawn', () => {
+    it('should add entity to spawn queue', () => {
+      const entityData = { id: 1 }
+      entitySpawnSystem.queueSpawn(entityData)
+      expect(entitySpawnSystem.spawnQueue).toHaveLength(1)
+      expect(entitySpawnSystem.spawnQueue[0]).toBe(entityData)
     })
   })
 
-  describe('removeEntity', () => {
-    it('should remove entity from state', () => {
-      const entitiesMap = new Map()
-      entitiesMap.set(1, { container: new MockContainer() })
-      gameEngine.state.get = jest.fn((key) => key === 'entities' ? entitiesMap : null)
-      
-      entitySpawnSystem.removeEntity(1)
-      expect(entitiesMap.has(1)).toBe(false)
+  describe('queueDeletion', () => {
+    it('should add entity to deletion queue', () => {
+      entitySpawnSystem.queueDeletion(1)
+      expect(entitySpawnSystem.deletionQueue).toContain(1)
     })
   })
 
   describe('processSpawns', () => {
     it('should process entity spawns', () => {
-      const entitiesMap = new Map()
       const entityData = {
         id: 1,
         position: { x: 100, y: 200 },
@@ -108,28 +108,34 @@ describe('EntitySpawnSystem', () => {
         fraction: 'Player',
         entity_type: 'vehicle'
       }
-      entitiesMap.set(1, entityData)
+      entitySpawnSystem.queueSpawn(entityData)
       
-      const newEntities = entitySpawnSystem.processSpawns(entitiesMap)
+      const newEntities = entitySpawnSystem.processSpawns()
       expect(newEntities.length).toBe(1)
+      expect(newEntities[0].id).toBe(1)
+    })
+
+    it('should return empty array when queue is empty', () => {
+      const newEntities = entitySpawnSystem.processSpawns()
+      expect(newEntities.length).toBe(0)
     })
   })
 
   describe('processDeletions', () => {
     it('should process entity deletions', () => {
-      const entitiesMap = new Map()
-      // State has entity 1, but passed map doesn't have it
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') {
-          const stateMap = new Map()
-          stateMap.set(1, { container: new MockContainer() })
-          return stateMap
-        }
-        return null
-      })
+      // Add entity to state
+      const stateEntities = new Map()
+      stateEntities.set(1, { container: new MockContainer() })
+      gameEngine.state.get = jest.fn((key) => key === 'entities' ? stateEntities : null)
       
-      const deletedCount = entitySpawnSystem.processDeletions(entitiesMap)
+      entitySpawnSystem.queueDeletion(1)
+      const deletedCount = entitySpawnSystem.processDeletions()
       expect(deletedCount).toBe(1)
+    })
+
+    it('should return 0 when queue is empty', () => {
+      const deletedCount = entitySpawnSystem.processDeletions()
+      expect(deletedCount).toBe(0)
     })
   })
 
@@ -138,10 +144,9 @@ describe('EntitySpawnSystem', () => {
       entitySpawnSystem.destroy()
       expect(entitySpawnSystem.isDestroyed).toBe(true)
       expect(entitySpawnSystem.gameEngine).toBeNull()
-      expect(entitySpawnSystem.transformer).toBeNull()
+      expect(entitySpawnSystem.app).toBeNull()
+      expect(entitySpawnSystem.spawnQueue).toEqual([])
+      expect(entitySpawnSystem.deletionQueue.size).toBe(0)
     })
   })
 })
-
-// Import the module for testing
-import { EntitySpawnSystem } from './EntitySpawnSystem.js'

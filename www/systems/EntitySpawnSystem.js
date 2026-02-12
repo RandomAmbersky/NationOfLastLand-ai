@@ -1,23 +1,23 @@
 /**
- * Entity Spawn System - Handles entity creation and deletion
+ * Entity Spawn System - Manages entity spawn queue and deletion queue
  * Separates creation concerns from rendering logic
  */
 
-import { EntityService } from '../entity-service.js'
-import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
+import { createRepository } from '../core/EntityRepository.js'
 
 export class EntitySpawnSystem {
   constructor(gameEngine, rendererSystem = null) {
     this.gameEngine = gameEngine
-    this.entityService = new EntityService(gameEngine)
     this.rendererSystem = rendererSystem
-    this.transformer = null
+    this.spawnQueue = []
+    this.deletionQueue = new Set()
+    this.repository = null
     this.isDestroyed = false
   }
 
   init(app) {
     this.app = app
-    this.transformer = createCoordinateTransformer(app)
+    this.repository = createRepository(this.gameEngine.state)
     
     // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {
@@ -26,27 +26,145 @@ export class EntitySpawnSystem {
   }
 
   /**
-   * Create a new entity sprite
-   * @param {number} id - Entity ID
-   * @param {number} x - Game X coordinate
-   * @param {number} y - Game Y coordinate
-   * @param {string} vehicleType - Vehicle type (scout, tank, transport)
-   * @param {string} faction - Entity faction
-   * @param {string} entityType - Entity type (vehicle, base, alert)
-   * @returns {Object} Created entity object
+   * Queue entity for spawning
+   * @param {Object} entityData - Entity data from WASM
    */
-  createEntitySprite(id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
+  queueSpawn(entityData) {
+    this.spawnQueue.push(entityData)
+  }
+
+  /**
+   * Queue entity for deletion
+   * @param {number} id - Entity ID to delete
+   */
+  queueDeletion(id) {
+    this.deletionQueue.add(id)
+  }
+
+  /**
+   * Process all pending spawns
+   * @returns {Array<Object>} Array of created entities
+   */
+  processSpawns() {
+    if (this.spawnQueue.length === 0) return []
+
+    const createdEntities = []
+    const entities = this.repository.getEntities()
+
+    for (const entityData of this.spawnQueue) {
+      const entity = this._createEntity(entityData)
+      if (entity) {
+        entities.set(entity.id, entity)
+        createdEntities.push(entity)
+      }
+    }
+
+    this.spawnQueue = []
+    this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
+    return createdEntities
+  }
+
+  /**
+   * Process all pending deletions
+   * @returns {number} Count of deleted entities
+   */
+  processDeletions() {
+    if (this.deletionQueue.size === 0) return 0
+
+    let deletedCount = 0
+    const entities = this.repository.getEntities()
+
+    for (const id of this.deletionQueue) {
+      if (entities.has(id)) {
+        const entity = entities.get(id)
+        
+        // Remove from stage using RendererSystem API
+        if (this.rendererSystem && entity.container) {
+          this.rendererSystem.removeFromStage(entity.container)
+          entity.container.destroy({ children: true, texture: true, baseTexture: true })
+        }
+        
+        entities.delete(id)
+        deletedCount++
+      }
+    }
+
+    this.deletionQueue.clear()
+    this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
+    return deletedCount
+  }
+
+  /**
+   * Process all pending spawns and deletions
+   * @returns {Object} Processing results
+   */
+  process() {
+    const created = this.processSpawns()
+    const deleted = this.processDeletions()
+    return { created, deleted }
+  }
+
+  /**
+   * Create entity from data
+   * @param {Object} entityData - Entity data
+   * @returns {Object|null} Created entity or null
+   * @private
+   */
+  _createEntity(entityData) {
     const app = this.gameEngine.app
     if (!app) {
       console.error('EntitySpawnSystem: app not initialized')
       return null
     }
 
-    const coords = this.transformer.gameToScreen(x, y)
-    const screenX = coords.x
-    const screenY = coords.y
+    const coords = this.app.rendererSystem.transformer.gameToScreen(
+      entityData.position?.x ?? 0,
+      entityData.position?.y ?? 0
+    )
 
     const graphics = new PIXI.Graphics()
+    this._drawEntity(graphics, entityData)
+
+    graphics.endFill()
+
+    const container = new PIXI.Container()
+    container.addChild(graphics)
+    container.x = coords.x
+    container.y = coords.y
+    container.gameX = entityData.position?.x ?? 0
+    container.gameY = entityData.position?.y ?? 0
+    container.entityData = entityData // Store original data
+
+    // Add to stage using RendererSystem
+    this.rendererSystem.addToStage(container)
+
+    const entity = {
+      id: entityData.id,
+      container,
+      graphics,
+      type: entityData.entity_type || 'vehicle',
+      vehicleType: entityData.subtype || 'scout',
+      fraction: entityData.fraction || null,
+      gameX: entityData.position?.x ?? 0,
+      gameY: entityData.position?.y ?? 0,
+      screenX: coords.x,
+      screenY: coords.y
+    }
+
+    return entity
+  }
+
+  /**
+   * Draw entity graphics
+   * @param {PIXI.Graphics} graphics - Graphics object
+   * @param {Object} entityData - Entity data
+   * @private
+   */
+  _drawEntity(graphics, entityData) {
+    const entityType = entityData.entity_type || 'vehicle'
+    const vehicleType = entityData.subtype || entityData.vehicleType || 'scout'
+    const fraction = entityData.fraction || null
+
     let color
 
     if (entityType === 'base') {
@@ -54,158 +172,26 @@ export class EntitySpawnSystem {
       graphics.beginFill(color)
       graphics.drawRect(-15, -15, 30, 30)
     } else if (entityType === 'alert') {
-      color = this._getAlertColor(faction)
+      color = 0xB8860B
       graphics.beginFill(color)
       graphics.moveTo(0, -8)
       graphics.lineTo(6, 6)
       graphics.lineTo(-6, 6)
       graphics.closePath()
-      graphics.endFill()
     } else {
-      color = this._getVehicleColor(vehicleType, faction)
+      color = this._getVehicleColor(vehicleType, fraction)
       graphics.beginFill(color)
       this._drawVehicleShape(graphics, vehicleType)
     }
-
-    graphics.endFill()
-
-    const container = new PIXI.Container()
-    container.addChild(graphics)
-    container.x = screenX
-    container.y = screenY
-    container.gameX = x
-    container.gameY = y
-    
-    // Используем RendererSystem для добавления на stage
-    this.rendererSystem.addToStage(container)
-
-    const entity = {
-      id,
-      container,
-      graphics,
-      type: entityType,
-      vehicleType,
-      faction,
-      gameX: x,
-      gameY: y,
-      screenX,
-      screenY
-    }
-
-    // Update state.entities
-    this._updateEntityInState(id, entity)
-
-    return entity
   }
 
   /**
-   * Remove an entity from rendering and state
-   * @param {number} id - Entity ID
+   * Get vehicle color based on type and faction
+   * @param {string} vehicleType - Vehicle type
+   * @param {string} faction - Faction name
+   * @returns {number} Color value
+   * @private
    */
-  removeEntity(id) {
-    const entities = this.gameEngine.state.get('entities')
-    if (!(entities instanceof Map)) return
-
-    const entity = entities.get(id)
-    if (!entity || !entity.container) return
-
-    // Remove from stage using RendererSystem API
-    this.rendererSystem.removeFromStage(entity.container)
-    
-    entity.container.destroy({ children: true, texture: true, baseTexture: true })
-
-    // Remove from state
-    entities.delete(id)
-    this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
-  }
-
-  /**
-   * Update existing entity with new container/graphics
-   * @param {number} id - Entity ID
-   * @param {Object} entity - Entity object with container and graphics
-   */
-  updateEntity(id, entity) {
-    this._updateEntityInState(id, entity)
-  }
-
-  /**
-   * Process all pending entity spawns
-   * @param {Map} entities - Current entities from state
-   */
-  processSpawns(entities) {
-    if (!(entities instanceof Map)) return []
-
-    const newEntities = []
-    for (const [id, entityData] of entities) {
-      // Check if entity needs to be spawned (no container)
-      if (!entityData.container) {
-        const entityType = entityData.entity_type || entityData.type || 'vehicle'
-        const vehicleType = entityData.subtype || entityData.vehicleType
-        const faction = entityData.fraction
-        const x = entityData.position?.x ?? entityData.gameX ?? 0
-        const y = entityData.position?.y ?? entityData.gameY ?? 0
-
-        const entity = this.createEntitySprite(
-          id,
-          x,
-          y,
-          vehicleType,
-          faction,
-          entityType
-        )
-
-        if (entity) {
-          newEntities.push(entity)
-        }
-      }
-    }
-
-    return newEntities
-  }
-
-  /**
-   * Process all pending entity deletions
-   * @param {Map} entities - Current entities from state
-   * @returns {number} Count of deleted entities
-   */
-  processDeletions(entities) {
-    if (!(entities instanceof Map)) return 0
-
-    let deletedCount = 0
-    const stateEntities = this.gameEngine.state.get('entities')
-
-    if (!(stateEntities instanceof Map)) return 0
-
-    for (const [id, storedEntity] of stateEntities) {
-      if (!entities.has(id)) {
-        this.removeEntity(id)
-        deletedCount++
-      }
-    }
-
-    return deletedCount
-  }
-
-  // Private methods
-
-  _updateEntityInState(id, entity) {
-    const entities = this.gameEngine.state.get('entities')
-    if (!(entities instanceof Map)) return
-
-    const existingEntity = entities.get(id)
-    if (existingEntity) {
-      entities.set(id, { ...existingEntity, ...entity })
-    } else {
-      entities.set(id, entity)
-    }
-    this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
-  }
-
-  _getAlertColor(faction) {
-    // Use default yellow for alerts
-    return 0xFFFF00
-  }
-
   _getVehicleColor(vehicleType, faction) {
     const colors = {
       scout: { player: 0x4CAF50, enemy: 0xF44336, neutral: 0x9E9E9E },
@@ -218,13 +204,18 @@ export class EntitySpawnSystem {
       Player: vehicleColors.player,
       Enemy: vehicleColors.enemy,
       Neutral: vehicleColors.neutral,
-      Wild: vehicleColors.enemy,
-      default: vehicleColors.neutral
+      Wild: vehicleColors.enemy
     }
 
-    return factionColors[faction] || factionColors.default
+    return factionColors[faction] || vehicleColors.neutral
   }
 
+  /**
+   * Draw vehicle shape
+   * @param {PIXI.Graphics} graphics - Graphics object
+   * @param {string} vehicleType - Vehicle type
+   * @private
+   */
   _drawVehicleShape(graphics, vehicleType) {
     switch (vehicleType) {
       case 'scout':
@@ -237,7 +228,6 @@ export class EntitySpawnSystem {
         graphics.drawRect(-12, -10, 24, 20)
         break
       default:
-        // Unknown type - white square
         graphics.drawRect(-4, -4, 8, 8)
     }
   }
@@ -246,10 +236,13 @@ export class EntitySpawnSystem {
     if (this.isDestroyed) return
     this.isDestroyed = true
 
+    // Clear queues
+    this.spawnQueue = []
+    this.deletionQueue.clear()
+    this.repository = null
     this.gameEngine = null
-    this.entityService = null
-    this.transformer = null
     this.app = null
+    this.rendererSystem = null
   }
 }
 

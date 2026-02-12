@@ -5,6 +5,8 @@
 // Core modules
 export { StateContainer, createContainer } from "./core/StateContainer.js"
 export { GameEngine, System, createEngine } from "./core/GameEngine.js"
+export { EntityRepository, createRepository } from "./core/EntityRepository.js"
+export { GameCleanup, createCleanupScope } from "./core/GameCleanup.js"
 
 // Selection service
 export { SelectionIndicator, createSelectionIndicator } from "./services/SelectionIndicator.js"
@@ -17,18 +19,19 @@ export { GameStateSystem, createGameStateSystem } from "./systems/GameStateSyste
 export { EntitySpawnSystem, createEntitySpawnSystem } from "./systems/EntitySpawnSystem.js"
 
 
-// Service modules
-export { EntityService } from "./entity-service.js"
-
 // Utils
 export { calculateDistance, calculateDistanceBetween, clamp, lerp } from "./utils/math.js"
 export { CoordinateTransformer, createCoordinateTransformer } from "./utils/coordinate-transformer.js"
-
-// WASM imports
-export { initWasm, init, gameInit, create_vehicle, update, select_entity, deselect_entity, set_group_target, create_base, build_floor, get_entity_info, create_random_alert, clear_selection, handle_entity_selection, get_entities_data } from "./wasm-imports.js"
-
-// Cleanup utilities
-export { GameCleanup, createCleanupScope } from "./core/GameCleanup.js"
+export { 
+  createEntityData,
+  findPlayerBase,
+  isPlayerBaseSelected,
+  getEntitiesByType,
+  getEntitiesByFraction,
+  entityExists,
+  canMove,
+  isPlayerUnit
+} from "./utils/entity-utils.js"
 export {
   createDisposable,
   TimerManager,
@@ -37,3 +40,72 @@ export {
   Cleanupable
 } from "./utils/cleanup.js"
 
+// WASM imports
+export { initWasm, init, gameInit, create_vehicle, update, select_entity, deselect_entity, set_group_target, create_base, build_floor, get_entity_info, create_random_alert, clear_selection, handle_entity_selection, get_entities_data } from "./wasm-imports.js"
+
+export default {
+  // Core
+  StateContainer,
+  createContainer,
+  GameEngine,
+  System,
+  createEngine,
+  EntityRepository,
+  createRepository,
+  GameCleanup,
+  createCleanupScope,
+  
+  // Selection
+  SelectionIndicator,
+  createSelectionIndicator,
+  
+  // Systems
+  RendererSystem,
+  createRenderer,
+  InputSystem,
+  createInputSystem,
+  SelectionSystem,
+  createSelectionSystem,
+  GameStateSystem,
+  createGameStateSystem,
+  EntitySpawnSystem,
+  createEntitySpawnSystem,
+  
+  // Utils
+  calculateDistance,
+  calculateDistanceBetween,
+  clamp,
+  lerp,
+  CoordinateTransformer,
+  createCoordinateTransformer,
+  createEntityData,
+  findPlayerBase,
+  isPlayerBaseSelected,
+  getEntitiesByType,
+  getEntitiesByFraction,
+  entityExists,
+  canMove,
+  isPlayerUnit,
+  createDisposable,
+  TimerManager,
+  EventManager,
+  GraphicsCleanup,
+  Cleanupable,
+  
+  // WASM
+  initWasm,
+  init,
+  gameInit,
+  create_vehicle,
+  update,
+  select_entity,
+  deselect_entity,
+  set_group_target,
+  create_base,
+  build_floor,
+  get_entity_info,
+  create_random_alert,
+  clear_selection,
+  handle_entity_selection,
+  get_entities_data
+}

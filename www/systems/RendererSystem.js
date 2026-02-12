@@ -4,6 +4,7 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
+import { createRepository } from '../core/EntityRepository.js'
 import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
 
 export class RendererSystem {
@@ -16,12 +17,13 @@ export class RendererSystem {
     this.alertHighlight = null
     this.gridContainer = null
     this.isDestroyed = false
-    this.entitySpawnSystem = null
+    this.entityRepository = null
   }
 
   init (app) {
      this.app = app
      this.transformer = createCoordinateTransformer(app)
+     this.entityRepository = createRepository(this.gameEngine.state)
      this.setupGrid()
      // Добавляем app в gameEngine для использования другими системами
      this.gameEngine.app = app
@@ -33,9 +35,7 @@ export class RendererSystem {
    * Получить отрисованную сущность по ID
    */
   getEntity (id) {
-    const entities = this.gameEngine.state.get('entities')
-    if (!(entities instanceof Map)) return null
-    return entities.get(id)
+    return this.entityRepository.getById(id)
   }
 
   /**
@@ -144,10 +144,7 @@ export class RendererSystem {
    * Обновить позицию сущности на основе данных из state.entities
    */
   updateEntityPosition (id, gameX, gameY) {
-    const entities = this.gameEngine.state.get('entities')
-    if (!(entities instanceof Map)) return
-    
-    const entity = entities.get(id)
+    const entity = this.getEntity(id)
     if (!entity || !entity.container) return
 
     const coords = this._toScreenCoords(gameX, gameY)
@@ -164,6 +161,7 @@ export class RendererSystem {
    * Установить систему для спавна сущностей
    */
   setEntitySpawnSystem(entitySpawnSystem) {
+    // Deprecated - kept for backwards compatibility
     this.entitySpawnSystem = entitySpawnSystem
   }
 
@@ -257,18 +255,8 @@ export class RendererSystem {
       screenY
     }
 
-    // Добавляем в state.entities
-    const entities = this.gameEngine.state.get('entities')
-    if (entities instanceof Map) {
-      const existingEntity = entities.get(id)
-      if (existingEntity) {
-        // Обновляем существующую сущность контейнером
-        entities.set(id, { ...existingEntity, container, graphics })
-      } else {
-        entities.set(id, entity)
-      }
-      this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
-    }
+    // Добавляем в state.entities через репозиторий
+    this.entityRepository.add(entity)
 
     return entity
   }
@@ -277,17 +265,15 @@ export class RendererSystem {
    * Удалить сущность из state.entities
    */
   removeEntity (id) {
+    this.entityRepository.remove(id)
+    
+    // Also remove from stage if exists
     const entities = this.gameEngine.state.get('entities')
-    if (!(entities instanceof Map)) return
-
     const entity = entities.get(id)
-    if (!entity || !entity.container) return
-
-    this.removeFromStage(entity.container)
-    entity.container.destroy({ children: true, texture: true, baseTexture: true })
-
-    entities.delete(id)
-    this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
+    if (entity && entity.container) {
+      this.removeFromStage(entity.container)
+      entity.container.destroy({ children: true, texture: true, baseTexture: true })
+    }
   }
 
   showTargetIndicator (gameX, gameY) {
@@ -366,8 +352,6 @@ export class RendererSystem {
 
   update (_dt) {
     // Scale is calculated on demand via transformer.getScale()
-    // Синхронизируем отрисованные сущности с state.entities
-    this._syncEntities()
   }
 
   /**
@@ -384,35 +368,6 @@ export class RendererSystem {
   _getScale() {
     const transformer = this._getTransformer()
     return transformer ? transformer.getScale() : { x: 1, y: 1 }
-  }
-
-  /**
-   * Синхронизация отрисованных сущностей с state.entities
-   * Создает новые сущности и удаляет удаленные
-   */
-  _syncEntities () {
-    const entities = this.gameEngine.state.get('entities')
-    if (!(entities instanceof Map)) {
-      console.warn('RendererSystem._syncEntities: entities is not a Map')
-      return
-    }
-
-    const entitiesCount = entities.size
-
-    // Если есть EntitySpawnSystem - делегируем спавн
-    if (this.entitySpawnSystem) {
-      const newEntities = this.entitySpawnSystem.processSpawns(entities)
-      const removedCount = this.entitySpawnSystem.processDeletions(entities)
-
-      console.log('RendererSystem._syncEntities:', {
-        entitiesCount,
-        newEntitiesCreated: newEntities.length,
-        entitiesRemoved: removedCount
-      })
-      return
-    }
-
-    console.warn('RendererSystem._syncEntities: no EntitySpawnSystem available')
   }
 
   destroy () {
@@ -445,6 +400,7 @@ export class RendererSystem {
     this.gameEngine = null
     this.app = null
     this.transformer = null
+    this.entityRepository = null
   }
 }
 

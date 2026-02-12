@@ -1,23 +1,10 @@
-const { EntityService } = require('./entity-service.js')
+const { createEntityData, findPlayerBase, isPlayerBaseSelected, getEntitiesByType, getEntitiesByFraction, entityExists } = require('./utils/entity-utils.js')
 
-describe('EntityService', () => {
-  let gameEngine
-  let entityService
-
-  beforeEach(() => {
-    gameEngine = {
-      state: {
-        get: jest.fn(),
-        merge: jest.fn()
-      }
-    }
-    entityService = new EntityService(gameEngine)
-  })
-
-  describe('createEntity', () => {
+describe('entity-utils', () => {
+  describe('createEntityData', () => {
     it('should create entity with default values', () => {
       const entityData = { id: 1 }
-      const entity = entityService.createEntity(entityData)
+      const entity = createEntityData(entityData)
       expect(entity).toEqual({
         id: 1,
         entityType: 'vehicle',
@@ -30,57 +17,57 @@ describe('EntityService', () => {
 
     it('should handle entity_type field', () => {
       const entityData = { id: 1, entity_type: 'base' }
-      const entity = entityService.createEntity(entityData)
+      const entity = createEntityData(entityData)
       expect(entity.entityType).toBe('base')
     })
 
     it('should determine vehicleType from subtype for scout', () => {
       const entityData = { id: 1, subtype: 'Scout Car' }
-      const entity = entityService.createEntity(entityData)
+      const entity = createEntityData(entityData)
       expect(entity.vehicleType).toBe('scout')
     })
 
     it('should determine vehicleType from subtype for heavy tank', () => {
       const entityData = { id: 1, subtype: 'Heavy Tank' }
-      const entity = entityService.createEntity(entityData)
+      const entity = createEntityData(entityData)
       expect(entity.vehicleType).toBe('tank')
     })
 
     it('should determine vehicleType from subtype for armored truck', () => {
       const entityData = { id: 1, subtype: 'Armored Truck' }
-      const entity = entityService.createEntity(entityData)
+      const entity = createEntityData(entityData)
       expect(entity.vehicleType).toBe('transport')
     })
 
     it('should handle alert subtypes with underscore', () => {
       const entityData = { id: 1, subtype: 'alert_Raider' }
-      const entity = entityService.createEntity(entityData)
+      const entity = createEntityData(entityData)
       expect(entity.vehicleType).toBe('alert_Raider')
     })
 
     it('should handle raiders', () => {
       const entityData = { id: 1, subtype: 'raider' }
-      const entity = entityService.createEntity(entityData)
+      const entity = createEntityData(entityData)
       expect(entity.vehicleType).toBe('raider')
     })
 
     it('should handle positions as arrays (Rust format)', () => {
       const entityData = { id: 1, position: [100, 200] }
-      const entity = entityService.createEntity(entityData)
+      const entity = createEntityData(entityData)
       expect(entity.gameX).toBe(100)
       expect(entity.gameY).toBe(200)
     })
 
     it('should handle positions as objects', () => {
       const entityData = { id: 1, position: { x: 150, y: 250 } }
-      const entity = entityService.createEntity(entityData)
+      const entity = createEntityData(entityData)
       expect(entity.gameX).toBe(150)
       expect(entity.gameY).toBe(250)
     })
 
     it('should spread remaining entityData properties', () => {
       const entityData = { id: 1, subtype: 'Scout Car', extraProperty: 'value', anotherProp: 42 }
-      const entity = entityService.createEntity(entityData)
+      const entity = createEntityData(entityData)
       expect(entity.extraProperty).toBe('value')
       expect(entity.anotherProp).toBe(42)
     })
@@ -89,30 +76,21 @@ describe('EntityService', () => {
   describe('findPlayerBase', () => {
     it('should find player base when it exists', () => {
       const baseEntity = { id: 1, entityType: 'base', fraction: 'Player' }
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') return new Map([[1, baseEntity]])
-        return null
-      })
-      const result = entityService.findPlayerBase()
+      const entitiesMap = new Map([[1, baseEntity]])
+      const result = findPlayerBase(entitiesMap)
       expect(result).toBe(baseEntity)
     })
 
     it('should return null when no player base exists', () => {
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') return new Map([[1, { entityType: 'vehicle', fraction: 'Player' }]])
-        return null
-      })
-      const result = entityService.findPlayerBase()
+      const entitiesMap = new Map([[1, { entityType: 'vehicle', fraction: 'Player' }]])
+      const result = findPlayerBase(entitiesMap)
       expect(result).toBeNull()
     })
 
     it('should return null when base belongs to enemy', () => {
       const enemyBase = { id: 1, entityType: 'base', fraction: 'Enemy' }
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') return new Map([[1, enemyBase]])
-        return null
-      })
-      const result = entityService.findPlayerBase()
+      const entitiesMap = new Map([[1, enemyBase]])
+      const result = findPlayerBase(entitiesMap)
       expect(result).toBeNull()
     })
   })
@@ -120,33 +98,24 @@ describe('EntityService', () => {
   describe('isPlayerBaseSelected', () => {
     it('should return true when player base is selected', () => {
       const baseEntity = { id: 1, entityType: 'base', fraction: 'Player' }
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') return new Map([[1, baseEntity]])
-        if (key === 'selection') return { selectedEntityIds: [1] }
-        return null
-      })
-      const result = entityService.isPlayerBaseSelected()
+      const selections = new Set([1])
+      const entitiesMap = new Map([[1, baseEntity]])
+      const result = isPlayerBaseSelected(selections, entitiesMap)
       expect(result).toBe(true)
     })
 
     it('should return false when no base is selected', () => {
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') return new Map([[1, { entityType: 'vehicle', fraction: 'Player' }]])
-        if (key === 'selection') return { selectedEntityIds: [1] }
-        return null
-      })
-      const result = entityService.isPlayerBaseSelected()
+      const entitiesMap = new Map([[1, { entityType: 'vehicle', fraction: 'Player' }]])
+      const selections = new Set([1])
+      const result = isPlayerBaseSelected(selections, entitiesMap)
       expect(result).toBe(false)
     })
 
     it('should return false when player vehicle is selected but not base', () => {
       const vehicleEntity = { id: 1, entityType: 'vehicle', fraction: 'Player' }
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') return new Map([[1, vehicleEntity]])
-        if (key === 'selection') return { selectedEntityIds: [1] }
-        return null
-      })
-      const result = entityService.isPlayerBaseSelected()
+      const selections = new Set([1])
+      const entitiesMap = new Map([[1, vehicleEntity]])
+      const result = isPlayerBaseSelected(selections, entitiesMap)
       expect(result).toBe(false)
     })
   })
@@ -156,22 +125,16 @@ describe('EntityService', () => {
       const base1 = { id: 1, entityType: 'base' }
       const base2 = { id: 2, entityType: 'base' }
       const vehicle = { id: 3, entityType: 'vehicle' }
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') return new Map([[1, base1], [2, base2], [3, vehicle]])
-        return null
-      })
-      const result = entityService.getEntitiesByType('base')
+      const entitiesMap = new Map([[1, base1], [2, base2], [3, vehicle]])
+      const result = getEntitiesByType(entitiesMap, 'base')
       expect(result).toHaveLength(2)
       expect(result).toContain(base1)
       expect(result).toContain(base2)
     })
 
     it('should return empty array when no entities match', () => {
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') return new Map([[1, { entityType: 'base' }]])
-        return null
-      })
-      const result = entityService.getEntitiesByType('vehicle')
+      const entitiesMap = new Map([[1, { entityType: 'base' }]])
+      const result = getEntitiesByType(entitiesMap, 'vehicle')
       expect(result).toEqual([])
     })
   })
@@ -181,42 +144,30 @@ describe('EntityService', () => {
       const playerUnit1 = { id: 1, fraction: 'Player' }
       const playerUnit2 = { id: 2, fraction: 'Player' }
       const enemyUnit = { id: 3, fraction: 'Enemy' }
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') return new Map([[1, playerUnit1], [2, playerUnit2], [3, enemyUnit]])
-        return null
-      })
-      const result = entityService.getEntitiesByFraction('Player')
+      const entitiesMap = new Map([[1, playerUnit1], [2, playerUnit2], [3, enemyUnit]])
+      const result = getEntitiesByFraction(entitiesMap, 'Player')
       expect(result).toHaveLength(2)
       expect(result).toContain(playerUnit1)
       expect(result).toContain(playerUnit2)
     })
 
     it('should return empty array when no entities match', () => {
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') return new Map([[1, { fraction: 'Player' }]])
-        return null
-      })
-      const result = entityService.getEntitiesByFraction('Enemy')
+      const entitiesMap = new Map([[1, { fraction: 'Player' }]])
+      const result = getEntitiesByFraction(entitiesMap, 'Enemy')
       expect(result).toEqual([])
     })
   })
 
   describe('entityExists', () => {
     it('should return true when entity exists', () => {
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') return new Map([[1, { id: 1 }]])
-        return null
-      })
-      const result = entityService.entityExists(1)
+      const entitiesMap = new Map([[1, { id: 1 }]])
+      const result = entityExists(entitiesMap, 1)
       expect(result).toBe(true)
     })
 
     it('should return false when entity does not exist', () => {
-      gameEngine.state.get = jest.fn((key) => {
-        if (key === 'entities') return new Map([[1, { id: 1 }]])
-        return null
-      })
-      const result = entityService.entityExists(999)
+      const entitiesMap = new Map([[1, { id: 1 }]])
+      const result = entityExists(entitiesMap, 999)
       expect(result).toBe(false)
     })
   })

@@ -6,18 +6,17 @@
 
 import { GAME_CONFIG } from '../config/game-config.js'
 import { SelectionIndicator } from '../services/SelectionIndicator.js'
-import { EntityService } from '../entity-service.js'
+import { createRepository } from '../core/EntityRepository.js'
 import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
+import { canMove, isPlayerUnit } from '../utils/entity-utils.js'
 
 export class SelectionSystem {
   constructor(gameEngine) {
     this.gameEngine = gameEngine
     this.selectionIndicator = null
-    this.entityService = null
+    this.repository = null
     this.transformer = null
     this.isDestroyed = false
-    this._typeIndex = new Map()
-    this._factionIndex = new Map()
   }
 
   init(app) {
@@ -25,41 +24,22 @@ export class SelectionSystem {
     // Получаем rendererSystem из gameEngine (устанавливается при инициализации RendererSystem)
     this.rendererSystem = this.gameEngine.rendererSystem || null
     this.selectionIndicator = new SelectionIndicator(this.gameEngine, this.rendererSystem)
-    this.entityService = new EntityService(this.gameEngine)
+    this.repository = createRepository(this.gameEngine.state)
     this.transformer = createCoordinateTransformer(app)
-    this._buildIndices()
-  }
-
-  _getIndex(key, value) {
-    if (key === 'type') return this._typeIndex.get(value) || []
-    if (key === 'faction') return this._factionIndex.get(value) || []
-    return []
-  }
-
-  _getScale() {
-    if (!this.transformer) return { x: 1, y: 1 }
-    return this.transformer.getScale()
   }
 
   /**
    * Проверяет, может ли юнит двигаться
    */
   _canMove(entity) {
-    // Базы не могут двигаться
-    if (entity.entityType === 'base') return false
-    // Алерты не могут двигаться
-    if (entity.entityType === 'alert') return false
-    // Если есть флаг movement, проверяем его
-    if (entity.movement && entity.movement.canMove === false) return false
-    // По умолчанию юниты могут двигаться
-    return true
+    return canMove(entity)
   }
 
   /**
    * Проверяет, принадлежит ли юнит игроку
    */
   _isPlayerUnit(entity) {
-    return entity.fraction === 'Player' && entity.entityType !== 'base'
+    return isPlayerUnit(entity)
   }
 
   /**
@@ -291,12 +271,12 @@ export class SelectionSystem {
     const state = this.gameEngine.state
     const selections = state.get('selections')
     const maxGroupSize = GAME_CONFIG.LIMITS.maxGroupSize
+    const entities = state.get('entities')
 
-    const playerUnits = this._getIndex('faction', 'Player')
     let count = 0
-    for (const id of playerUnits) {
+    for (const [id, entity] of entities) {
       if (count >= maxGroupSize) break
-      if (!selections.has(id)) {
+      if (!selections.has(id) && this._isPlayerUnit(entity) && this._canMove(entity)) {
         selections.add(id)
         count++
       }
@@ -353,37 +333,9 @@ export class SelectionSystem {
       entityScreenY <= bounds.y + bounds.height
   }
 
-  selectSameType(entityId) {
-    const state = this.gameEngine.state
-    const selections = state.get('selections')
-    const maxGroupSize = GAME_CONFIG.LIMITS.maxGroupSize
-
-    const entity = this.gameEngine.state.get('entities').get(entityId)
-    if (!entity) return 0
-
-    const targetType = entity.vehicleType || entity.type
-    const sameTypeEntities = this._getIndex('type', targetType)
-
-    let addedCount = 0
-    for (const id of sameTypeEntities) {
-      if (addedCount >= maxGroupSize) break
-      const entityToAdd = this.gameEngine.state.get('entities').get(id)
-      if (entityToAdd && !selections.has(id)) {
-        // Проверяем, что юнит принадлежит игроку и может двигаться
-        if (this._isPlayerUnit(entityToAdd) && this._canMove(entityToAdd)) {
-          selections.add(id)
-          addedCount++
-        }
-      }
-    }
-
-    if (addedCount > 0) {
-      state.merge({ selections }, 'selectionsChanged')
-      if (this.selectionIndicator) {
-        this.selectionIndicator.updateIndicators(selections)
-      }
-    }
-    return addedCount
+  _getScale() {
+    if (!this.transformer) return { x: 1, y: 1 }
+    return this.transformer.getScale()
   }
 
   setGroupTarget(gameX, gameY) {
@@ -403,11 +355,9 @@ export class SelectionSystem {
     }
   }
 
-  update(_dt) {
-    this._buildIndices()
-  }
+  update(_dt) {}
 
-  render() { }
+  render() {}
 
   destroy() {
     if (this.isDestroyed) return
@@ -418,7 +368,7 @@ export class SelectionSystem {
     }
 
     this.selectionIndicator = null
-    this.entityService = null
+    this.repository = null
     this.transformer = null
     this.gameEngine = null
   }
