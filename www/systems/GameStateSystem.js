@@ -45,26 +45,25 @@ export class GameStateSystem {
         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
       }
 
-      // Подписываемся на событие клика по юниту
+      // Подписываемся на событие клика по юниту - отправляем в state для обработки
       this.gameEngine.state.subscribe('entityClicked', (data) => {
         console.log('GameStateSystem: entityClicked event received', data)
-        this.selectionSystem?.handleEntityClicked(data)
-        this._handleEntityClicked(data)
+        this.gameEngine.state.emit('entityClickedProcessed', data)
       })
 
       // Подписываемся на событие выбора юнита (правая кнопка мыши)
       this.gameEngine.state.subscribe('entitySelected', (data) => {
-        this.selectionSystem?.handleEntitySelected(data)
+        this.gameEngine.state.emit('entitySelectedProcessed', data)
       })
 
       // Подписываемся на событие сброса выделения
       this.gameEngine.state.subscribe('selectionCleared', (data) => {
-        this.selectionSystem?.handleSelectionCleared(data)
+        this.gameEngine.state.emit('selectionClearedProcessed', data)
       })
 
       // Подписываемся на событие выделения прямоугольником
       this.gameEngine.state.subscribe('rectangleSelection', (data) => {
-        this.selectionSystem?.handleRectangleSelection(data)
+        this.gameEngine.state.emit('rectangleSelectionProcessed', data)
       })
 
       return { success: true, data: gameState }
@@ -82,7 +81,7 @@ export class GameStateSystem {
     const angle = Math.random() * Math.PI * 2
 
     // Rust Position struct serializes as { x, y } object
-    const { x: baseX, y: baseY } = this.gameEngine.coordinateService?.normalizeCoords(baseEntity.position, baseEntity.gameX) ?? { x: 0, y: 0 }
+    const { x: baseX, y: baseY } = baseEntity.position ?? { x: 0, y: 0 }
 
     const spawnX = baseX + Math.cos(angle) * distance
     const spawnY = baseY + Math.sin(angle) * distance
@@ -196,41 +195,6 @@ export class GameStateSystem {
       return _clearSelection()
     } catch (error) {
       return null
-    }
-  }
-
-  _handleEntityClicked(data) {
-    const { entityId, isMultiSelect, gameX, gameY } = data
-    const entities = this.gameEngine.state.get('entities')
-    const entity = entities.get(entityId)
-
-    if (entity) {
-      console.log('Entity clicked:', entity)
-      // Здесь можно добавить отображение параметров юнита в UI
-      // Например, обновить элемент DOM с информацией о юните
-      this._showEntityInfo(entity)
-    }
-  }
-
-  _showEntityInfo(entity) {
-    // Пытаемся найти элемент для отображения информации
-    const entityInfoEl = document.getElementById('entity-info')
-    if (entityInfoEl) {
-      // Получаем тип: приоритет от subtype (из Rust), затем entity_type
-      const typeValue = entity.subtype || entity.entity_type || 'N/A'
-      // Получаем фракцию
-      const fractionValue = entity.fraction || 'N/A'
-      // Получаем позицию: приоритет от gameX/gameY, затем из position
-      const gameX = entity.gameX ?? (entity.position?.x ?? 0)
-      const gameY = entity.gameY ?? (entity.position?.y ?? 0)
-      const info = `
-ID: ${entity.id}
-Тип: ${typeValue}
-Фракция: ${fractionValue}
-Позиция: (${gameX.toFixed(1)}, ${gameY.toFixed(1)})
-       `
-      entityInfoEl.textContent = info
-      entityInfoEl.style.display = 'block'
     }
   }
 }

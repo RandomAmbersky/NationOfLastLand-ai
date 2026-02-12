@@ -1,52 +1,38 @@
 /**
- * Game Engine Demo - New architecture using GameEngine, Systems, and Services
- * Refactored version of GameDemo with better separation of concerns
+ * Game Engine Demo - Simple game controller using GameEngine
+ * Uses GameEngine as central coordinator with built-in systems
  */
 
-import { GameEngine, RendererSystem, InputSystem, SelectionSystem, GameStateSystem } from './index.js'
-import { CoordinateService } from './coordinate-service.js'
-import { EntityService } from './entity-service.js'
+import { GameEngine, createEngine } from './core/GameEngine.js'
+import { GameStateSystem, createGameStateSystem } from './systems/GameStateSystem.js'
 import { GAME_CONFIG } from './config/game-config.js'
 
 /**
- * Main Game Controller using new architecture
- * Coordinates systems through GameEngine
+ * Main Game Controller using GameEngine
+ * Simplified architecture - GameEngine coordinates all systems
  */
 export class GameEngineDemo {
   constructor () {
     // Initialize GameEngine as central coordinator
-    this.gameEngine = new GameEngine()
+    this.gameEngine = createEngine()
 
-    // Initialize systems
-    this.coordinateService = new CoordinateService(this)
-    this.rendererSystem = new RendererSystem(this.gameEngine, this.coordinateService)
-    this.inputSystem = new InputSystem(this.gameEngine)
-    this.selectionSystem = new SelectionSystem(this.gameEngine)
-    this.gameStateSystem = new GameStateSystem(this.gameEngine)
+    // Initialize game state system (handles WASM communication)
+    this.gameStateSystem = createGameStateSystem(this.gameEngine)
 
-    // Add systems to engine
-    this.gameEngine.addSystem(this.rendererSystem)
-    this.gameEngine.addSystem(this.inputSystem)
-    this.gameEngine.addSystem(this.selectionSystem)
+    // Add game state system to engine
     this.gameEngine.addSystem(this.gameStateSystem)
-
-    // Legacy services for compatibility
-    this.entityService = new EntityService(this)
 
     // State - legacy compatibility with CoreStateManager interface
     this.app = null
     this.isInitialized = false
     this.lastUpdate = Date.now()
-    this.bases = new Map()
-    this.entities = new Map()
 
-    // New state from GameEngine
-    this.stateManager = this.gameEngine.state
+    // Use GameEngine's state
+    this.entities = this.gameEngine.state.get('entities')
+    this.bases = this.gameEngine.state.get('bases')
 
     // Event subscriptions
     this._setupEventSubscriptions()
-
-    this.initPixi()
   }
 
   /**
@@ -69,46 +55,37 @@ export class GameEngineDemo {
    * Initialize Pixi.js
    */
   initPixi () {
-     const canvasContainer = document.querySelector('.game-container')
-     if (!canvasContainer) {
-       console.error('GameEngineDemo.initPixi: .game-container not found')
-       return
-     }
+    const canvasContainer = document.querySelector('.game-container')
+    if (!canvasContainer) {
+      console.error('GameEngineDemo.initPixi: .game-container not found')
+      return
+    }
 
-     const rect = canvasContainer.getBoundingClientRect()
+    const rect = canvasContainer.getBoundingClientRect()
 
-     this.app = new PIXI.Application({
-       width: rect.width,
-       height: rect.height,
-       backgroundColor: 0x2a2a2a,
-       antialias: true,
-       resolution: window.devicePixelRatio || 1,
-       autoDensity: true
-     })
+    this.app = new PIXI.Application({
+      width: rect.width,
+      height: rect.height,
+      backgroundColor: 0x2a2a2a,
+      antialias: true,
+      resolution: window.devicePixelRatio || 1,
+      autoDensity: true
+    })
 
-     const canvas = document.getElementById('game-canvas')
-     if (canvas && canvas.parentNode) {
-       canvas.parentNode.replaceChild(this.app.view, canvas)
-     }
+    const canvas = document.getElementById('game-canvas')
+    if (canvas && canvas.parentNode) {
+      canvas.parentNode.replaceChild(this.app.view, canvas)
+    }
 
-     this.gameWidth = GAME_CONFIG.WORLD_SIZE.width
-     this.gameHeight = GAME_CONFIG.WORLD_SIZE.height
+    this.gameWidth = GAME_CONFIG.WORLD_SIZE.width
+    this.gameHeight = GAME_CONFIG.WORLD_SIZE.height
 
-     // Initialize renderer with app
-     this.rendererSystem.init(this.app)
+    // Store app in gameEngine for systems that need it
+    this.gameEngine.app = this.app
 
-     // Initialize input with app
-     this.inputSystem.init(this.app)
-
-      // Initialize selection with app
-      this.selectionSystem.init(this.app)
-      
-      // Устанавливаем app в GameEngine для SelectionIndicator
-      this.gameEngine.app = this.app
-
-      // Add resize handler
-     window.addEventListener('resize', () => this.handleResize())
-   }
+    // Add resize handler
+    window.addEventListener('resize', () => this.handleResize())
+  }
 
   /**
    * Handle window resize
@@ -119,7 +96,6 @@ export class GameEngineDemo {
 
     if (this.app) {
       this.app.renderer.resize(rect.width, rect.height)
-      this.coordinateService.invalidateScaleCache()
     }
   }
 
@@ -128,8 +104,6 @@ export class GameEngineDemo {
     */
    async initializeGame () {
       try {
-        // Передаем selectionSystem в gameStateSystem ДО инициализации
-        this.gameStateSystem.selectionSystem = this.selectionSystem
         const result = await this.gameStateSystem.initializeGame()
         this.isInitialized = true
         this.gameEngine.start()
@@ -154,7 +128,7 @@ export class GameEngineDemo {
    */
   updateGameLoop (dt) {
     try {
-      return this.gameStateSystem.updateGameLoop(dt)
+      return this.gameStateSystem.update(dt)
     } catch (error) {
       console.error('Game update error:', error)
       return { success: false, error: error.message }
@@ -180,31 +154,43 @@ export class GameEngineDemo {
   }
 
   /**
-   * Get scale
+   * Get scale - legacy compatibility
    */
   getScale () {
-    return this.coordinateService.getScale()
+    if (!this.app) return { x: 1, y: 1 }
+    return {
+      x: this.app.screen.width / GAME_CONFIG.WORLD_SIZE.width,
+      y: this.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
+    }
   }
 
   /**
-   * Invalidate scale cache
+   * Invalidate scale cache - legacy compatibility
    */
   invalidateScaleCache () {
-    this.coordinateService.invalidateScaleCache()
+    // Scale is recalculated on demand now
   }
 
   /**
-   * Screen to game coordinates
+   * Screen to game coordinates - legacy compatibility
    */
   screenToGame (x, y) {
-    return this.coordinateService.screenToGame(x, y)
+    const { x: scaleX, y: scaleY } = this.getScale()
+    return {
+      x: (x / scaleX) / GAME_CONFIG.WORLD_SIZE.width,
+      y: (y / scaleY) / GAME_CONFIG.WORLD_SIZE.height
+    }
   }
 
   /**
-   * Game to screen coordinates
+   * Game to screen coordinates - legacy compatibility
    */
   gameToScreen (x, y) {
-    return this.coordinateService.gameToScreen(x, y)
+    const { x: scaleX, y: scaleY } = this.getScale()
+    return {
+      x: x * scaleX * GAME_CONFIG.WORLD_SIZE.width,
+      y: y * scaleY * GAME_CONFIG.WORLD_SIZE.height
+    }
   }
 
   /**
