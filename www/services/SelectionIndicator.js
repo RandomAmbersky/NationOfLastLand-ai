@@ -5,29 +5,19 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
-import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
+import { withTransformer, ensureTransformer } from '../utils/TransformerMixin.js'
 
-export class SelectionIndicator {
+export class SelectionIndicator extends withTransformer(class {}) {
   constructor(gameEngine, rendererSystem = null) {
+    super()
     this.gameEngine = gameEngine
     this.rendererSystem = rendererSystem
-    this.transformer = null
     this.isDestroyed = false
   }
 
-  setTransformer (transformer) {
-    this.transformer = transformer
-  }
-
   init(app) {
-    // Use transformer from RendererSystem or GameEngine if available
-    if (this.rendererSystem && this.rendererSystem.transformer) {
-      this.transformer = this.rendererSystem.transformer
-    } else if (this.gameEngine && this.gameEngine.transformer) {
-      this.transformer = this.gameEngine.transformer
-    } else {
-      this.transformer = createCoordinateTransformer(app)
-    }
+    // Get transformer from available sources
+    this.transformer = ensureTransformer(this)
     
     // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {
@@ -47,7 +37,7 @@ export class SelectionIndicator {
      indicatorGraphics.drawCircle(0, 0, 12)
      
      // Используем RendererSystem для добавления в контейнер
-     this.rendererSystem.addEntityToContainer({ container: indicatorGraphics }, entity.container)
+     this.rendererSystem?.addEntityToContainer({ container: indicatorGraphics }, entity.container)
      
      entity.selectionIndicator = indicatorGraphics
    }
@@ -55,7 +45,7 @@ export class SelectionIndicator {
   removeSelectionIndicator(entity) {
     if (entity && entity.selectionIndicator) {
       // Используем RendererSystem для удаления из контейнера
-      this.rendererSystem.removeEntityFromContainer({ container: entity.selectionIndicator })
+      this.rendererSystem?.removeEntityFromContainer({ container: entity.selectionIndicator })
       entity.selectionIndicator = null
     }
   }
@@ -63,7 +53,7 @@ export class SelectionIndicator {
   removeInfoIndicator(entity) {
     if (entity && entity.infoIndicator) {
       // Используем RendererSystem для удаления из контейнера
-      this.rendererSystem.removeEntityFromContainer({ container: entity.infoIndicator })
+      this.rendererSystem?.removeEntityFromContainer({ container: entity.infoIndicator })
       
       if (entity.infoIndicator.destroy) {
         entity.infoIndicator.destroy({ children: true, texture: true, baseTexture: true })

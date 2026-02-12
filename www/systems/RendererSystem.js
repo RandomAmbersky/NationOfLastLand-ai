@@ -5,14 +5,14 @@
 
 import { GAME_CONFIG } from '../config/game-config.js'
 import { createRepository } from '../core/EntityRepository.js'
-import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
 import { drawEntity, createEntitySprite } from '../utils/entity-drawer.js'
+import { withTransformer, getTransformer } from '../utils/TransformerMixin.js'
 
-export class RendererSystem {
+export class RendererSystem extends withTransformer(class {}) {
   constructor (gameEngine, coordinateService = null) {
+    super()
     this.gameEngine = gameEngine
     this.coordinateService = coordinateService
-    this.transformer = null
     this.app = null
     this.targetIndicator = null
     this.alertHighlight = null
@@ -21,23 +21,11 @@ export class RendererSystem {
     this.entityRepository = null
   }
 
-  setTransformer (transformer) {
-    this.transformer = transformer
-  }
-
   init (app) {
      this.app = app
-     // Use transformer from GameEngine if available
-     if (this.gameEngine && this.gameEngine.transformer) {
-       this.transformer = this.gameEngine.transformer
-     } else {
-       this.transformer = createCoordinateTransformer(app)
-     }
      this.entityRepository = createRepository(this.gameEngine.state)
      this.setupGrid()
-     // Добавляем app в gameEngine для использования другими системами
      this.gameEngine.app = app
-     // Устанавливаем ссылку на себя в gameEngine для других систем
      this.gameEngine.rendererSystem = this
    }
 
@@ -56,11 +44,7 @@ export class RendererSystem {
     if (this.coordinateService && this.coordinateService.getTransformer) {
       return this.coordinateService.getTransformer()
     }
-    if (this.app) {
-      this.transformer = createCoordinateTransformer(this.app)
-      return this.transformer
-    }
-    return null
+    return super._getTransformer()
   }
 
   // ============== Инкапсулирующий API для работы с контейнерами ==============
@@ -222,6 +206,7 @@ export class RendererSystem {
     if (this.targetIndicator) {
       this.removeFromStage(this.targetIndicator)
       this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
+      this.targetIndicator = null
     }
 
     const coords = this._toScreenCoords(gameX, gameY)
@@ -262,9 +247,10 @@ export class RendererSystem {
 
     this.gridContainer = new PIXI.Container()
     const gridGraphics = new PIXI.Graphics()
-    gridGraphics.lineStyle(1, 0x444444, 0.5)
+    const gridConfig = GAME_CONFIG.GRID
+    gridGraphics.lineStyle(1, gridConfig.color, gridConfig.alpha)
 
-    const gridSize = 50
+    const gridSize = gridConfig.spacing
     const { x: scaleX, y: scaleY } = this._getScale()
 
     for (let x = 0; x <= GAME_CONFIG.WORLD_SIZE.width; x += gridSize) {
@@ -285,10 +271,6 @@ export class RendererSystem {
 
   updateGrid () {
     if (!this.gridContainer) return
-    if (this.app) {
-      this.removeFromStage(this.gridContainer)
-      this.gridContainer.destroy({ children: true, texture: true, baseTexture: true })
-    }
     this.setupGrid()
   }
 
@@ -341,7 +323,6 @@ export class RendererSystem {
 
     this.gameEngine = null
     this.app = null
-    this.transformer = null
     this.entityRepository = null
   }
 }

@@ -5,24 +5,17 @@
 
 import { drawEntity } from '../utils/entity-drawer.js'
 import { createRepository } from '../core/EntityRepository.js'
+import { withTransformer, ensureTransformer } from '../utils/TransformerMixin.js'
 
-export class EntitySpawnSystem {
+export class EntitySpawnSystem extends withTransformer(class {}) {
   constructor(gameEngine, rendererSystem = null) {
+    super()
     this.gameEngine = gameEngine
     this.rendererSystem = rendererSystem
     this.spawnQueue = []
     this.deletionQueue = new Set()
     this.repository = null
     this.isDestroyed = false
-  }
-
-  setTransformer (transformer) {
-    // Use transformer from RendererSystem if available
-    if (this.rendererSystem && this.rendererSystem.transformer) {
-      this.transformer = this.rendererSystem.transformer
-    } else if (transformer) {
-      this.transformer = transformer
-    }
   }
 
   init(app) {
@@ -35,12 +28,8 @@ export class EntitySpawnSystem {
       this.rendererSystem = this.gameEngine.rendererSystem
     }
     
-    // Get transformer from RendererSystem or GameEngine
-    if (this.rendererSystem && this.rendererSystem.transformer) {
-      this.transformer = this.rendererSystem.transformer
-    } else if (this.gameEngine && this.gameEngine.transformer) {
-      this.transformer = this.gameEngine.transformer
-    }
+    // Get transformer from available sources
+    this.transformer = ensureTransformer(this)
   }
 
   /**
@@ -135,7 +124,8 @@ export class EntitySpawnSystem {
       return null
     }
 
-    const coords = renderer.transformer.gameToScreen(
+    const transformer = renderer.transformer
+    const coords = transformer.gameToScreen(
       entityData.position?.x ?? 0,
       entityData.position?.y ?? 0
     )
@@ -185,7 +175,6 @@ export class EntitySpawnSystem {
     this.gameEngine = null
     this.app = null
     this.rendererSystem = null
-    this.transformer = null
   }
 }
 

@@ -4,36 +4,29 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
-import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
+import { withTransformer, ensureTransformer } from '../utils/TransformerMixin.js'
 
-export class InputSystem {
+export class InputSystem extends withTransformer(class {}) {
   constructor (gameEngine, rendererSystem = null) {
+    super()
     this.gameEngine = gameEngine
     this.app = null
-    this.transformer = null
     this.rendererSystem = rendererSystem
     this.dragState = this._createDragState()
     this.isDestroyed = false
     this.boundHandlers = {}
   }
 
-  setTransformer (transformer) {
-    this.transformer = transformer
-  }
-
   init (app) {
     this.app = app
-    // Use transformer from GameEngine if available
-    if (this.gameEngine && this.gameEngine.transformer) {
-      this.transformer = this.gameEngine.transformer
-    } else {
-      this.transformer = createCoordinateTransformer(app)
-    }
     
     // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {
       this.rendererSystem = this.gameEngine.rendererSystem
     }
+    
+    // Get transformer from available sources
+    this.transformer = ensureTransformer(this)
     
     this.setupEventListeners()
   }
@@ -129,7 +122,7 @@ export class InputSystem {
       this._processDragSelection()
     } else {
       if (drag.graphics) {
-        this.rendererSystem.removeFromStage({ container: drag.graphics })
+        this.rendererSystem?.removeFromStage({ container: drag.graphics })
         drag.graphics = null
       }
     }
@@ -144,7 +137,7 @@ export class InputSystem {
     drag.hasDragged = false
 
     if (drag.graphics) {
-      this.rendererSystem.removeFromStage({ container: drag.graphics })
+      this.rendererSystem?.removeFromStage({ container: drag.graphics })
       drag.graphics = null
     }
   }
@@ -159,14 +152,14 @@ export class InputSystem {
      }
 
      const { screenX, screenY } = this._getCanvasCoords(event)
-     const { gameX, gameY } = this.transformer.screenToGame(screenX, screenY)
+     const transformer = ensureTransformer(this)
+     const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
 
      const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
 
       if (entityAtPosition !== null) {
         // Клик по юниту
         const isMultiSelect = event.shiftKey
-        console.log('InputSystem: entity clicked, id=', entityAtPosition, 'shiftKey=', isMultiSelect)
         this.gameEngine.state.emit('entityClicked', {
           entityId: entityAtPosition,
           isMultiSelect,
@@ -183,6 +176,7 @@ export class InputSystem {
     if (!this.gameEngine.state.get('isRunning')) return
 
     const { screenX, screenY } = this._getCanvasCoords(event)
+    const transformer = ensureTransformer(this)
     const entityId = this._findEntityAtPosition(screenX, screenY)
 
      if (entityId !== null) {
@@ -224,7 +218,7 @@ export class InputSystem {
   _cleanupDragGraphics () {
     const drag = this.dragState
     if (drag.graphics && !drag.isDragging) {
-      this.rendererSystem.removeFromStage({ container: drag.graphics })
+      this.rendererSystem?.removeFromStage({ container: drag.graphics })
       drag.graphics = null
     }
   }
@@ -239,7 +233,7 @@ export class InputSystem {
       drag.isDragging = false
       drag.mouseLeftCanvas = false
       if (drag.graphics) {
-        this.rendererSystem.removeFromStage({ container: drag.graphics })
+        this.rendererSystem?.removeFromStage({ container: drag.graphics })
         drag.graphics = null
       }
     }
@@ -253,14 +247,14 @@ export class InputSystem {
     drag.mouseLeftCanvas = false
 
     if (drag.graphics) {
-      this.rendererSystem.removeFromStage({ container: drag.graphics })
+      this.rendererSystem?.removeFromStage({ container: drag.graphics })
       drag.graphics = null
     }
 
     drag.graphics = new PIXI.Graphics()
     drag.graphics.alpha = 0
     drag.graphics.zIndex = 1000
-    this.rendererSystem.addToStage(drag.graphics)
+    this.rendererSystem?.addToStage(drag.graphics)
   }
 
   _updateDragSelection (event) {
@@ -306,7 +300,7 @@ export class InputSystem {
     drag.mouseLeftCanvas = false
 
     if (drag.graphics) {
-      this.rendererSystem.removeFromStage({ container: drag.graphics })
+      this.rendererSystem?.removeFromStage({ container: drag.graphics })
       drag.graphics = null
     }
   }
@@ -323,7 +317,7 @@ export class InputSystem {
      }
 
     if (drag.graphics) {
-      this.rendererSystem.removeFromStage({ container: drag.graphics })
+      this.rendererSystem?.removeFromStage({ container: drag.graphics })
       drag.graphics = null
     }
   }
@@ -358,10 +352,11 @@ export class InputSystem {
      if (!(entities instanceof Map)) return null
 
      // Используем transformer.screenToGame для корректного преобразования
-     const { gameX, gameY } = this.transformer.screenToGame(screenX, screenY)
+     const transformer = ensureTransformer(this)
+     const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
      
      // Ищем сущность, которая отрисована и содержит точку
-     const hitRadius = GAME_CONFIG.LIMITS.entityHitRadius || 15
+     const hitRadius = GAME_CONFIG.LIMITS.entityHitRadius ?? 15
      
      for (const [id, entity] of entities) {
        const entityGameX = entity.gameX ?? entity.position?.x ?? 0
@@ -385,7 +380,7 @@ export class InputSystem {
     this.isDestroyed = true
     
     // Remove event listeners to prevent memory leaks
-    if (this.app) {
+    if (this.app && this.boundHandlers) {
       const canvas = this.app.view
       canvas.removeEventListener('mousedown', this.boundHandlers.mouseDown)
       canvas.removeEventListener('mousemove', this.boundHandlers.mouseMove)
