@@ -8,31 +8,41 @@ JS Frontend рефакторинг без изменения Rust кода. Со
 
 ```
 www/
-├── core/                           # НОВЫЕ: Core modules
+├── core/                           # Core modules
 │   ├── StateContainer.js          # Immutable state container
 │   ├── GameEngine.js              # Central coordinator (update/render loop)
-│   └── GameCleanup.js             # Existing cleanup utilities
-├── systems/                        # НОВЫЕ: Game systems
+│   ├── EntityRepository.js        # Centralized entity access
+│   └── GameCleanup.js             # Cleanup utilities
+├── systems/                        # Game systems
 │   ├── RendererSystem.js          # Entity rendering
 │   ├── InputSystem.js             # Input handling (mouse, keyboard)
 │   ├── SelectionSystem.js         # Entity selection & groups
-│   └── GameStateSystem.js         # WASM state management
-├── services/                       # НОВЫЕ: Service modules
+│   ├── GameStateSystem.js         # WASM state management
+│   └── EntitySpawnSystem.js       # Entity spawn/deletion queue
+├── services/                       # Service modules
 │   └── SelectionIndicator.js      # Visual indicators
 ├── utils/
-│   ├── math.js                    # Math utilities (NEW)
-│   └── cleanup.js                 # Existing cleanup utilities
+│   ├── math.js                    # Math utilities
+│   ├── cleanup.js                 # Cleanup utilities
+│   ├── coordinate-transformer.js  # Coordinate conversion
+│   └── entity-utils.js            # Entity operation utilities
 ├── config/
-│   └── game-config.js             # Existing config
-├── index.js                        # Updated: Centralized exports
-├── game-demo.js                    # Main controller (оставлен для backward compat)
-├── core-state-manager.js           # Оставлен для backward compat
-├── game-state-manager.js           # Оставлен для backward compat
-├── selection-manager.js            # Оставлен для backward compat
-├── entity-renderer.js              # Оставлен для backward compat
-├── input-handler.js                # Оставлен для backward compat
-└── ... (остальные файлы)
+│   └── game-config.js             # Centralized config
+├── index.js                        # Centralized exports
+└── wasm-imports.js                 # WASM function exports
 ```
+
+## Files Status
+
+**Old files that were REMOVED:**
+- `game-demo.js`
+- `core-state-manager.js`
+- `game-state-manager.js`
+- `selection-manager.js`
+- `entity-renderer.js`
+- `input-handler.js`
+
+All old duplicate files have been removed. The architecture is now clean with new modular systems.
 
 ## Key Improvements
 
@@ -53,8 +63,8 @@ www/
 
 ## Migration Guide
 
-| Old | New | Notes |
-|-----|-----|-------|
+| Старый файл | Новый модуль | Примечание |
+|-------------|--------------|------------|
 | `CoreStateManager` | `StateContainer` | Immutable, versioned |
 | `GameDemo` | `GameEngine` | Central coordinator |
 | `GameStateManager` | `GameStateSystem` | WASM interface |
@@ -94,6 +104,7 @@ gameEngine.render()
 
 ## Next Steps
 
-1. Обновить `game-demo.js` для использования новой архитектуры
-2. Удалить устаревшие файлы (когда миграция завершена)
-3. Тестирование новой системы
+1. Тестирование новой системы
+2. Добавить TypeScript для type safety
+3. Настроить процесс сборки (Vite/webpack)
+4. Интегрировать GameCleanup в архитектуру

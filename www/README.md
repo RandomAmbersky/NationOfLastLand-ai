@@ -51,24 +51,28 @@ Then open http://localhost:3000 in your browser.
 - **SelectionSystem** (`systems/SelectionSystem.js`): Entity selection and grouping
 - **GameStateSystem** (`systems/GameStateSystem.js`): WASM state management
 - **SelectionIndicator** (`services/SelectionIndicator.js`): Visual selection indicators
+- **EntitySpawnSystem** (`systems/EntitySpawnSystem.js`): Entity spawn and deletion queue management
 
 ### Utility Modules
 
 - `utils/cleanup.js` - Cleanup utilities (TimerManager, EventManager, GraphicsCleanup)
 - `utils/math.js` - Mathematical utility functions
 - `utils/coordinate-transformer.js` - Coordinate conversion utilities
+- `utils/entity-utils.js` - Entity operation utilities
 - `config/game-config.js` - Centralized game configuration
 
 ## Files
 
 - `index.html` - Main HTML page with Pixi.js canvas
 - `index.js` - Centralized exports for all modules
+- `wasm-imports.js` - WASM function exports
 - `pkg/` - Generated WebAssembly package
 
 ### Core Modules
 
 - `core/GameEngine.js` - Central coordinator for game systems
 - `core/StateContainer.js` - Immutable state management with versioning
+- `core/EntityRepository.js` - Centralized entity access
 - `core/GameCleanup.js` - Main cleanup manager
 
 ### System Modules
@@ -77,6 +81,7 @@ Then open http://localhost:3000 in your browser.
 - `systems/RendererSystem.js` - Entity rendering and visual effects
 - `systems/InputSystem.js` - Mouse and keyboard input handling
 - `systems/SelectionSystem.js` - Entity selection and grouping
+- `systems/EntitySpawnSystem.js` - Entity spawn/deletion queue
 
 ### Service Modules
 
@@ -87,6 +92,7 @@ Then open http://localhost:3000 in your browser.
 - `utils/cleanup.js` - Cleanup utilities (TimerManager, EventManager, GraphicsCleanup)
 - `utils/math.js` - Mathematical utility functions
 - `utils/coordinate-transformer.js` - Coordinate conversion utilities
+- `utils/entity-utils.js` - Entity operation utilities
 
 ## Technical Details
 

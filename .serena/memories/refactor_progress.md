@@ -101,8 +101,14 @@ Old → New:
 - `InputHandler` → `InputSystem`
 - `SelectionManager` → `SelectionSystem`
 
-## Future Steps
+## Next Steps
 
-- Update `game-demo.js` to use new architecture
-- Remove old duplicate files if needed
+1. Тестирование новой системы
+2. Добавить TypeScript для type safety
+3. Настроить процесс сборки (Vite/webpack)
+4. Интегрировать GameCleanup в архитектуру
+
 - Test the new system integration
+- Add TypeScript for type safety
+- Set up build process (Vite/webpack)
+- Integrate GameCleanup into architecture
