@@ -4,11 +4,13 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
+import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
 
 export class InputSystem {
   constructor (gameEngine) {
     this.gameEngine = gameEngine
     this.app = null
+    this.transformer = null
     this.dragState = this._createDragState()
     this.isDestroyed = false
   }
@@ -29,6 +31,7 @@ export class InputSystem {
 
   init (app) {
     this.app = app
+    this.transformer = createCoordinateTransformer(app)
     this.setupEventListeners()
   }
 
@@ -128,7 +131,7 @@ export class InputSystem {
      }
 
      const { screenX, screenY } = this._getCanvasCoords(event)
-     const { gameX, gameY } = this._toGameCoords(screenX, screenY)
+     const { gameX, gameY } = this.transformer.screenToGame(screenX, screenY)
 
      const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
 
@@ -322,25 +325,11 @@ export class InputSystem {
     }
   }
 
-  _toGameCoords (screenX, screenY) {
-     return {
-       gameX: (screenX / this.app.screen.width) * GAME_CONFIG.WORLD_SIZE.width,
-       gameY: (screenY / this.app.screen.height) * GAME_CONFIG.WORLD_SIZE.height
-     }
-   }
-
-  _getScale () {
-     return {
-       x: this.app.screen.width / GAME_CONFIG.WORLD_SIZE.width,
-       y: this.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
-     }
-   }
-
     _findEntityAtPosition (screenX, screenY) {
      const entities = this.gameEngine.state.get('entities')
      if (!(entities instanceof Map)) return null
 
-     const { x: scaleX, y: scaleY } = this._getScale()
+     const { x: scaleX, y: scaleY } = this.transformer.getScale()
      
      // Ищем сущность, которая отрисована и содержит точку
      for (const [id, entity] of entities) {
@@ -372,6 +361,7 @@ export class InputSystem {
     this.isDestroyed = true
     this.dragState = this._createDragState()
     this.app = null
+    this.transformer = null
     this.gameEngine = null
   }
 }

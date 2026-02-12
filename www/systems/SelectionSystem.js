@@ -7,12 +7,14 @@
 import { GAME_CONFIG } from '../config/game-config.js'
 import { SelectionIndicator } from '../services/SelectionIndicator.js'
 import { EntityService } from '../entity-service.js'
+import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
 
 export class SelectionSystem {
   constructor(gameEngine) {
     this.gameEngine = gameEngine
     this.selectionIndicator = null
     this.entityService = null
+    this.transformer = null
     this.isDestroyed = false
     this._typeIndex = new Map()
     this._factionIndex = new Map()
@@ -22,29 +24,8 @@ export class SelectionSystem {
     this.app = app
     this.selectionIndicator = new SelectionIndicator(this.gameEngine)
     this.entityService = new EntityService(this.gameEngine)
+    this.transformer = createCoordinateTransformer(app)
     this._buildIndices()
-  }
-
-  _buildIndices() {
-    const entities = this.gameEngine.state.get('entities')
-    this._typeIndex.clear()
-    this._factionIndex.clear()
-
-    for (const [id, entity] of entities) {
-      const type = entity.vehicleType || entity.type
-      if (!this._typeIndex.has(type)) {
-        this._typeIndex.set(type, [])
-      }
-      this._typeIndex.get(type).push(id)
-
-      const faction = entity.fraction
-      if (faction) {
-        if (!this._factionIndex.has(faction)) {
-          this._factionIndex.set(faction, [])
-        }
-        this._factionIndex.get(faction).push(id)
-      }
-    }
   }
 
   _getIndex(key, value) {
@@ -54,11 +35,8 @@ export class SelectionSystem {
   }
 
   _getScale() {
-    if (!this.gameEngine.app) return { x: 1, y: 1 }
-    return {
-      x: this.gameEngine.app.screen.width / GAME_CONFIG.WORLD_SIZE.width,
-      y: this.gameEngine.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
-    }
+    if (!this.transformer) return { x: 1, y: 1 }
+    return this.transformer.getScale()
   }
 
   /**
@@ -439,6 +417,7 @@ export class SelectionSystem {
 
     this.selectionIndicator = null
     this.entityService = null
+    this.transformer = null
     this.gameEngine = null
   }
 }

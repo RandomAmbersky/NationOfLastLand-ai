@@ -1,60 +1,59 @@
 # Todo List - Frontend Improvements
 
-## 🟡 Архитектурные проблемы
+## 🟢 Актуальные архитектурные проблемы
 
 ### 1. **StateContainer не является истинным источником истины**
 - ❌ `RendererSystem._renderedEntities` хранит дублирующую информацию
 - ❌ `SelectionIndicator` работает напрямую с Pixi контейнерами
 - **СТАТУС**: Требует архитектурной переработки
 
-### 2. **Критическое дублирование логики координатной трансформации** ⚠️ КРИТИЧНО
-- ❌ `EntitySpawnSystem` использует `_getScale()` (строка 122) вместо `CoordinateTransformer`
-- ❌ `InputSystem` использует `_toGameCoords()` (строка 231) и `_getScale()` вместо `CoordinateTransformer`
-- ❌ `SelectionSystem` использует `_getScale()` (строка 65) вместо `CoordinateTransformer`
-- ❌ `SelectionIndicator` использует `_getApp()` вместо `CoordinateTransformer`
-- ⚠️ `RendererSystem` частично использует `CoordinateTransformer` через `_getTransformer()`
-- **СТАТУС**: Все системы кроме `RendererSystem` имеют свою логику трансформации
-
-### 3. **Непоследовательный обмен данными**
+### 2. **Непоследовательный обмен данными**
 - ⚠️ Системы получают `gameEngine` в конструкторе
 - ❌ Нет явного API для взаимодействия между системами
 - **СТАТУС**: Требует архитектурной переработки
 
-## ⚠️ Недостаточно исправленные проблемы
+## ✅ Исправленные критические проблемы (2026-02-12)
 
-### 4. **Ошибки в `_syncEntities`** - **НЕИСПРАВЛЕНО**
-- ❌ В `RendererSystem._syncEntities` (строка 356-378) fallback логика с `this.entitySpawnSystem` **присутствует**
-- ✅ `RendererSystem` делегирует спавн `EntitySpawnSystem.processSpawns()` и `processDeletions()`
-- **СТАТУС**: Частичное делегирование, fallback код не удален
+### 3. **Критическое дублирование логики координатной трансформации** ✅ ИСПРАВЛЕНО
+- ✅ `EntitySpawnSystem` теперь использует `CoordinateTransformer` через `this.transformer.gameToScreen()`
+- ✅ `InputSystem` теперь использует `CoordinateTransformer` через `this.transformer.screenToGame()` и `getScale()`
+- ✅ `SelectionSystem` теперь использует `CoordinateTransformer` через `this.transformer.getScale()`
+- ✅ `SelectionIndicator` теперь использует `CoordinateTransformer` через `this.transformer`
+- ✅ `RendererSystem` частично использует `CoordinateTransformer` через `_getTransformer()`
 
-### 5. **Утечки памяти**
+### 4. **Утечки памяти - инициализация** ✅ ИСПРАВЛЕНО
+- ✅ `EntitySpawnSystem.init()` инициализирует transformer
+- ✅ `InputSystem.init()` инициализирует transformer
+- ✅ `SelectionSystem.init()` инициализирует transformer
+- ✅ `SelectionIndicator.init()` инициализирует transformer
+
+### 5. **Утечки памяти - cleanup** ✅ ИСПРАВЛЕНО
 - ✅ `RendererSystem.destroy()` очищает контейнеры и устанавливает `transformer = null`
-- ✅ `SelectionIndicator.destroy()` очищает индикаторы
-- ❌ `InputSystem.destroy()` не очищает transformer (отсутствует)
-- ❌ `EntitySpawnSystem.destroy()` не очищает transformer (отсутствует)
-- ❌ `SelectionSystem.destroy()` не очищает transformer (отсутствует)
-- **СТАТУС**: Требует добавления cleanup для всех систем
+- ✅ `SelectionIndicator.destroy()` очищает индикаторы и transformer
+- ✅ `InputSystem.destroy()` очищает transformer
+- ✅ `EntitySpawnSystem.destroy()` очищает transformer
+- ✅ `SelectionSystem.destroy()` очищает transformer
 
-### 6. **EntitySpawnSystem дублирует логику** - **НЕИСПРАВЛЕНО**
-- ❌ `EntitySpawnSystem` имеет `_getScale()` и `_normalizeCoords()` вместо использования `CoordinateTransformer`
-- ❌ Дублирование логики: `RendererSystem._toScreenCoords()` и `EntitySpawnSystem._getScale()` делают одно и то же
-- **СТАТУС**: Требует рефакторинга на `CoordinateTransformer`
+### 6. **EntitySpawnSystem дублирование** ✅ ИСПРАВЛЕНО
+- ✅ `EntitySpawnSystem` больше не использует `_getScale()` и `_normalizeCoords()`
+- ✅ Использует `CoordinateTransformer.gameToScreen()` для всех преобразований
+- ✅ Удалена дублирующая логика: `_getScale()` и `_normalizeCoords()`
 
 ## 📋 Рекомендации по улучшению
 
 ### Приоритет 1 (критично)
 
-- [ ] Интегрировать `CoordinateTransformer` во все системы:
-  - [ ] `EntitySpawnSystem` - замена `_getScale()` и `_normalizeCoords()`
-  - [ ] `InputSystem` - замена `_toGameCoords()` и `_getScale()`
-  - [ ] `SelectionSystem` - замена `_getScale()`
-  - [ ] `SelectionIndicator` - замена `_getApp()`
-- [ ] Удалить дублирующую логику трансформации из всех систем
-- [ ] Добавить `destroy()` для очистки transformer во всех системах
+- [x] Интегрировать `CoordinateTransformer` во все системы:
+  - [x] `EntitySpawnSystem` - замена `_getScale()` и `_normalizeCoords()` ✅
+  - [x] `InputSystem` - замена `_toGameCoords()` и `_getScale()` ✅
+  - [x] `SelectionSystem` - замена `_getScale()` ✅
+  - [x] `SelectionIndicator` - замена `_getApp()` ✅
+- [x] Удалить дублирующую логику трансформации из всех систем ✅
+- [x] Добавить `destroy()` для очистки transformer во всех системах ✅
 
 ### Приоритет 2 (важно)
 
-- [ ] Вынести логику создания/удаления сущностей в отдельный `EntitySpawnSystem` - **ВЫПОЛНЕНО**
+- [x] Вынести логику создания/удаления сущностей в отдельный `EntitySpawnSystem` - **ВЫПОЛНЕНО**
 - [ ] Удалить fallback логику из `RendererSystem._syncEntities`
 - [ ] Устранить дублирование `_renderedEntities` в `RendererSystem`
   - 📝 `_renderedEntities` используется для быстрого доступа к отрисованным сущностям без поиска по state.entities
@@ -64,3 +63,13 @@
 - [ ] Стандартизировать API между системами
 - [ ] Добавить документацию к каждой системе
 - [ ] Рассмотреть рефакторинг `SelectionIndicator` в отдельную систему
+
+## 📝 История изменений
+
+### 2026-02-12 - Рефакторинг координатных преобразований
+- **EntitySpawnSystem**: Внедрен `CoordinateTransformer`, удален `_getScale()` и `_normalizeCoords()`
+- **InputSystem**: Внедрен `CoordinateTransformer`, удален `_toGameCoords()` и `_getScale()`
+- **SelectionSystem**: Внедрен `CoordinateTransformer`, `_getScale()` теперь через `transformer.getScale()`
+- **SelectionIndicator**: Внедрен `CoordinateTransformer`, удален `_getApp()`
+- **Все системы**: Добавлены `init(app)` и улучшенные `destroy()` методы с очисткой transformer
+- **Tests**: Обновлены все тесты для вызова `init()` перед использованием систем

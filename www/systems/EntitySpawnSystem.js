@@ -4,12 +4,19 @@
  */
 
 import { EntityService } from '../entity-service.js'
+import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
 
 export class EntitySpawnSystem {
   constructor(gameEngine) {
     this.gameEngine = gameEngine
     this.entityService = new EntityService(gameEngine)
+    this.transformer = null
     this.isDestroyed = false
+  }
+
+  init(app) {
+    this.app = app
+    this.transformer = createCoordinateTransformer(app)
   }
 
   /**
@@ -29,10 +36,9 @@ export class EntitySpawnSystem {
       return null
     }
 
-    const { x: scaleX, y: scaleY } = this._getScale()
-    const { x: posX, y: posY } = this._normalizeCoords(x, y)
-    const screenX = posX * scaleX
-    const screenY = posY * scaleY
+    const coords = this.transformer.gameToScreen(x, y)
+    const screenX = coords.x
+    const screenY = coords.y
 
     const graphics = new PIXI.Graphics()
     let color
@@ -61,8 +67,8 @@ export class EntitySpawnSystem {
     container.addChild(graphics)
     container.x = screenX
     container.y = screenY
-    container.gameX = posX
-    container.gameY = posY
+    container.gameX = x
+    container.gameY = y
     app.stage.addChild(container)
 
     const entity = {
@@ -72,8 +78,8 @@ export class EntitySpawnSystem {
       type: entityType,
       vehicleType,
       faction,
-      gameX: posX,
-      gameY: posY,
+      gameX: x,
+      gameY: y,
       screenX,
       screenY
     }
@@ -188,24 +194,6 @@ export class EntitySpawnSystem {
     this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
   }
 
-  _getScale() {
-    if (!this.gameEngine.app) return { x: 1, y: 1 }
-    return {
-      x: this.gameEngine.app.screen.width / 1000,
-      y: this.gameEngine.app.screen.height / 1000
-    }
-  }
-
-  _normalizeCoords(gameX, gameY) {
-    if (Array.isArray(gameX)) {
-      return { x: gameX[0] ?? 0, y: gameX[1] ?? 0 }
-    }
-    if (gameX && typeof gameX === 'object' && !Array.isArray(gameX)) {
-      return { x: gameX.x ?? 0, y: gameY?.y ?? gameX.y ?? 0 }
-    }
-    return { x: gameX ?? 0, y: gameY ?? 0 }
-  }
-
   _getAlertColor(faction) {
     // Use default yellow for alerts
     return 0xFFFF00
@@ -253,6 +241,8 @@ export class EntitySpawnSystem {
 
     this.gameEngine = null
     this.entityService = null
+    this.transformer = null
+    this.app = null
   }
 }
 

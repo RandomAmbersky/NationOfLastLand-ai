@@ -61,6 +61,7 @@ describe('EntitySpawnSystem', () => {
     }
 
     entitySpawnSystem = new EntitySpawnSystem(gameEngine)
+    entitySpawnSystem.init(mockApp)
   })
 
   describe('constructor', () => {
@@ -131,6 +132,7 @@ describe('EntitySpawnSystem', () => {
       entitySpawnSystem.destroy()
       expect(entitySpawnSystem.isDestroyed).toBe(true)
       expect(entitySpawnSystem.gameEngine).toBeNull()
+      expect(entitySpawnSystem.transformer).toBeNull()
     })
   })
 })

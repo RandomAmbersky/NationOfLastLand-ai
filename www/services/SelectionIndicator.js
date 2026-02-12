@@ -4,16 +4,21 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
+import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
 
 export class SelectionIndicator {
   constructor(gameEngine) {
     this.gameEngine = gameEngine
+    this.transformer = null
     this.isDestroyed = false
   }
 
+  init(app) {
+    this.transformer = createCoordinateTransformer(app)
+  }
+
   createSelectionIndicator(entity, isEnemy = false) {
-     const app = this._getApp()
-     if (!app) return
+     if (!this.transformer) return
      if (!entity || !entity.container) return
      const graphics = new PIXI.Graphics()
      const color = isEnemy
@@ -23,13 +28,6 @@ export class SelectionIndicator {
      graphics.drawCircle(0, 0, 12)
      entity.container.addChild(graphics)
      entity.selectionIndicator = graphics
-   }
-
-  _getApp () {
-     // Try to get app from gameEngine first (for SelectionSystem)
-     if (this.gameEngine.app) return this.gameEngine.app
-     // Fallback to state container's app (for legacy)
-     return null
    }
 
   removeSelectionIndicator(entity) {
@@ -50,8 +48,7 @@ export class SelectionIndicator {
   }
 
   updateIndicators(selections) {
-     const app = this._getApp()
-     if (!app) return
+     if (!this.transformer) return
      
      // Get entities from gameEngine state
      const entities = this.gameEngine.state.get('entities')
@@ -95,6 +92,7 @@ export class SelectionIndicator {
       }
     }
 
+    this.transformer = null
     this.gameEngine = null
   }
 
