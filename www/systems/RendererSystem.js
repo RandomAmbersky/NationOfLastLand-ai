@@ -9,12 +9,13 @@ export class RendererSystem {
   constructor (gameEngine) {
     this.gameEngine = gameEngine
     this.app = null
-    this.entities = new Map()
     this.targetIndicator = null
     this.alertHighlight = null
     this.gridContainer = null
     this.isDestroyed = false
     this._cachedScale = null
+    // Следим за сущностями, которые отрисовали (для очистки при удалении)
+    this._renderedEntities = new Map()
   }
 
   init (app) {
@@ -23,8 +24,18 @@ export class RendererSystem {
     this.setupGrid()
   }
 
+  /**
+   * Получить отрисованную сущность по ID
+   */
+  getEntity (id) {
+    return this._renderedEntities.get(id)
+  }
+
+  /**
+   * Обновить позицию сущности на основе данных из state.entities
+   */
   updateEntityPosition (id, gameX, gameY) {
-    const entity = this.entities.get(id)
+    const entity = this._renderedEntities.get(id)
     if (!entity || !entity.container) return
 
     const { x: scaleX, y: scaleY } = this._getScale()
@@ -39,6 +50,10 @@ export class RendererSystem {
     entity.gameY = gameY
   }
 
+  /**
+   * Создать спрайт сущности и добавить в state.entities
+   * Возвращает объект сущности с container и graphics
+   */
   createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
     const { x: scaleX, y: scaleY } = this._getScale()
     const screenX = x * scaleX
@@ -110,12 +125,30 @@ export class RendererSystem {
       screenY
     }
 
-    this.entities.set(id, entity)
+    // Добавляем в отрисованные сущности
+    this._renderedEntities.set(id, entity)
+
+    // Обновляем state.entities - добавляем container для рендеринга
+    const entities = this.gameEngine.state.get('entities')
+    if (entities instanceof Map) {
+      const existingEntity = entities.get(id)
+      if (existingEntity) {
+        // Обновляем существующую сущность контейнером
+        entities.set(id, { ...existingEntity, container, graphics })
+      } else {
+        entities.set(id, entity)
+      }
+      this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
+    }
+
     return entity
   }
 
+  /**
+   * Удалить сущность из отрисованных и из state.entities
+   */
   removeEntity (id) {
-    const entity = this.entities.get(id)
+    const entity = this._renderedEntities.get(id)
     if (!entity) return
 
     if (entity.container) {
@@ -123,7 +156,14 @@ export class RendererSystem {
       entity.container.destroy({ children: true, texture: true, baseTexture: true })
     }
 
-    this.entities.delete(id)
+    this._renderedEntities.delete(id)
+
+    // Удаляем из state.entities
+    const entities = this.gameEngine.state.get('entities')
+    if (entities instanceof Map) {
+      entities.delete(id)
+      this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
+    }
   }
 
   showTargetIndicator (gameX, gameY) {
@@ -202,9 +242,49 @@ export class RendererSystem {
 
   update (_dt) {
     this._updateScaleCache()
+    // Синхронизируем отрисованные сущности с state.entities
+    this._syncEntities()
   }
 
-  render () {}
+  /**
+   * Отрисовка сущностей (вызывается из GameEngine.render())
+   */
+  render () {
+    // В текущей реализации отрисовка происходит при создании/обновлении сущностей
+    // Этот метод может быть использован для дополнительной отрисовки (эффекты и т.д.)
+  }
+
+  /**
+   * Синхронизация отрисованных сущностей с state.entities
+   * Создает новые сущности и удаляет удаленные
+   */
+  _syncEntities () {
+    const entities = this.gameEngine.state.get('entities')
+    if (!(entities instanceof Map)) return
+
+    // Создаем новые сущности, которые еще не отрисованы
+    for (const [id, entityData] of entities) {
+      if (!this._renderedEntities.has(id) && entityData.container === undefined) {
+        // Сущность есть в state.entities, но не отрисована
+        // Создаем спрайт для нее
+        this.createEntitySprite(
+          entityData.id,
+          entityData.gameX,
+          entityData.gameY,
+          entityData.vehicleType,
+          entityData.fraction,
+          entityData.entityType
+        )
+      }
+    }
+
+    // Удаляем сущности, которые отрисованы, но нет в state.entities
+    for (const [id, renderedEntity] of this._renderedEntities) {
+      if (!entities.has(id)) {
+        this.removeEntity(id)
+      }
+    }
+  }
 
   invalidateScaleCache () {
     this._cachedScale = null
@@ -226,13 +306,14 @@ export class RendererSystem {
     if (this.isDestroyed) return
     this.isDestroyed = true
 
-    for (const [_id, entity] of this.entities) {
+    // Очищаем отрисованные сущности
+    for (const [_id, entity] of this._renderedEntities) {
       if (entity.container) {
         this.app?.stage.removeChild(entity.container)
         entity.container.destroy({ children: true, texture: true, baseTexture: true })
       }
     }
-    this.entities.clear()
+    this._renderedEntities.clear()
 
     if (this.targetIndicator) {
       this.app?.stage.removeChild(this.targetIndicator)
