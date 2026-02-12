@@ -17,6 +17,7 @@ export class EntitySpawnSystem {
 
   init(app) {
     this.app = app
+    this.renderer = this.app || null
     this.repository = createRepository(this.gameEngine.state)
     
     // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
@@ -111,13 +112,13 @@ export class EntitySpawnSystem {
    * @private
    */
   _createEntity(entityData) {
-    const app = this.gameEngine.app
-    if (!app) {
-      console.error('EntitySpawnSystem: app not initialized')
+    const renderer = this.rendererSystem || this.renderer
+    if (!renderer) {
+      console.error('EntitySpawnSystem: renderer not initialized')
       return null
     }
 
-    const coords = this.app.rendererSystem.transformer.gameToScreen(
+    const coords = renderer.transformer.gameToScreen(
       entityData.position?.x ?? 0,
       entityData.position?.y ?? 0
     )

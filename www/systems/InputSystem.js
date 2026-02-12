@@ -336,23 +336,19 @@ export class InputSystem {
      const entities = this.gameEngine.state.get('entities')
      if (!(entities instanceof Map)) return null
 
-     const { x: scaleX, y: scaleY } = this.transformer.getScale()
+     // Используем transformer.screenToGame для корректного преобразования
+     const { gameX, gameY } = this.transformer.screenToGame(screenX, screenY)
      
      // Ищем сущность, которая отрисована и содержит точку
+     const hitRadius = GAME_CONFIG.LIMITS.entityHitRadius || 15
+     
      for (const [id, entity] of entities) {
-       // Используем gameX/gameY из state.entities (координаты в игровом мире)
-       // и преобразуем их в экранные координаты
-       const gameX = entity.gameX ?? entity.position?.x ?? 0
-       const gameY = entity.gameY ?? entity.position?.y ?? 0
+       const entityGameX = entity.gameX ?? entity.position?.x ?? 0
+       const entityGameY = entity.gameY ?? entity.position?.y ?? 0
        
-       // Преобразуем игровые координаты в экранные
-       const entityScreenX = gameX * scaleX
-       const entityScreenY = gameY * scaleY
-       
-       // Примерная проверка попадания (для квадратных сущностей)
-       const size = 15 // Примерный размер сущности (половина ширины/высоты)
-       if (screenX >= entityScreenX - size && screenX <= entityScreenX + size &&
-           screenY >= entityScreenY - size && screenY <= entityScreenY + size) {
+       // Сравниваем в игровых координатах
+       if (Math.abs(gameX - entityGameX) <= hitRadius &&
+           Math.abs(gameY - entityGameY) <= hitRadius) {
          return id
        }
      }
