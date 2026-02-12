@@ -63,6 +63,7 @@ export class RendererSystem {
       const { x: scaleX, y: scaleY } = this._getScale()
       // x и y могут быть массивом [x, y], объектом {x, y} или просто числами
       const { x: posX, y: posY } = this.coordinateService?.normalizeCoords(x, y) ?? { x: 0, y: 0 }
+      // Преобразуем игровые координаты в экранные
       const screenX = posX * scaleX
       const screenY = posY * scaleY
 
@@ -150,17 +151,13 @@ export class RendererSystem {
     const entities = this.gameEngine.state.get('entities')
     if (entities instanceof Map) {
       const existingEntity = entities.get(id)
-      console.log('createEntitySprite: updating entity', id, 'existingEntity =', existingEntity)
       if (existingEntity) {
         // Обновляем существующую сущность контейнером
-        const updatedEntity = { ...existingEntity, container, graphics }
-        console.log('createEntitySprite: updatedEntity =', updatedEntity)
-        entities.set(id, updatedEntity)
+        entities.set(id, { ...existingEntity, container, graphics })
       } else {
         entities.set(id, entity)
       }
       this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
-      console.log('createEntitySprite: state merged, entities size =', entities.size)
     }
 
     return entity
@@ -354,7 +351,13 @@ export class RendererSystem {
   }
 
   _getScale () {
-    return this._cachedScale || { x: 1, y: 1 }
+    if (!this.app) return { x: 1, y: 1 }
+    // Используем размер канваса, а не screen
+    const canvas = this.app.view
+    return {
+      x: canvas.width / GAME_CONFIG.WORLD_SIZE.width,
+      y: canvas.height / GAME_CONFIG.WORLD_SIZE.height
+    }
   }
 
   destroy () {

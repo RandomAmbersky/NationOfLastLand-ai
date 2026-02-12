@@ -114,16 +114,12 @@ export class GameEngineDemo {
     */
    async initializeGame () {
       try {
-        console.log('GameEngineDemo.initializeGame: starting...')
         // Initialize Pixi.js first
         this.initPixi()
-        console.log('GameEngineDemo.initializeGame: Pixi initialized, app =', this.app)
         
         const result = await this.gameStateSystem.initializeGame()
-        console.log('GameEngineDemo.initializeGame: gameStateSystem initialized, result =', result)
         this.isInitialized = true
         this.gameEngine.start()
-        console.log('GameEngineDemo.initializeGame: GameEngine started')
         // Update status in DOM
         const statusEl = document.getElementById('status')
         if (statusEl) {
@@ -145,9 +141,7 @@ export class GameEngineDemo {
    */
   updateGameLoop (dt) {
     try {
-      console.log('GameEngineDemo.updateGameLoop: calling gameStateSystem.update with dt =', dt)
       const result = this.gameStateSystem.update(dt)
-      console.log('GameEngineDemo.updateGameLoop: gameStateSystem.update result =', result)
       // Also call render after update
       this.gameEngine.render()
       return result
