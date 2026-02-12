@@ -3,7 +3,6 @@
  * Separates creation concerns from rendering logic
  */
 
-import { drawEntity } from '../utils/entity-drawer.js'
 import { createRepository } from '../core/EntityRepository.js'
 
 export class EntitySpawnSystem {
@@ -130,7 +129,7 @@ export class EntitySpawnSystem {
     const fraction = entityData.fraction || null
 
     const graphics = new PIXI.Graphics()
-    drawEntity(graphics, entityData)
+    this._drawEntity(graphics, entityData)
     graphics.endFill()
 
     const container = new PIXI.Container()
@@ -155,6 +154,84 @@ export class EntitySpawnSystem {
       gameY: entityData.position?.y ?? 0,
       screenX: coords.x,
       screenY: coords.y
+    }
+  }
+
+  /**
+   * Draw entity graphics
+   * @param {PIXI.Graphics} graphics - Graphics object
+   * @param {Object} entityData - Entity data
+   * @private
+   */
+  _drawEntity(graphics, entityData) {
+    const entityType = entityData.entity_type || 'vehicle'
+    const vehicleType = entityData.subtype || entityData.vehicleType || 'scout'
+    const faction = entityData.fraction || null
+
+    let color
+
+    if (entityType === 'base') {
+      color = 0x2196F3
+      graphics.beginFill(color)
+      graphics.drawRect(-15, -15, 30, 30)
+    } else if (entityType === 'alert') {
+      color = 0xB8860B
+      graphics.beginFill(color)
+      graphics.moveTo(0, -8)
+      graphics.lineTo(6, 6)
+      graphics.lineTo(-6, 6)
+      graphics.closePath()
+    } else {
+      color = this._getVehicleColor(vehicleType, faction)
+      graphics.beginFill(color)
+      this._drawVehicleShape(graphics, vehicleType)
+    }
+  }
+
+  /**
+   * Get vehicle color based on type and faction
+   * @param {string} vehicleType - Vehicle type
+   * @param {string} faction - Faction name
+   * @returns {number} Color value
+   * @private
+   */
+  _getVehicleColor(vehicleType, faction) {
+    const colors = {
+      scout: { player: 0x4CAF50, enemy: 0xF44336, neutral: 0x9E9E9E },
+      tank: { player: 0x3F51B5, enemy: 0xD32F2F, neutral: 0x757575 },
+      transport: { player: 0x2196F3, enemy: 0x9C27B0, neutral: 0x607D8B }
+    }
+
+    const vehicleColors = colors[vehicleType] || colors.scout
+    const factionColors = {
+      Player: vehicleColors.player,
+      Enemy: vehicleColors.enemy,
+      Neutral: vehicleColors.neutral,
+      Wild: vehicleColors.enemy
+    }
+
+    return factionColors[faction] || vehicleColors.neutral
+  }
+
+  /**
+   * Draw vehicle shape
+   * @param {PIXI.Graphics} graphics - Graphics object
+   * @param {string} vehicleType - Vehicle type
+   * @private
+   */
+  _drawVehicleShape(graphics, vehicleType) {
+    switch (vehicleType) {
+      case 'scout':
+        graphics.drawRect(-4, -4, 8, 8)
+        break
+      case 'tank':
+        graphics.drawRect(-10, -8, 20, 16)
+        break
+      case 'transport':
+        graphics.drawRect(-12, -10, 24, 20)
+        break
+      default:
+        graphics.drawRect(-4, -4, 8, 8)
     }
   }
 
