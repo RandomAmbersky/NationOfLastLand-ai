@@ -22,7 +22,15 @@ export { EntitySpawnSystem, createEntitySpawnSystem } from "./systems/EntitySpaw
 // Utils
 export { calculateDistance, calculateDistanceBetween, clamp, lerp } from "./utils/math.js"
 export { CoordinateTransformer, createCoordinateTransformer } from "./utils/coordinate-transformer.js"
-export { 
+export { createEntitySprite, getEntityColor, drawEntity, drawEntityShape, drawBaseShape, drawAlertShape } from "./utils/entity-drawer.js"
+export {
+  createDisposable,
+  TimerManager,
+  EventManager,
+  GraphicsCleanup,
+  Cleanupable
+} from "./utils/cleanup.js"
+export {
   createEntityData,
   findPlayerBase,
   isPlayerBaseSelected,
@@ -32,13 +40,6 @@ export {
   canMove,
   isPlayerUnit
 } from "./utils/entity-utils.js"
-export {
-  createDisposable,
-  TimerManager,
-  EventManager,
-  GraphicsCleanup,
-  Cleanupable
-} from "./utils/cleanup.js"
 
 // WASM imports
 export { initWasm, init, gameInit, create_vehicle, update, select_entity, deselect_entity, set_group_target, create_base, build_floor, get_entity_info, create_random_alert, clear_selection, handle_entity_selection, get_entities_data } from "./wasm-imports.js"
@@ -78,6 +79,12 @@ export default {
   lerp,
   CoordinateTransformer,
   createCoordinateTransformer,
+  createEntitySprite,
+  getEntityColor,
+  drawEntity,
+  drawEntityShape,
+  drawBaseShape,
+  drawAlertShape,
   createEntityData,
   findPlayerBase,
   isPlayerBaseSelected,

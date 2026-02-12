@@ -6,6 +6,7 @@
 import { GAME_CONFIG } from '../config/game-config.js'
 import { createRepository } from '../core/EntityRepository.js'
 import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
+import { drawEntity, createEntitySprite } from '../utils/entity-drawer.js'
 
 export class RendererSystem {
   constructor (gameEngine, coordinateService = null) {
@@ -170,90 +171,23 @@ export class RendererSystem {
    * Возвращает объект сущности с container и graphics
    */
   createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
-    const coords = this._toScreenCoords(x, y)
-    const screenX = coords.x
-    const screenY = coords.y
-    const posX = x
-    const posY = y
-    const scaleX = coords.scaleX
-    const scaleY = coords.scaleY
-
-    const graphics = new PIXI.Graphics()
-    let color
-
-    if (entityType === 'base') {
-      color = 0x2196F3
-      graphics.beginFill(color)
-      graphics.drawRect(-15, -15, 30, 30)
-    } else if (entityType === 'alert') {
-      // Алерты - желтые треугольники
-      color = GAME_CONFIG.COLORS.alert
-      graphics.beginFill(color)
-      graphics.moveTo(0, -8)
-      graphics.lineTo(6, 6)
-      graphics.lineTo(-6, 6)
-      graphics.closePath()
-      graphics.endFill()
-    } else {
-      // Виды транспорта: scout, tank, transport
-      switch (vehicleType) {
-        case 'scout':
-          color = faction === 'Neutral'
-            ? GAME_CONFIG.COLORS.neutral.scout
-            : (faction === 'Enemy' || faction === 'Wild')
-              ? GAME_CONFIG.COLORS.enemy.scout
-              : GAME_CONFIG.COLORS.player.scout
-          graphics.beginFill(color)
-          graphics.drawRect(-4, -4, 8, 8)
-          break
-        case 'tank':
-          color = faction === 'Neutral'
-            ? GAME_CONFIG.COLORS.neutral.tank
-            : (faction === 'Enemy' || faction === 'Wild')
-              ? GAME_CONFIG.COLORS.enemy.tank
-              : GAME_CONFIG.COLORS.player.tank
-          graphics.beginFill(color)
-          graphics.drawRect(-10, -8, 20, 16)
-          break
-        case 'transport':
-          color = faction === 'Neutral'
-            ? GAME_CONFIG.COLORS.neutral.transport
-            : (faction === 'Enemy' || faction === 'Wild')
-              ? GAME_CONFIG.COLORS.enemy.transport
-              : GAME_CONFIG.COLORS.player.transport
-          graphics.beginFill(color)
-          graphics.drawRect(-12, -10, 24, 20)
-          break
-        default:
-          // Неизвестный тип транспорта - белый квадрат
-          color = 0xFFFFFF
-          graphics.beginFill(color)
-          graphics.drawRect(-4, -4, 8, 8)
-      }
-    }
-
-    graphics.endFill()
-
-    const container = new PIXI.Container()
-    container.addChild(graphics)
-    container.x = screenX
-    container.y = screenY
-    container.gameX = posX
-    container.gameY = posY
-    this.addToStage(container)
-
-    const entity = {
+    const entityData = {
       id,
-      container,
-      graphics,
-      type: entityType,
-      vehicleType,
-      faction,
-      gameX: posX,
-      gameY: posY,
-      screenX,
-      screenY
+      entity_type: entityType,
+      subtype: vehicleType,
+      fraction: faction,
+      position: { x, y }
     }
+
+    const coords = this._toScreenCoords(x, y)
+
+    const entity = createEntitySprite(id, coords.x, coords.y, entityData)
+    entity.screenX = coords.x
+    entity.screenY = coords.y
+    entity.gameX = x
+    entity.gameY = y
+
+    this.addToStage(entity.container)
 
     // Добавляем в state.entities через репозиторий
     this.entityRepository.add(entity)

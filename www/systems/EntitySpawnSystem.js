@@ -123,9 +123,13 @@ export class EntitySpawnSystem {
       entityData.position?.y ?? 0
     )
 
+    // Extract data for entity creation
+    const entityType = entityData.entity_type || 'vehicle'
+    const vehicleType = entityData.subtype || entityData.vehicleType || 'scout'
+    const fraction = entityData.fraction || null
+
     const graphics = new PIXI.Graphics()
     this._drawEntity(graphics, entityData)
-
     graphics.endFill()
 
     const container = new PIXI.Container()
@@ -134,25 +138,23 @@ export class EntitySpawnSystem {
     container.y = coords.y
     container.gameX = entityData.position?.x ?? 0
     container.gameY = entityData.position?.y ?? 0
-    container.entityData = entityData // Store original data
+    container.entityData = entityData
 
     // Add to stage using RendererSystem
     this.rendererSystem.addToStage(container)
 
-    const entity = {
+    return {
       id: entityData.id,
       container,
       graphics,
-      type: entityData.entity_type || 'vehicle',
-      vehicleType: entityData.subtype || 'scout',
-      fraction: entityData.fraction || null,
+      type: entityType,
+      vehicleType,
+      fraction,
       gameX: entityData.position?.x ?? 0,
       gameY: entityData.position?.y ?? 0,
       screenX: coords.x,
       screenY: coords.y
     }
-
-    return entity
   }
 
   /**
@@ -164,7 +166,7 @@ export class EntitySpawnSystem {
   _drawEntity(graphics, entityData) {
     const entityType = entityData.entity_type || 'vehicle'
     const vehicleType = entityData.subtype || entityData.vehicleType || 'scout'
-    const fraction = entityData.fraction || null
+    const faction = entityData.fraction || null
 
     let color
 
@@ -180,7 +182,7 @@ export class EntitySpawnSystem {
       graphics.lineTo(-6, 6)
       graphics.closePath()
     } else {
-      color = this._getVehicleColor(vehicleType, fraction)
+      color = this._getVehicleColor(vehicleType, faction)
       graphics.beginFill(color)
       this._drawVehicleShape(graphics, vehicleType)
     }
