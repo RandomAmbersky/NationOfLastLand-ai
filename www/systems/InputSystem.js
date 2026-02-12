@@ -7,12 +7,25 @@ import { GAME_CONFIG } from '../config/game-config.js'
 import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
 
 export class InputSystem {
-  constructor (gameEngine) {
+  constructor (gameEngine, rendererSystem = null) {
     this.gameEngine = gameEngine
     this.app = null
     this.transformer = null
+    this.rendererSystem = rendererSystem
     this.dragState = this._createDragState()
     this.isDestroyed = false
+  }
+
+  init (app) {
+    this.app = app
+    this.transformer = createCoordinateTransformer(app)
+    
+    // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
+    if (!this.rendererSystem && this.gameEngine.rendererSystem) {
+      this.rendererSystem = this.gameEngine.rendererSystem
+    }
+    
+    this.setupEventListeners()
   }
 
   _createDragState () {
@@ -27,12 +40,6 @@ export class InputSystem {
       justFinishedDrag: false,
       mouseLeftCanvas: false
     }
-  }
-
-  init (app) {
-    this.app = app
-    this.transformer = createCoordinateTransformer(app)
-    this.setupEventListeners()
   }
 
   setupEventListeners () {
@@ -101,7 +108,7 @@ export class InputSystem {
       this._processDragSelection()
     } else {
       if (drag.graphics) {
-        this.app.stage.removeChild(drag.graphics)
+        this.rendererSystem.removeFromStage({ container: drag.graphics })
         drag.graphics = null
       }
     }
@@ -116,7 +123,7 @@ export class InputSystem {
     drag.hasDragged = false
 
     if (drag.graphics) {
-      this.app.stage.removeChild(drag.graphics)
+      this.rendererSystem.removeFromStage({ container: drag.graphics })
       drag.graphics = null
     }
   }
@@ -196,7 +203,7 @@ export class InputSystem {
   _cleanupDragGraphics () {
     const drag = this.dragState
     if (drag.graphics && !drag.isDragging) {
-      this.app.stage.removeChild(drag.graphics)
+      this.rendererSystem.removeFromStage({ container: drag.graphics })
       drag.graphics = null
     }
   }
@@ -211,7 +218,7 @@ export class InputSystem {
       drag.isDragging = false
       drag.mouseLeftCanvas = false
       if (drag.graphics) {
-        this.app.stage.removeChild(drag.graphics)
+        this.rendererSystem.removeFromStage({ container: drag.graphics })
         drag.graphics = null
       }
     }
@@ -225,14 +232,14 @@ export class InputSystem {
     drag.mouseLeftCanvas = false
 
     if (drag.graphics) {
-      this.app.stage.removeChild(drag.graphics)
+      this.rendererSystem.removeFromStage({ container: drag.graphics })
       drag.graphics = null
     }
 
     drag.graphics = new PIXI.Graphics()
     drag.graphics.alpha = 0
     drag.graphics.zIndex = 1000
-    this.app.stage.addChild(drag.graphics)
+    this.rendererSystem.addToStage(drag.graphics)
   }
 
   _updateDragSelection (event) {
@@ -278,7 +285,7 @@ export class InputSystem {
     drag.mouseLeftCanvas = false
 
     if (drag.graphics) {
-      this.app.stage.removeChild(drag.graphics)
+      this.rendererSystem.removeFromStage({ container: drag.graphics })
       drag.graphics = null
     }
   }
@@ -295,7 +302,7 @@ export class InputSystem {
      }
 
     if (drag.graphics) {
-      this.app.stage.removeChild(drag.graphics)
+      this.rendererSystem.removeFromStage({ container: drag.graphics })
       drag.graphics = null
     }
   }

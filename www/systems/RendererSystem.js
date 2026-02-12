@@ -283,10 +283,8 @@ export class RendererSystem {
     const entity = entities.get(id)
     if (!entity || !entity.container) return
 
-    if (this.app && entity.container) {
-      this.app.stage.removeChild(entity.container)
-      entity.container.destroy({ children: true, texture: true, baseTexture: true })
-    }
+    this.removeFromStage(entity.container)
+    entity.container.destroy({ children: true, texture: true, baseTexture: true })
 
     entities.delete(id)
     this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
@@ -294,7 +292,7 @@ export class RendererSystem {
 
   showTargetIndicator (gameX, gameY) {
     if (this.targetIndicator) {
-      this.app.stage.removeChild(this.targetIndicator)
+      this.removeFromStage(this.targetIndicator)
       this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
     }
 
@@ -315,14 +313,14 @@ export class RendererSystem {
     container.addChild(graphics)
     container.x = screenX
     container.y = screenY
-    this.app.stage.addChild(container)
+    this.addToStage(container)
 
     this.targetIndicator = container
   }
 
   clearTargetIndicator () {
     if (this.targetIndicator) {
-      this.app.stage.removeChild(this.targetIndicator)
+      this.removeFromStage(this.targetIndicator)
       this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
       this.targetIndicator = null
     }
@@ -330,7 +328,7 @@ export class RendererSystem {
 
   setupGrid () {
     if (this.gridContainer) {
-      this.app.stage.removeChild(this.gridContainer)
+      this.removeFromStage(this.gridContainer)
       this.gridContainer.destroy({ children: true, texture: true, baseTexture: true })
     }
 
@@ -360,7 +358,7 @@ export class RendererSystem {
   updateGrid () {
     if (!this.gridContainer) return
     if (this.app) {
-      this.app.stage.removeChild(this.gridContainer)
+      this.removeFromStage(this.gridContainer)
       this.gridContainer.destroy({ children: true, texture: true, baseTexture: true })
     }
     this.setupGrid()
@@ -422,19 +420,19 @@ export class RendererSystem {
     this.isDestroyed = true
 
     if (this.targetIndicator) {
-      this.app?.stage.removeChild(this.targetIndicator)
+      this.removeFromStage(this.targetIndicator)
       this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
       this.targetIndicator = null
     }
 
     if (this.alertHighlight) {
-      this.app?.stage.removeChild(this.alertHighlight)
+      this.removeFromStage(this.alertHighlight)
       this.alertHighlight.destroy({ children: true, texture: true, baseTexture: true })
       this.alertHighlight = null
     }
 
     if (this.gridContainer) {
-      this.app?.stage.removeChild(this.gridContainer)
+      this.removeFromStage(this.gridContainer)
       this.gridContainer.destroy({ children: true, texture: true, baseTexture: true })
       this.gridContainer = null
     }
