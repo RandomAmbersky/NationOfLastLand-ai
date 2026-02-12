@@ -49,6 +49,7 @@ export class GameStateSystem {
          this.gameEngine.state.subscribe('entityClicked', (data) => {
            console.log('GameStateSystem: entityClicked event received', data)
            this.selectionSystem?.handleEntityClicked(data)
+           this._handleEntityClicked(data)
          })
 
         // Подписываемся на событие выбора юнита (правая кнопка мыши)
