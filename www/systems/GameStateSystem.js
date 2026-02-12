@@ -4,6 +4,7 @@
  */
 
 import {
+  initWasm,
   gameInit,
   create_vehicle,
   update,
@@ -22,6 +23,8 @@ export class GameStateSystem {
 
   async initializeGame () {
     try {
+      // Initialize WASM if not already initialized
+      await initWasm()
       const result = gameInit()
       const gameState = JSON.parse(result)
 
