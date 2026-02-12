@@ -14,6 +14,7 @@ export class InputSystem {
     this.rendererSystem = rendererSystem
     this.dragState = this._createDragState()
     this.isDestroyed = false
+    this.boundHandlers = {}
   }
 
   setTransformer (transformer) {
@@ -54,14 +55,25 @@ export class InputSystem {
   setupEventListeners () {
     if (!this.app) return
     const canvas = this.app.view
-    canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e))
-    canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e))
-    canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e))
-    canvas.addEventListener('mouseleave', (e) => this.handleMouseLeave(e))
-    canvas.addEventListener('click', (e) => this.handleCanvasClick(e))
-    canvas.addEventListener('dblclick', (e) => this.handleDoubleClick(e))
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault())
-    document.addEventListener('keydown', (e) => this.handleKeyDown(e))
+    
+    // Create bound handlers for later removal
+    this.boundHandlers.mouseDown = (e) => this.handleMouseDown(e)
+    this.boundHandlers.mouseMove = (e) => this.handleMouseMove(e)
+    this.boundHandlers.mouseUp = (e) => this.handleMouseUp(e)
+    this.boundHandlers.mouseLeave = (e) => this.handleMouseLeave(e)
+    this.boundHandlers.click = (e) => this.handleCanvasClick(e)
+    this.boundHandlers.doubleClick = (e) => this.handleDoubleClick(e)
+    this.boundHandlers.contextMenu = (e) => e.preventDefault()
+    this.boundHandlers.keyDown = (e) => this.handleKeyDown(e)
+    
+    canvas.addEventListener('mousedown', this.boundHandlers.mouseDown)
+    canvas.addEventListener('mousemove', this.boundHandlers.mouseMove)
+    canvas.addEventListener('mouseup', this.boundHandlers.mouseUp)
+    canvas.addEventListener('mouseleave', this.boundHandlers.mouseLeave)
+    canvas.addEventListener('click', this.boundHandlers.click)
+    canvas.addEventListener('dblclick', this.boundHandlers.doubleClick)
+    canvas.addEventListener('contextmenu', this.boundHandlers.contextMenu)
+    document.addEventListener('keydown', this.boundHandlers.keyDown)
   }
 
   handleMouseDown (event) {
@@ -371,7 +383,22 @@ export class InputSystem {
   destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
+    
+    // Remove event listeners to prevent memory leaks
+    if (this.app) {
+      const canvas = this.app.view
+      canvas.removeEventListener('mousedown', this.boundHandlers.mouseDown)
+      canvas.removeEventListener('mousemove', this.boundHandlers.mouseMove)
+      canvas.removeEventListener('mouseup', this.boundHandlers.mouseUp)
+      canvas.removeEventListener('mouseleave', this.boundHandlers.mouseLeave)
+      canvas.removeEventListener('click', this.boundHandlers.click)
+      canvas.removeEventListener('dblclick', this.boundHandlers.doubleClick)
+      canvas.removeEventListener('contextmenu', this.boundHandlers.contextMenu)
+      document.removeEventListener('keydown', this.boundHandlers.keyDown)
+    }
+    
     this.dragState = this._createDragState()
+    this.boundHandlers = {}
     this.app = null
     this.transformer = null
     this.gameEngine = null

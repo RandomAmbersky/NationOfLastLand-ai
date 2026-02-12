@@ -15,8 +15,19 @@ export class SelectionIndicator {
     this.isDestroyed = false
   }
 
+  setTransformer (transformer) {
+    this.transformer = transformer
+  }
+
   init(app) {
-    this.transformer = createCoordinateTransformer(app)
+    // Use transformer from RendererSystem or GameEngine if available
+    if (this.rendererSystem && this.rendererSystem.transformer) {
+      this.transformer = this.rendererSystem.transformer
+    } else if (this.gameEngine && this.gameEngine.transformer) {
+      this.transformer = this.gameEngine.transformer
+    } else {
+      this.transformer = createCoordinateTransformer(app)
+    }
     
     // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {
@@ -110,6 +121,7 @@ export class SelectionIndicator {
 
     this.transformer = null
     this.gameEngine = null
+    this.rendererSystem = null
   }
 
   validateAndFixSelectionState() {

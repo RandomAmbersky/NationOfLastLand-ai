@@ -34,6 +34,11 @@ export class SelectionSystem {
     } else if (this.gameEngine && this.gameEngine.transformer) {
       this.transformer = this.gameEngine.transformer
     }
+    
+    // Set transformer on selection indicator
+    if (this.selectionIndicator && this.transformer) {
+      this.selectionIndicator.setTransformer(this.transformer)
+    }
   }
 
   /**
@@ -55,12 +60,10 @@ export class SelectionSystem {
    */
   handleEntityClicked(data) {
     const { entityId, isMultiSelect, gameX, gameY } = data
-    console.log('SelectionSystem.handleEntityClicked:', data)
     const state = this.gameEngine.state
     const selections = state.get('selections')
     const entities = state.get('entities')
     const clickedEntity = entities.get(entityId)
-    console.log('clickedEntity:', clickedEntity)
 
     if (!clickedEntity) {
       console.warn('handleEntityClicked: clickedEntity not found for id', entityId)
@@ -373,9 +376,9 @@ export class SelectionSystem {
 
     if (this.selectionIndicator) {
       this.selectionIndicator.destroy()
+      this.selectionIndicator = null
     }
 
-    this.selectionIndicator = null
     this.repository = null
     this.transformer = null
     this.gameEngine = null

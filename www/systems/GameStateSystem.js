@@ -22,6 +22,7 @@ export class GameStateSystem {
     this.gameEngine = gameEngine
     this.repository = null
     this.isDestroyed = false
+    this._unsubscribeHandlers = []
   }
 
   init(app) {
@@ -54,25 +55,33 @@ export class GameStateSystem {
       }
 
       // Подписываемся на событие клика по юниту - отправляем в state для обработки
-      this.gameEngine.state.subscribe('entityClicked', (data) => {
-        console.log('GameStateSystem: entityClicked event received', data)
-        this.gameEngine.state.emit('entityClickedProcessed', data)
-      })
+      this._unsubscribeHandlers.push(
+        this.gameEngine.state.subscribe('entityClicked', (data) => {
+          console.log('GameStateSystem: entityClicked event received', data)
+          this.gameEngine.state.emit('entityClickedProcessed', data)
+        })
+      )
 
       // Подписываемся на событие выбора юнита (правая кнопка мыши)
-      this.gameEngine.state.subscribe('entitySelected', (data) => {
-        this.gameEngine.state.emit('entitySelectedProcessed', data)
-      })
+      this._unsubscribeHandlers.push(
+        this.gameEngine.state.subscribe('entitySelected', (data) => {
+          this.gameEngine.state.emit('entitySelectedProcessed', data)
+        })
+      )
 
       // Подписываемся на событие сброса выделения
-      this.gameEngine.state.subscribe('selectionCleared', (data) => {
-        this.gameEngine.state.emit('selectionClearedProcessed', data)
-      })
+      this._unsubscribeHandlers.push(
+        this.gameEngine.state.subscribe('selectionCleared', (data) => {
+          this.gameEngine.state.emit('selectionClearedProcessed', data)
+        })
+      )
 
       // Подписываемся на событие выделения прямоугольником
-      this.gameEngine.state.subscribe('rectangleSelection', (data) => {
-        this.gameEngine.state.emit('rectangleSelectionProcessed', data)
-      })
+      this._unsubscribeHandlers.push(
+        this.gameEngine.state.subscribe('rectangleSelection', (data) => {
+          this.gameEngine.state.emit('rectangleSelectionProcessed', data)
+        })
+      )
 
       return { success: true, data: gameState }
     } catch (error) {
@@ -186,6 +195,11 @@ export class GameStateSystem {
   destroy() {
     if (this.isDestroyed) return
     this.isDestroyed = true
+    
+    // Unsubscribe from all state events to prevent memory leaks
+    this._unsubscribeHandlers.forEach(unsubscribe => unsubscribe())
+    this._unsubscribeHandlers = []
+    
     this.repository = null
     this.gameEngine = null
   }
