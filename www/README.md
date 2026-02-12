@@ -63,7 +63,6 @@ Then open http://localhost:3000 in your browser.
 
 - `index.html` - Main HTML page with Pixi.js canvas
 - `index.js` - Centralized exports for all modules
-- `game-engine.js` - Main game demo application (GameDemo)
 - `pkg/` - Generated WebAssembly package
 
 ### Core Modules
@@ -117,18 +116,22 @@ Each major component has a `destroy()` method that:
 3. Destroys Pixi.js graphics and containers
 4. Cleans up references to prevent memory leaks
 
-Call `gameDemo.destroy()` when shutting down the game to clean up all resources.
+Call `gameEngine.destroy()` when shutting down the game to clean up all resources.
 
 ### Example
 
 ```javascript
-import { GameDemo } from "./index.js";
+import { GameEngine, GameStateSystem, RendererSystem } from "./index.js";
 
-const demo = new GameDemo();
-await demo.initializeDemo();
+const gameEngine = new GameEngine();
+const gameStateSystem = new GameStateSystem(gameEngine);
+const rendererSystem = new RendererSystem(gameEngine);
+
+gameEngine.addSystem(gameStateSystem);
+gameEngine.addSystem(rendererSystem);
 
 // ... play game ...
 
 // When done, cleanup all resources
-demo.destroy();
+gameEngine.destroy();
 ```

@@ -135,29 +135,66 @@
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <script type="module">
-        // Create and initialize the game demo
-        import { GameDemo } from './game-demo.js';
+        import { GameEngine, GameStateSystem, RendererSystem } from './index.js';
         
-        const demo = new GameDemo();
+        const gameEngine = new GameEngine();
         
-        // Initialize demo
-        demo.initializeDemo()
-          .then(result => {
-            const statusEl = document.getElementById('status');
-            if (statusEl) {
-              statusEl.textContent = result.success ? 'Game initialized successfully!' : `Error: ${result.error}`;
-            }
-            
-            // Start auto update after initialization
-            demo.startAutoUpdate();
-          })
-          .catch(error => {
-            console.error('initializeDemo error:', error);
-            const statusEl = document.getElementById('status');
-            if (statusEl) {
-              statusEl.textContent = `Error: ${error.message}`;
-            }
-          });
+        // Initialize systems
+        const gameStateSystem = new GameStateSystem(gameEngine);
+        const rendererSystem = new RendererSystem(gameEngine);
+        
+        // Add systems to engine
+        gameEngine.addSystem(gameStateSystem);
+        gameEngine.addSystem(rendererSystem);
+        
+        // Initialize Pixi.js
+        const canvasContainer = document.querySelector('.game-container');
+        const rect = canvasContainer.getBoundingClientRect();
+        
+        const app = new PIXI.Application({
+            width: rect.width,
+            height: rect.height,
+            backgroundColor: 0x2a2a2a,
+            antialias: true,
+            resolution: window.devicePixelRatio || 1,
+            autoDensity: true
+        });
+        
+        const canvas = document.getElementById('game-canvas');
+        if (canvas && canvas.parentNode) {
+            canvas.parentNode.replaceChild(app.view, canvas);
+        }
+        
+        // Store app in gameEngine for systems
+        gameEngine.app = app;
+        
+        // Initialize renderer system
+        rendererSystem.init(app);
+        
+        // Update status
+        const statusEl = document.getElementById('status');
+        if (statusEl) {
+            statusEl.textContent = 'Initializing WASM...';
+        }
+        
+        // Initialize game
+        gameStateSystem.initializeGame()
+            .then(result => {
+                if (statusEl) {
+                    statusEl.textContent = result.success ? 'Game initialized successfully!' : `Error: ${result.error}`;
+                }
+                
+                if (result.success) {
+                    gameEngine.start();
+                }
+            })
+            .catch(error => {
+                console.error('Game initialization error:', error);
+                if (statusEl) {
+                    statusEl.textContent = `Error: ${error.message}`;
+                }
+            });
     </script>
 </body>
+
 </html>

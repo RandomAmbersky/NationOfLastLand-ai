@@ -15,8 +15,6 @@ export { InputSystem, createInputSystem } from "./systems/InputSystem.js"
 export { SelectionSystem, createSelectionSystem } from "./systems/SelectionSystem.js"
 export { GameStateSystem, createGameStateSystem } from "./systems/GameStateSystem.js"
 
-// Game demo
-export { GameDemo, createGameDemo } from "./game-engine.js"
 
 // Service modules
 export { EntityService } from "./entity-service.js"
