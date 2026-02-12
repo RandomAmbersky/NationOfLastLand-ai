@@ -18,7 +18,8 @@ export class GameEngineDemo {
     this.gameEngine = new GameEngine()
 
     // Initialize systems
-    this.rendererSystem = new RendererSystem(this.gameEngine)
+    this.coordinateService = new CoordinateService(this)
+    this.rendererSystem = new RendererSystem(this.gameEngine, this.coordinateService)
     this.inputSystem = new InputSystem(this.gameEngine)
     this.selectionSystem = new SelectionSystem(this.gameEngine)
     this.gameStateSystem = new GameStateSystem(this.gameEngine)
@@ -30,7 +31,6 @@ export class GameEngineDemo {
     this.gameEngine.addSystem(this.gameStateSystem)
 
     // Legacy services for compatibility
-    this.coordinateService = new CoordinateService(this)
     this.entityService = new EntityService(this)
 
     // State - legacy compatibility with CoreStateManager interface

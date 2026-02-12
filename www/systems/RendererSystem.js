@@ -6,8 +6,9 @@
 import { GAME_CONFIG } from '../config/game-config.js'
 
 export class RendererSystem {
-  constructor (gameEngine) {
+  constructor (gameEngine, coordinateService = null) {
     this.gameEngine = gameEngine
+    this.coordinateService = coordinateService
     this.app = null
     this.targetIndicator = null
     this.alertHighlight = null
@@ -31,37 +32,37 @@ export class RendererSystem {
     return this._renderedEntities.get(id)
   }
 
-   /**
-    * Обновить позицию сущности на основе данных из state.entities
-    */
-   updateEntityPosition (id, gameX, gameY) {
-     const entity = this._renderedEntities.get(id)
-     if (!entity || !entity.container) return
+    /**
+     * Обновить позицию сущности на основе данных из state.entities
+     */
+    updateEntityPosition (id, gameX, gameY) {
+      const entity = this._renderedEntities.get(id)
+      if (!entity || !entity.container) return
 
-     const { x: scaleX, y: scaleY } = this._getScale()
-     // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
-     const { x, y } = this.gameEngine.coordinateService?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
-     const screenX = x * scaleX
-     const screenY = y * scaleY
+      const { x: scaleX, y: scaleY } = this._getScale()
+      // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
+      const { x, y } = this.coordinateService?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
+      const screenX = x * scaleX
+      const screenY = y * scaleY
 
-     entity.container.x = screenX
-     entity.container.y = screenY
-     entity.x = screenX
-     entity.y = screenY
-     entity.gameX = x
-     entity.gameY = y
-   }
+      entity.container.x = screenX
+      entity.container.y = screenY
+      entity.x = screenX
+      entity.y = screenY
+      entity.gameX = x
+      entity.gameY = y
+    }
 
-   /**
-    * Создать спрайт сущности и добавить в state.entities
-    * Возвращает объект сущности с container и graphics
-    */
-   createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
-     const { x: scaleX, y: scaleY } = this._getScale()
-     // x и y могут быть массивом [x, y], объектом {x, y} или просто числами
-     const { x: posX, y: posY } = this.gameEngine.coordinateService?.normalizeCoords(x, y) ?? { x: 0, y: 0 }
-     const screenX = posX * scaleX
-     const screenY = posY * scaleY
+    /**
+     * Создать спрайт сущности и добавить в state.entities
+     * Возвращает объект сущности с container и graphics
+     */
+    createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
+      const { x: scaleX, y: scaleY } = this._getScale()
+      // x и y могут быть массивом [x, y], объектом {x, y} или просто числами
+      const { x: posX, y: posY } = this.coordinateService?.normalizeCoords(x, y) ?? { x: 0, y: 0 }
+      const screenX = posX * scaleX
+      const screenY = posY * scaleY
 
     const graphics = new PIXI.Graphics()
     let color
@@ -181,17 +182,17 @@ export class RendererSystem {
     }
   }
 
-   showTargetIndicator (gameX, gameY) {
-     if (this.targetIndicator) {
-       this.app.stage.removeChild(this.targetIndicator)
-       this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
-     }
+    showTargetIndicator (gameX, gameY) {
+      if (this.targetIndicator) {
+        this.app.stage.removeChild(this.targetIndicator)
+        this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
+      }
 
-     const { x: scaleX, y: scaleY } = this._getScale()
-     // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
-     const { x, y } = this.gameEngine.coordinateService?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
-     const screenX = x * scaleX
-     const screenY = y * scaleY
+      const { x: scaleX, y: scaleY } = this._getScale()
+      // gameX и gameY могут быть массивом [x, y], объектом {x, y} или просто числами
+      const { x, y } = this.coordinateService?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
+      const screenX = x * scaleX
+      const screenY = y * scaleY
 
     const container = new PIXI.Container()
     const graphics = new PIXI.Graphics()
@@ -384,7 +385,7 @@ export class RendererSystem {
   }
 }
 
-export function createRenderer (gameEngine) {
-  return new RendererSystem(gameEngine)
+export function createRenderer (gameEngine, coordinateService = null) {
+  return new RendererSystem(gameEngine, coordinateService)
 }
 

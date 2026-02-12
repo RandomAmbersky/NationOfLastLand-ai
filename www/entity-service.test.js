@@ -9,6 +9,20 @@ describe('EntityService', () => {
       stateManager: {
         getEntityState: jest.fn(),
         getSelectionState: jest.fn()
+      },
+      coordinateService: {
+        normalizeCoords: jest.fn((gameX, gameY) => {
+          // Если gameX - массив [x, y]
+          if (Array.isArray(gameX)) {
+            return { x: gameX[0] ?? 0, y: gameX[1] ?? 0 }
+          }
+          // Если gameX - объект {x, y}
+          if (gameX && typeof gameX === 'object' && !Array.isArray(gameX)) {
+            return { x: gameX.x ?? 0, y: gameY?.y ?? gameX.y ?? 0 }
+          }
+          // Если gameX - число, gameY - число
+          return { x: gameX ?? 0, y: gameY ?? 0 }
+        })
       }
     }
     entityService = new EntityService(gameDemo)
