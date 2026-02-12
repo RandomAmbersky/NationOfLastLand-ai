@@ -3,16 +3,16 @@
  * Using manual mocks to avoid module resolution issues
  */
 
-// Mock WASM functions
-const initWasm = () => Promise.resolve()
-const gameInit = () => JSON.stringify({ time: 0, entities_count: 0, alerts_count: 0, entities: [] })
-const create_vehicle = () => JSON.stringify({ success: true, id: 1 })
-const create_base = () => JSON.stringify({ success: true, id: 1 })
-const build_floor = () => JSON.stringify({ success: true, id: 1 })
-const create_random_alert = () => JSON.stringify({ success: true, id: 1 })
-const set_group_target = () => JSON.stringify({ success: true })
-const update = () => JSON.stringify({ time: 1, entities_count: 0, alerts_count: 0, entities: [], removed_entities: [] })
-const clear_selection = () => undefined
+// Mock WASM functions with jest.fn
+const initWasm = jest.fn(() => Promise.resolve())
+const gameInit = jest.fn(() => JSON.stringify({ time: 0, entities_count: 0, alerts_count: 0, entities: [] }))
+const create_vehicle = jest.fn(() => JSON.stringify({ success: true, id: 1 }))
+const create_base = jest.fn(() => JSON.stringify({ success: true, id: 1 }))
+const build_floor = jest.fn(() => JSON.stringify({ success: true, id: 1 }))
+const create_random_alert = jest.fn(() => JSON.stringify({ success: true, id: 1 }))
+const set_group_target = jest.fn(() => JSON.stringify({ success: true }))
+const update = jest.fn(() => JSON.stringify({ time: 1, entities_count: 0, alerts_count: 0, entities: [], removed_entities: [] }))
+const clear_selection = jest.fn(() => undefined)
 
 class GameStateSystem {
   constructor(gameEngine) {
@@ -43,7 +43,6 @@ class GameStateSystem {
         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
       }
 
-      // Set up event subscribers
       this.gameEngine.state.subscribe('entityClicked', (data) => {
         this.gameEngine.state.emit('entityClickedProcessed', data)
       })
@@ -233,7 +232,7 @@ describe('GameStateSystem', () => {
     })
 
     it('should handle WASM initialization errors', async () => {
-      jest.spyOn(global, 'initWasm').mockRejectedValue(new Error('WASM init failed'))
+      initWasm.mockRejectedValue(new Error('WASM init failed'))
       const result = await gameStateSystem.initializeGame()
       expect(result).toEqual({ success: false, error: 'WASM init failed' })
     })
@@ -337,7 +336,14 @@ describe('GameStateSystem', () => {
 
 describe('createGameStateSystem', () => {
   it('should create GameStateSystem instance', () => {
-    const system = createGameStateSystem(gameEngine)
+    const mockState = {
+      get: jest.fn(() => null),
+      merge: jest.fn(),
+      subscribe: jest.fn(),
+      emit: jest.fn()
+    }
+    const localGameEngine = { state: mockState }
+    const system = createGameStateSystem(localGameEngine)
     expect(system).toBeInstanceOf(GameStateSystem)
   })
 })

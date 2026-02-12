@@ -804,8 +804,20 @@ describe('InputSystem', () => {
 })
 
 describe('createInputSystem', () => {
+  let localGameEngine
+
+  beforeEach(() => {
+    const mockState = {
+      get: jest.fn(() => null),
+      merge: jest.fn(),
+      subscribe: jest.fn(),
+      emit: jest.fn()
+    }
+    localGameEngine = { state: mockState, app: null }
+  })
+
   it('should create InputSystem instance', () => {
-    const system = createInputSystem(gameEngine)
+    const system = createInputSystem(localGameEngine)
     expect(system).toBeInstanceOf(InputSystem)
   })
 })

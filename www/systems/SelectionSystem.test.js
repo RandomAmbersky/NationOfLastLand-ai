@@ -123,7 +123,9 @@ class SelectionSystem {
     if (selections.size === 0) {
       selections.add(entityId)
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      if (this.selectionIndicator) {
+        this.selectionIndicator.updateIndicators(selections)
+      }
       return
     }
 
@@ -134,7 +136,9 @@ class SelectionSystem {
       selections.clear()
       selections.add(entityId)
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      if (this.selectionIndicator) {
+        this.selectionIndicator.updateIndicators(selections)
+      }
       return
     }
 
@@ -143,7 +147,9 @@ class SelectionSystem {
         selections.clear()
         selections.add(entityId)
         state.merge({ selections }, 'selectionsChanged')
-        this.selectionIndicator.updateIndicators(selections)
+        if (this.selectionIndicator) {
+          this.selectionIndicator.updateIndicators(selections)
+        }
         return
       }
     }
@@ -163,7 +169,9 @@ class SelectionSystem {
         if (selections.size < GAME_CONFIG.LIMITS.maxGroupSize) {
           selections.add(entityId)
           state.merge({ selections }, 'selectionsChanged')
-          this.selectionIndicator.updateIndicators(selections)
+          if (this.selectionIndicator) {
+            this.selectionIndicator.updateIndicators(selections)
+          }
         }
       }
       return
@@ -174,7 +182,9 @@ class SelectionSystem {
     if (selections.size === 1 && this._isPlayerUnit(clickedEntity) && this._canMove(clickedEntity)) {
       selections.add(entityId)
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      if (this.selectionIndicator) {
+        this.selectionIndicator.updateIndicators(selections)
+      }
       return
     }
 
@@ -182,7 +192,9 @@ class SelectionSystem {
       selections.clear()
       selections.add(entityId)
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      if (this.selectionIndicator) {
+        this.selectionIndicator.updateIndicators(selections)
+      }
       return
     }
 
@@ -190,7 +202,9 @@ class SelectionSystem {
       selections.clear()
       selections.add(entityId)
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      if (this.selectionIndicator) {
+        this.selectionIndicator.updateIndicators(selections)
+      }
       return
     }
   }
@@ -207,7 +221,9 @@ class SelectionSystem {
     selections.clear()
     selections.add(entityId)
     state.merge({ selections }, 'selectionsChanged')
-    this.selectionIndicator.updateIndicators(selections)
+    if (this.selectionIndicator) {
+      this.selectionIndicator.updateIndicators(selections)
+    }
   }
 
   handleSelectionCleared() {
@@ -217,7 +233,9 @@ class SelectionSystem {
     if (selections.size > 0) {
       selections.clear()
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      if (this.selectionIndicator) {
+        this.selectionIndicator.updateIndicators(selections)
+      }
     }
   }
 
@@ -247,7 +265,9 @@ class SelectionSystem {
 
     if (addedCount > 0) {
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      if (this.selectionIndicator) {
+        this.selectionIndicator.updateIndicators(selections)
+      }
     }
     return addedCount
   }
@@ -462,6 +482,10 @@ describe('SelectionSystem', () => {
   })
 
   describe('handleEntityClicked', () => {
+    beforeEach(() => {
+      selectionSystem.init(mockApp)
+    })
+
     it('should select entity when nothing selected', () => {
       const mockEntities = new Map([[1, { vehicleType: 'scout', fraction: 'Player' }]])
       gameEngine.state.get = jest.fn((key) => {
@@ -492,6 +516,10 @@ describe('SelectionSystem', () => {
   })
 
   describe('handleEntitySelected', () => {
+    beforeEach(() => {
+      selectionSystem.init(mockApp)
+    })
+
     it('should select entity on right click', () => {
       const mockEntities = new Map([[1, { vehicleType: 'scout', fraction: 'Player' }]])
       gameEngine.state.get = jest.fn((key) => {
@@ -506,6 +534,10 @@ describe('SelectionSystem', () => {
   })
 
   describe('handleSelectionCleared', () => {
+    beforeEach(() => {
+      selectionSystem.init(mockApp)
+    })
+
     it('should clear selections', () => {
       const mockSet = new Set([1, 2])
       gameEngine.state.get = jest.fn((key) => {
@@ -519,6 +551,10 @@ describe('SelectionSystem', () => {
   })
 
   describe('handleRectangleSelection', () => {
+    beforeEach(() => {
+      selectionSystem.init(mockApp)
+    })
+
     it('should select entities in bounds', () => {
       const mockEntities = new Map([
         [1, { vehicleType: 'scout', fraction: 'Player', gameX: 100, gameY: 100 }]
@@ -559,6 +595,10 @@ describe('SelectionSystem', () => {
   })
 
   describe('deselectEntity', () => {
+    beforeEach(() => {
+      selectionSystem.init(mockApp)
+    })
+
     it('should remove entity from selection', () => {
       const mockSet = new Set([1, 2])
       gameEngine.state.get = jest.fn((key) => {
@@ -572,6 +612,10 @@ describe('SelectionSystem', () => {
   })
 
   describe('clearAll', () => {
+    beforeEach(() => {
+      selectionSystem.init(mockApp)
+    })
+
     it('should clear all selections', () => {
       const mockSet = new Set([1, 2, 3])
       gameEngine.state.get = jest.fn((key) => {
@@ -605,8 +649,20 @@ describe('SelectionSystem', () => {
 })
 
 describe('createSelectionSystem', () => {
+  let localGameEngine
+
+  beforeEach(() => {
+    const mockState = {
+      get: jest.fn(() => null),
+      merge: jest.fn(),
+      subscribe: jest.fn(),
+      emit: jest.fn()
+    }
+    localGameEngine = { state: mockState, app: null }
+  })
+
   it('should create SelectionSystem instance', () => {
-    const system = createSelectionSystem(gameEngine)
+    const system = createSelectionSystem(localGameEngine)
     expect(system).toBeInstanceOf(SelectionSystem)
   })
 })
