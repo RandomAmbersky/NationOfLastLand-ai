@@ -127,146 +127,37 @@
             </div>
             <div class="controls">
                 <div class="control-group">
-                    <label for="vehicle-type">Vehicle Type:</label>
-                    <select id="vehicle-type">
-                        <option value="scout">Scout</option>
-                        <option value="tank">Tank</option>
-                        <option value="transport">Transport</option>
-                    </select>
-                </div>
-                <div class="control-group">
-                    <label for="base-x">Base X:</label>
-                    <input type="number" id="base-x" value="100" min="0" max="800">
-                </div>
-                <div class="control-group">
-                    <label for="base-y">Base Y:</label>
-                    <input type="number" id="base-y" value="100" min="0" max="600">
-                </div>
-                <div class="control-group">
-                    <label for="floor-type">Floor Type:</label>
-                    <select id="floor-type">
-                        <option value="storage">Storage</option>
-                        <option value="laboratory">Laboratory</option>
-                        <option value="repair">Repair</option>
-                        <option value="rest">Rest</option>
-                    </select>
-                </div>
-                <button id="spawn-btn">Spawn Vehicle</button>
-                <button id="create-base-btn">Create Base</button>
-                <button id="build-floor-btn">Build Floor</button>
-                <button id="create-alert-btn">Create Random Alert</button>
-                <button id="init-btn">Initialize Game</button>
-                <button id="clear-selection-btn">Clear Selection</button>
-                <button id="cleanup-btn" style="background-color: #f44336;">Cleanup & Reset</button>
-                <div style="margin: 8px 0; display: flex; gap: 5px; flex-wrap: wrap;">
-                    <button id="start-auto-update-btn">Start Auto Update</button>
-                    <button id="stop-auto-update-btn">Stop Auto Update</button>
-                    <button id="update-once-btn">Update Once</button>
-                </div>
-                <div class="info-section">
-                    <div id="status">Ready to initialize...</div>
-                    <div id="entity-info" style="display: none;">No entity selected</div>
+                    <label>Status:</label>
+                    <div id="status">Initializing...</div>
                 </div>
             </div>
         </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
-    <script type="module" src="./game-demo.js"></script>
     <script type="module">
         // Create and initialize the game demo
         import { GameDemo } from './game-demo.js';
         
-        console.log('index.html inline script: GameDemo imported');
-        
         const demo = new GameDemo();
-        console.log('index.html inline script: GameDemo created');
         
         // Initialize demo
         demo.initializeDemo()
           .then(result => {
-            console.log('index.html inline script: initializeDemo result =', result);
             const statusEl = document.getElementById('status');
             if (statusEl) {
               statusEl.textContent = result.success ? 'Game initialized successfully!' : `Error: ${result.error}`;
             }
+            
+            // Start auto update after initialization
+            demo.startAutoUpdate();
           })
           .catch(error => {
-            console.error('index.html inline script: initializeDemo error =', error);
+            console.error('initializeDemo error:', error);
             const statusEl = document.getElementById('status');
             if (statusEl) {
               statusEl.textContent = `Error: ${error.message}`;
             }
           });
-        
-        // Setup button event listeners
-        document.getElementById('init-btn').addEventListener('click', async () => {
-            const statusEl = document.getElementById('status');
-            try {
-                await demo.initializeDemo();
-                statusEl.textContent = 'Game initialized successfully!';
-            } catch (error) {
-                statusEl.textContent = `Error: ${error.message}`;
-            }
-        });
-        
-        document.getElementById('start-auto-update-btn').addEventListener('click', () => {
-            demo.startAutoUpdate();
-            document.getElementById('status').textContent = 'Auto update started';
-        });
-        
-        document.getElementById('stop-auto-update-btn').addEventListener('click', () => {
-            demo.stopAutoUpdate();
-            document.getElementById('status').textContent = 'Auto update stopped';
-        });
-        
-        document.getElementById('update-once-btn').addEventListener('click', () => {
-            demo.updateGameLoop(0.016); // ~60 FPS
-            document.getElementById('status').textContent = 'Game updated once';
-        });
-        
-        document.getElementById('spawn-btn').addEventListener('click', () => {
-            const vehicleType = document.getElementById('vehicle-type').value;
-            const baseEntity = demo.entities.values().next().value;
-            if (baseEntity) {
-                demo.spawnVehicle(vehicleType, baseEntity).then(result => {
-                    document.getElementById('status').textContent = JSON.stringify(result);
-                });
-            } else {
-                document.getElementById('status').textContent = 'No base selected';
-            }
-        });
-        
-        document.getElementById('create-base-btn').addEventListener('click', () => {
-            const x = parseFloat(document.getElementById('base-x').value) || 100;
-            const y = parseFloat(document.getElementById('base-y').value) || 100;
-            demo.createBase(x, y).then(result => {
-                document.getElementById('status').textContent = JSON.stringify(result);
-            });
-        });
-        
-        document.getElementById('build-floor-btn').addEventListener('click', () => {
-            const baseId = 0; // TODO: get from demo
-            const floorType = document.getElementById('floor-type').value;
-            demo.buildFloor(baseId, floorType).then(result => {
-                document.getElementById('status').textContent = JSON.stringify(result);
-            });
-        });
-        
-        document.getElementById('create-alert-btn').addEventListener('click', () => {
-            demo.createRandomAlert().then(result => {
-                document.getElementById('status').textContent = JSON.stringify(result);
-            });
-        });
-        
-        document.getElementById('clear-selection-btn').addEventListener('click', () => {
-            demo.clearSelection();
-            document.getElementById('status').textContent = 'Selection cleared';
-        });
-        
-        document.getElementById('cleanup-btn').addEventListener('click', () => {
-            demo.destroy();
-            document.getElementById('status').textContent = 'Game cleaned up';
-        });
     </script>
 </body>
 </html>

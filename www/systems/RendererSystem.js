@@ -150,13 +150,17 @@ export class RendererSystem {
     const entities = this.gameEngine.state.get('entities')
     if (entities instanceof Map) {
       const existingEntity = entities.get(id)
+      console.log('createEntitySprite: updating entity', id, 'existingEntity =', existingEntity)
       if (existingEntity) {
         // Обновляем существующую сущность контейнером
-        entities.set(id, { ...existingEntity, container, graphics })
+        const updatedEntity = { ...existingEntity, container, graphics }
+        console.log('createEntitySprite: updatedEntity =', updatedEntity)
+        entities.set(id, updatedEntity)
       } else {
         entities.set(id, entity)
       }
       this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
+      console.log('createEntitySprite: state merged, entities size =', entities.size)
     }
 
     return entity
@@ -293,8 +297,10 @@ export class RendererSystem {
     let createdCount = 0
     
     for (const [id, entityData] of entities) {
-      if (!renderedIds.has(id) && entityData.container === undefined) {
-        
+      const hasContainer = entityData.container !== undefined
+      const alreadyRendered = renderedIds.has(id)
+      
+      if (!alreadyRendered && !hasContainer) {
         // WASM возвращает данные с другими именами полей:
         // - entity_type: 'base', 'alert', 'vehicle'
         // - subtype: specific type (e.g., 'floors_1', 'RaiderAlert_Hidden', 'scout')

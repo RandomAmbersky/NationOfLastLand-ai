@@ -144,6 +144,8 @@ export class GameStateSystem {
       const result = update(dt)
       const gameState = JSON.parse(result)
 
+      console.log('GameStateSystem.updateGameLoop: gameState =', gameState)
+
       this.gameEngine.state.merge({
         time: gameState.time,
         entitiesCount: gameState.entities_count,
@@ -151,12 +153,15 @@ export class GameStateSystem {
       }, 'gameStateUpdated')
 
       if (gameState.entities) {
+        console.log('GameStateSystem.updateGameLoop: received entities:', gameState.entities)
         const existingEntities = this.gameEngine.state.get('entities')
         const entitiesMap = existingEntities instanceof Map ? existingEntities : new Map()
         for (const entity of gameState.entities) {
+          console.log('GameStateSystem.updateGameLoop: updating entity:', entity.id, entity)
           entitiesMap.set(entity.id, entity)
         }
         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
+        console.log('GameStateSystem.updateGameLoop: entities map size:', entitiesMap.size)
       }
 
       if (gameState.removed_entities && gameState.removed_entities.length > 0) {

@@ -5,6 +5,7 @@
 
 import { GameEngine, createEngine } from './core/GameEngine.js'
 import { GameStateSystem, createGameStateSystem } from './systems/GameStateSystem.js'
+import { RendererSystem, createRenderer } from './systems/RendererSystem.js'
 import { GAME_CONFIG } from './config/game-config.js'
 
 /**
@@ -19,8 +20,12 @@ export class GameEngineDemo {
     // Initialize game state system (handles WASM communication)
     this.gameStateSystem = createGameStateSystem(this.gameEngine)
 
-    // Add game state system to engine
+    // Initialize renderer system (handles entity rendering)
+    this.rendererSystem = createRenderer(this.gameEngine)
+
+    // Add systems to engine
     this.gameEngine.addSystem(this.gameStateSystem)
+    this.gameEngine.addSystem(this.rendererSystem)
 
     // State - legacy compatibility with CoreStateManager interface
     this.app = null
@@ -83,6 +88,11 @@ export class GameEngineDemo {
     // Store app in gameEngine for systems that need it
     this.gameEngine.app = this.app
 
+    // Initialize renderer system with app
+    if (this.rendererSystem) {
+      this.rendererSystem.init(this.app)
+    }
+
     // Add resize handler
     window.addEventListener('resize', () => this.handleResize())
   }
@@ -104,20 +114,27 @@ export class GameEngineDemo {
     */
    async initializeGame () {
       try {
+        console.log('GameEngineDemo.initializeGame: starting...')
+        // Initialize Pixi.js first
+        this.initPixi()
+        console.log('GameEngineDemo.initializeGame: Pixi initialized, app =', this.app)
+        
         const result = await this.gameStateSystem.initializeGame()
+        console.log('GameEngineDemo.initializeGame: gameStateSystem initialized, result =', result)
         this.isInitialized = true
         this.gameEngine.start()
+        console.log('GameEngineDemo.initializeGame: GameEngine started')
         // Update status in DOM
         const statusEl = document.getElementById('status')
         if (statusEl) {
-          statusEl.textContent = 'Game initialized successfully!'
+          statusEl.textContent = result.success ? 'Game initialized successfully!' : `Error: ${result.error}`;
         }
         return result
       } catch (error) {
         console.error('Game initialization error:', error)
         const statusEl = document.getElementById('status')
         if (statusEl) {
-          statusEl.textContent = `Error: ${error.message}`
+          statusEl.textContent = `Error: ${error.message}`;
         }
         return { success: false, error: error.message }
       }
@@ -128,7 +145,12 @@ export class GameEngineDemo {
    */
   updateGameLoop (dt) {
     try {
-      return this.gameStateSystem.update(dt)
+      console.log('GameEngineDemo.updateGameLoop: calling gameStateSystem.update with dt =', dt)
+      const result = this.gameStateSystem.update(dt)
+      console.log('GameEngineDemo.updateGameLoop: gameStateSystem.update result =', result)
+      // Also call render after update
+      this.gameEngine.render()
+      return result
     } catch (error) {
       console.error('Game update error:', error)
       return { success: false, error: error.message }
