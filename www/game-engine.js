@@ -69,40 +69,43 @@ export class GameEngineDemo {
    * Initialize Pixi.js
    */
   initPixi () {
-    const canvasContainer = document.querySelector('.game-container')
-    if (!canvasContainer) {
-      console.error('GameEngineDemo.initPixi: .game-container not found')
-      return
-    }
+     const canvasContainer = document.querySelector('.game-container')
+     if (!canvasContainer) {
+       console.error('GameEngineDemo.initPixi: .game-container not found')
+       return
+     }
 
-    const rect = canvasContainer.getBoundingClientRect()
+     const rect = canvasContainer.getBoundingClientRect()
 
-    this.app = new PIXI.Application({
-      width: rect.width,
-      height: rect.height,
-      backgroundColor: 0x2a2a2a,
-      antialias: true,
-      resolution: window.devicePixelRatio || 1,
-      autoDensity: true
-    })
+     this.app = new PIXI.Application({
+       width: rect.width,
+       height: rect.height,
+       backgroundColor: 0x2a2a2a,
+       antialias: true,
+       resolution: window.devicePixelRatio || 1,
+       autoDensity: true
+     })
 
-    const canvas = document.getElementById('game-canvas')
-    if (canvas && canvas.parentNode) {
-      canvas.parentNode.replaceChild(this.app.view, canvas)
-    }
+     const canvas = document.getElementById('game-canvas')
+     if (canvas && canvas.parentNode) {
+       canvas.parentNode.replaceChild(this.app.view, canvas)
+     }
 
-    this.gameWidth = GAME_CONFIG.WORLD_SIZE.width
-    this.gameHeight = GAME_CONFIG.WORLD_SIZE.height
+     this.gameWidth = GAME_CONFIG.WORLD_SIZE.width
+     this.gameHeight = GAME_CONFIG.WORLD_SIZE.height
 
-    // Initialize renderer with app
-    this.rendererSystem.init(this.app)
+     // Initialize renderer with app
+     this.rendererSystem.init(this.app)
 
-    // Initialize input with app
-    this.inputSystem.init(this.app)
+     // Initialize input with app
+     this.inputSystem.init(this.app)
 
-    // Add resize handler
-    window.addEventListener('resize', () => this.handleResize())
-  }
+     // Initialize selection with app
+     this.selectionSystem.init(this.app)
+
+     // Add resize handler
+     window.addEventListener('resize', () => this.handleResize())
+   }
 
   /**
    * Handle window resize

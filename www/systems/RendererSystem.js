@@ -20,10 +20,12 @@ export class RendererSystem {
   }
 
   init (app) {
-    this.app = app
-    this._updateScaleCache()
-    this.setupGrid()
-  }
+     this.app = app
+     this._updateScaleCache()
+     this.setupGrid()
+     // Добавляем app в gameEngine для использования другими системами
+     this.gameEngine.app = app
+   }
 
   /**
    * Получить отрисованную сущность по ID

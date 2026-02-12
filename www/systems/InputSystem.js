@@ -325,31 +325,45 @@ export class InputSystem {
   }
 
   _toGameCoords (screenX, screenY) {
-    return {
-      gameX: (screenX / this.app.screen.width) * GAME_CONFIG.WORLD_SIZE.width,
-      gameY: (screenY / this.app.screen.height) * GAME_CONFIG.WORLD_SIZE.height
-    }
-  }
+     return {
+       gameX: (screenX / this.app.screen.width) * GAME_CONFIG.WORLD_SIZE.width,
+       gameY: (screenY / this.app.screen.height) * GAME_CONFIG.WORLD_SIZE.height
+     }
+   }
 
-   _findEntityAtPosition (screenX, screenY) {
-    const entities = this.gameEngine.state.get('entities')
-    if (!(entities instanceof Map)) return null
+  _getScale () {
+     return {
+       x: this.app.screen.width / GAME_CONFIG.WORLD_SIZE.width,
+       y: this.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
+     }
+   }
 
-    // Ищем сущность, которая отрисована и содержит точку
-    for (const [id, entity] of entities) {
-      if (entity.container && entity.container.x !== undefined && entity.container.y !== undefined) {
-        // Примерная проверка попадания (для квадратных сущностей)
-        const size = 10 // Примерный размер сущности
-        const entityScreenX = entity.container.x
-        const entityScreenY = entity.container.y
-        if (screenX >= entityScreenX - size && screenX <= entityScreenX + size &&
-            screenY >= entityScreenY - size && screenY <= entityScreenY + size) {
-          return id
-        }
-      }
-    }
-    return null
-  }
+    _findEntityAtPosition (screenX, screenY) {
+     const entities = this.gameEngine.state.get('entities')
+     if (!(entities instanceof Map)) return null
+
+     const { x: scaleX, y: scaleY } = this._getScale()
+     
+     // Ищем сущность, которая отрисована и содержит точку
+     for (const [id, entity] of entities) {
+       // Используем gameX/gameY из state.entities (координаты в игровом мире)
+       // и преобразуем их в экранные координаты
+       const gameX = entity.gameX ?? entity.position?.x ?? 0
+       const gameY = entity.gameY ?? entity.position?.y ?? 0
+       
+       // Преобразуем игровые координаты в экранные
+       const entityScreenX = gameX * scaleX
+       const entityScreenY = gameY * scaleY
+       
+       // Примерная проверка попадания (для квадратных сущностей)
+       const size = 15 // Примерный размер сущности (половина ширины/высоты)
+       if (screenX >= entityScreenX - size && screenX <= entityScreenX + size &&
+           screenY >= entityScreenY - size && screenY <= entityScreenY + size) {
+         return id
+       }
+     }
+     return null
+   }
 
   update (_dt) {}
 

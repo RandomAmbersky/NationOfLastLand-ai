@@ -17,11 +17,12 @@ export class SelectionSystem {
     this._factionIndex = new Map()
   }
 
-  init () {
-    this.selectionIndicator = new SelectionIndicator(this.gameEngine)
-    this.entityService = new EntityService(this.gameEngine)
-    this._buildIndices()
-  }
+  init (app) {
+     this.app = app
+     this.selectionIndicator = new SelectionIndicator(this.gameEngine)
+     this.entityService = new EntityService(this.gameEngine)
+     this._buildIndices()
+   }
 
   _buildIndices () {
     const entities = this.gameEngine.state.get('entities')
@@ -46,10 +47,18 @@ export class SelectionSystem {
   }
 
   _getIndex (key, value) {
-    if (key === 'type') return this._typeIndex.get(value) || []
-    if (key === 'faction') return this._factionIndex.get(value) || []
-    return []
-  }
+     if (key === 'type') return this._typeIndex.get(value) || []
+     if (key === 'faction') return this._factionIndex.get(value) || []
+     return []
+   }
+
+  _getScale () {
+     if (!this.gameEngine.app) return { x: 1, y: 1 }
+     return {
+       x: this.gameEngine.app.screen.width / GAME_CONFIG.WORLD_SIZE.width,
+       y: this.gameEngine.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
+     }
+   }
 
   selectEntity (entityId, isMultiSelect = false) {
     const state = this.gameEngine.state
@@ -149,16 +158,22 @@ export class SelectionSystem {
   }
 
   _isEntityInBounds (entity, bounds) {
-    if (!entity.container) return false
+     if (!entity) return false
 
-    const entityScreenX = entity.container.x
-    const entityScreenY = entity.container.y
+     // Используем gameX/gameY из state.entities (координаты в игровом мире)
+     // и преобразуем их в экранные координаты
+     const gameX = entity.gameX ?? entity.position?.x ?? 0
+     const gameY = entity.gameY ?? entity.position?.y ?? 0
+     
+     const { x: scaleX, y: scaleY } = this._getScale()
+     const entityScreenX = gameX * scaleX
+     const entityScreenY = gameY * scaleY
 
-    return entityScreenX >= bounds.x &&
-           entityScreenY >= bounds.y &&
-           entityScreenX <= bounds.x + bounds.width &&
-           entityScreenY <= bounds.y + bounds.height
-  }
+     return entityScreenX >= bounds.x &&
+            entityScreenY >= bounds.y &&
+            entityScreenX <= bounds.x + bounds.width &&
+            entityScreenY <= bounds.y + bounds.height
+   }
 
   selectSameType (entityId) {
     const state = this.gameEngine.state

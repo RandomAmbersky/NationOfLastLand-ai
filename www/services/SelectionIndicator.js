@@ -12,15 +12,24 @@ export class SelectionIndicator {
   }
 
   createSelectionIndicator(entity, isEnemy = false) {
-    const graphics = new PIXI.Graphics()
-    const color = isEnemy
-      ? GAME_CONFIG.COLORS.selection.enemy
-      : GAME_CONFIG.COLORS.selection.player
-    graphics.lineStyle(3, color, 1)
-    graphics.drawCircle(0, 0, 12)
-    entity.container.addChild(graphics)
-    entity.selectionIndicator = graphics
-  }
+     const app = this._getApp()
+     if (!app) return
+     const graphics = new PIXI.Graphics()
+     const color = isEnemy
+       ? GAME_CONFIG.COLORS.selection.enemy
+       : GAME_CONFIG.COLORS.selection.player
+     graphics.lineStyle(3, color, 1)
+     graphics.drawCircle(0, 0, 12)
+     entity.container.addChild(graphics)
+     entity.selectionIndicator = graphics
+   }
+
+  _getApp () {
+     // Try to get app from gameEngine first (for SelectionSystem)
+     if (this.gameEngine.app) return this.gameEngine.app
+     // Fallback to state container's app (for legacy)
+     return null
+   }
 
   removeSelectionIndicator(entity) {
     if (entity && entity.selectionIndicator) {
@@ -40,33 +49,36 @@ export class SelectionIndicator {
   }
 
   updateIndicators(selections) {
-    // Get entities from gameEngine state
-    const entities = this.gameEngine.state.get('entities')
+     const app = this._getApp()
+     if (!app) return
+     
+     // Get entities from gameEngine state
+     const entities = this.gameEngine.state.get('entities')
 
-    // Remove infoIndicator from all entities
-    for (const [, entity] of entities) {
-      if (entity.infoIndicator) {
-        this.removeInfoIndicator(entity)
-      }
-    }
+     // Remove infoIndicator from all entities
+     for (const [, entity] of entities) {
+       if (entity.infoIndicator) {
+         this.removeInfoIndicator(entity)
+       }
+     }
 
-    for (const [entityId, entity] of entities) {
-      if (entity.selectionIndicator && !selections.has(entityId)) {
-        this.removeSelectionIndicator(entity)
-      }
-    }
+     for (const [entityId, entity] of entities) {
+       if (entity.selectionIndicator && !selections.has(entityId)) {
+         this.removeSelectionIndicator(entity)
+       }
+     }
 
-    for (const entityId of selections) {
-      const entity = entities.get(entityId)
-      if (entity && !entity.selectionIndicator) {
-        const isEnemy =
-          entity.fraction === 'Enemy' ||
-          entity.fraction === 'Wild' ||
-          entity.entityType === 'alert'
-        this.createSelectionIndicator(entity, isEnemy)
-      }
-    }
-  }
+     for (const entityId of selections) {
+       const entity = entities.get(entityId)
+       if (entity && !entity.selectionIndicator) {
+         const isEnemy =
+           entity.fraction === 'Enemy' ||
+           entity.fraction === 'Wild' ||
+           entity.entityType === 'alert'
+         this.createSelectionIndicator(entity, isEnemy)
+       }
+     }
+   }
 
   destroy() {
     if (this.isDestroyed) return
