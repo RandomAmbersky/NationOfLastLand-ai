@@ -14,52 +14,27 @@
 - ❌ Нет стандартного API для прямого взаимодействия систем друг с другом
 - **СТАТУС**: Архитектура использует StateContainer как EventBus, прямые зависимости через gameEngine
 
-## ✅ Исправленные критические проблемы (2026-02-12)
-
-### 3. **Критическое дублирование логики координатной трансформации** ✅ ИСПРАВЛЕНО
-- ✅ `EntitySpawnSystem` теперь использует `CoordinateTransformer` через `this.transformer.gameToScreen()`
-- ✅ `InputSystem` теперь использует `CoordinateTransformer` через `this.transformer.screenToGame()` и `getScale()`
-- ✅ `SelectionSystem` теперь использует `CoordinateTransformer` через `this.transformer.getScale()`
-- ✅ `SelectionIndicator` теперь использует `CoordinateTransformer` через `this.transformer`
-- ✅ `RendererSystem` частично использует `CoordinateTransformer` через `_getTransformer()`
-
-### 4. **Утечки памяти - инициализация** ✅ ИСПРАВЛЕНО
-- ✅ `EntitySpawnSystem.init()` инициализирует transformer
-- ✅ `InputSystem.init()` инициализирует transformer
-- ✅ `SelectionSystem.init()` инициализирует transformer
-- ✅ `SelectionIndicator.init()` инициализирует transformer
-
-### 5. **Утечки памяти - cleanup** ✅ ИСПРАВЛЕНО
-- ✅ `RendererSystem.destroy()` очищает контейнеры и устанавливает `transformer = null`
-- ✅ `SelectionIndicator.destroy()` очищает индикаторы и transformer
-- ✅ `InputSystem.destroy()` очищает transformer
-- ✅ `EntitySpawnSystem.destroy()` очищает transformer
-- ✅ `SelectionSystem.destroy()` очищает transformer
-
-### 6. **EntitySpawnSystem дублирование** ✅ ИСПРАВЛЕНО
-- ✅ `EntitySpawnSystem` больше не использует `_getScale()` и `_normalizeCoords()`
-- ✅ Использует `CoordinateTransformer.gameToScreen()` для всех преобразований
-- ✅ Удалена дублирующая логика: `_getScale()` и `_normalizeCoords()`
-
-## 🟢 Критические исправления (2026-02-12)
+## 🟡 Архитектурные проблемы (требуют внимания)
 
 ### 7. **Дублирование _renderedEntities и state.entities** ✅ ИСПРАВЛЕНО
 - ✅ Удалено дублирование: `_renderedEntities` больше не используется
-- ✅ `RendererSystem.getEntity()` теперь читает из `state.entities`
-- ✅ `RendererSystem.updateEntityPosition()` работает напрямую с state
-- ✅ `RendererSystem.removeEntity()` удаляет только из state (удаление из stage внутри)
-- ✅ Удален лишний цикл очистки `_renderedEntities` в `destroy()`
+- ✅ `RendererSystem.getEntity()` читает из `state.entities`
+- ✅ `RendererSystem.updateEntityPosition()` работает с state
+- ✅ Удален лишний цикл очистки в `destroy()`
 
 ### 8. **Fallback логика в _syncEntities** ✅ ИСПРАВЛЕНО
 - ✅ Удалена fallback логика без entitySpawnSystem
-- ✅ `_syncEntities()` теперь логирует ошибку если нет entitySpawnSystem
-- ✅ Удалены ссылки на `_renderedEntities.size` в логировании
+- ✅ `_syncEntities()` логирует ошибку если нет entitySpawnSystem
 
-### 9. **SelectionIndicator прямой доступ к Pixi контейнерам** ✅ ЧАСТИЧНО ИСПРАВЛЕНО
+### 9. **SelectionIndicator прямой доступ к Pixi контейнерам** ❌ АКТУАЛЬНАЯ ПРОБЛЕМА
 - ✅ `SelectionIndicator` читает данные из `state.entities`
-- ❌ `SelectionIndicator` все еще работает напрямую с `entity.container` (addChild, removeChild)
-- ❌ Методы `createSelectionIndicator`, `removeSelectionIndicator`, `removeInfoIndicator` работают с `entity.container`
-- **СТАТУС**: Требует инкапсуляции - работа с контейнерами должна быть через `RendererSystem`
+- ❌ `SelectionIndicator` работает напрямую с `entity.container` (addChild, removeChild)
+- ❌ Прямой доступ к `entity.container` в методах:
+  - `createSelectionIndicator()` (строка 30)
+  - `removeSelectionIndicator()` (строка 36)
+  - `removeInfoIndicator()` (строка 43)
+- ❌ `RendererSystem` не предоставляет API для инкапсуляции работы с контейнерами
+- **СТАТУС**: Требует инкапсуляции через `RendererSystem.getEntityContainer(id)`
 
 ## 📋 Текущий статус задач (актуально на 2026-02-12)
 
@@ -88,10 +63,17 @@
 
 #### Приоритет 2 (важно) - Рефакторинг
 
-- [ ] Стандартизировать методы доступа к сущностям (получить контейнер, graphics, координаты)
-- [ ] Добавить метод `getEntityContainer(id)` в `RendererSystem` для инкапсуляции доступа к Pixi контейнерам
-- [ ] Добавить метод `getEntityGraphics(id)` в `RendererSystem` для инкапсуляции доступа к graphics
-- [ ] Добавить метод `getEntityCoordinates(id)` в `RendererSystem` для получения gameX/gameY
+- [ ] **Добавить инкапсулирующий API в `RendererSystem`**:
+  - [ ] `getEntityContainer(id)` - получить контейнер сущности
+  - [ ] `getEntityGraphics(id)` - получить graphics сущности
+  - [ ] `getEntityCoordinates(id)` - получить gameX/gameY сущности
+  - [ ] `addEntityToContainer(entity, container)` - добавить в контейнер (скрыть детали addChild)
+  - [ ] `removeEntityFromContainer(entity)` - удалить из контейнера (скрыть детали removeChild)
+
+- [ ] **Рефакторить `SelectionIndicator`** для использования нового API:
+  - [ ] Заменить `entity.container.addChild()` на `rendererSystem.addEntityToContainer()`
+  - [ ] Заменить `entity.container.removeChild()` на `rendererSystem.removeEntityFromContainer()`
+  - [ ] Убрать зависимость от `entity.container` напрямую
 
 #### Приоритет 3 (желательно)
 
@@ -128,3 +110,10 @@
 - ⚠️ Приоритет 1: Остались архитектурные проблемы с `StateContainer` и API
 - ⚠️ Приоритет 1: SelectionIndicator требует инкапсуляции работы с entity.container через RendererSystem
 - ✅ Системы используют gameEngine.state как EventBus для взаимодействия
+
+### 2026-02-12 - Проверка актуальности TODO.md
+- ❌ TODO.md требует обновления - осталась АКТУАЛЬНАЯ проблема в SelectionIndicator
+- ✅ SelectionIndicator работает напрямую с `entity.container` (lines 30, 36, 43)
+- ❌ `RendererSystem` не предоставляет API для инкапсуляции работы с контейнерами
+- ⚠️ Задача из TODO.md про "ЧАСТИЧНО ИСПРАВЛЕНО" для SelectionIndicator больше не актуальна - проблема ВСЕ ЕСТЬ
+- 🆕 Добавлены новые задачи в Приоритет 2 для добавления инкапсулирующего API в `RendererSystem`
