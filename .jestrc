@@ -3,7 +3,12 @@ module.exports = {
   moduleFileExtensions: ["js", "json"],
   testMatch: ["**/*.test.js"],
   transform: {
-    "^.+\.js$": "babel-jest",
+    "^.+\\.js$": "babel-jest",
+  },
+  moduleNameMapper: {
+    '\\.wasm$': '<rootDir>/www/__mocks__/wasm-mock.js',
+    '<rootDir>/www/pkg/nation_of_last_land.js': '<rootDir>/www/__mocks__/wasm-mock.js',
+    '<rootDir>/www/wasm-imports.js': '<rootDir>/www/__mocks__/wasm-imports.js'
   },
   globals: {
     describe: "readonly",

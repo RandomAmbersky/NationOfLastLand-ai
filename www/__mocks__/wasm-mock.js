@@ -1,5 +1,5 @@
-// Mock for wasm-imports.js
-// This file mocks the WASM imports for testing
+// Mock for WASM files
+// This file mocks the WASM module for testing
 
 export const initWasm = jest.fn(() => Promise.resolve())
 export const init = jest.fn(() => Promise.resolve())
@@ -16,3 +16,5 @@ export const create_random_alert = jest.fn()
 export const clear_selection = jest.fn()
 export const handle_entity_selection = jest.fn()
 export const get_entities_data = jest.fn()
+
+export default initWasm
