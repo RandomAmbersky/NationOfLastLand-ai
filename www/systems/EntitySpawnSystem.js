@@ -81,10 +81,6 @@ export class EntitySpawnSystem extends TransformerProvider {
   processDeletions() {
     if (this.deletionQueue.size === 0) return 0
 
-    // Ensure repository is initialized
-    if (!this.repository) {
-      this.repository = createRepository(this.gameEngine.state)
-    }
     
     let deletedCount = 0
     const entities = this.repository.getEntities()

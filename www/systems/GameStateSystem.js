@@ -20,14 +20,9 @@ import { createEntityData } from '../utils/entityUtils.js'
 export class GameStateSystem {
   constructor(gameEngine) {
     this.gameEngine = gameEngine
-    this.repository = null
+    this.repository = createRepository(gameEngine.state)
     this.isDestroyed = false
     this._unsubscribeHandlers = []
-  }
-
-  init(app) {
-    this.app = app
-    this.repository = createRepository(this.gameEngine.state)
   }
 
   async initializeGame() {
@@ -200,7 +195,7 @@ export class GameStateSystem {
     this._unsubscribeHandlers.forEach(unsubscribe => unsubscribe())
     this._unsubscribeHandlers = []
     
-    this.repository = null
+    this.repository = createRepository(gameEngine.state)
     this.gameEngine = null
   }
 
