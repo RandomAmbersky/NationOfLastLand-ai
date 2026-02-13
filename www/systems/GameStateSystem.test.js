@@ -46,7 +46,7 @@ describe('GameStateSystem', () => {
     it('should initialize game state', async () => {
       gameStateSystem = new GameStateSystem(gameEngine)
       const result = await gameStateSystem.initializeGame()
-      
+
       expect(result).toEqual({
         success: true,
         data: expect.objectContaining({
@@ -62,7 +62,7 @@ describe('GameStateSystem', () => {
     it('should cleanup resources', () => {
       gameStateSystem = new GameStateSystem(gameEngine)
       gameStateSystem.destroy()
-      
+
       expect(gameStateSystem.isDestroyed).toBe(true)
       expect(gameStateSystem.gameApi).toBeNull()
       expect(gameStateSystem.repository).toBeNull()

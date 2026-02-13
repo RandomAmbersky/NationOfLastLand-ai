@@ -17,8 +17,7 @@
       "<rootDir>/jest.setup.js"
     ],
     "moduleNameMapper": {
-      "^./wasm-imports\\.js$": "<rootDir>/www/__mocks__/wasm-imports.js",
-      "^../wasm-imports\\.js$": "<rootDir>/www/__mocks__/wasm-imports.js"
+      "^./wasm-imports\\.js$": "<rootDir>/www/__mocks__/wasm-imports.js"
     }
   },
   "scripts": {
