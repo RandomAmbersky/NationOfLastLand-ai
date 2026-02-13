@@ -7,12 +7,10 @@
 import { GAME_CONFIG } from '../config/game-config.js'
 import { SelectionIndicator } from '../services/SelectionIndicator.js'
 import { createRepository } from '../core/EntityRepository.js'
-import { TransformerProvider } from '../utils/TransformerMixin.js'
 import { canMove, isPlayerUnit } from '../utils/entityUtils.js'
 
-export class SelectionSystem extends TransformerProvider {
+export class SelectionSystem {
   constructor (gameEngine) {
-    super()
     this.gameEngine = gameEngine
     this.selectionIndicator = null
     this.repository = null
@@ -26,14 +24,9 @@ export class SelectionSystem extends TransformerProvider {
     this.selectionIndicator = new SelectionIndicator(this.gameEngine, this.rendererSystem)
     this.repository = createRepository(this.gameEngine.state)
 
-    // Initialize transformer from app
-    if (!this.transformer && this.app) {
-      this.transformer = this.getTransformer()
-    }
-
-    // Set transformer on selection indicator
-    if (this.selectionIndicator && this.transformer) {
-      this.selectionIndicator.setTransformer(this.transformer)
+    // Pass transformer to selection indicator
+    if (this.selectionIndicator && this.gameEngine.transformer) {
+      this.selectionIndicator.setTransformer(this.gameEngine.transformer)
     }
   }
 
@@ -340,8 +333,8 @@ export class SelectionSystem extends TransformerProvider {
   }
 
   _getScale () {
-    if (!this.transformer) return { x: 1, y: 1 }
-    return this.transformer.getScale()
+    if (!this.gameEngine.transformer) return { x: 1, y: 1 }
+    return this.gameEngine.transformer.getScale()
   }
 
   setGroupTarget (gameX, gameY) {
@@ -375,7 +368,6 @@ export class SelectionSystem extends TransformerProvider {
     }
 
     this.repository = null
-    this.transformer = null
     this.gameEngine = null
   }
 }

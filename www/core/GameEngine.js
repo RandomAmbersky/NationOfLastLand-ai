@@ -58,10 +58,7 @@ export class GameEngine {
     this.systems.push(system)
     system.update = system.update.bind(system)
     system.render = system.render.bind(system)
-    // Pass shared transformer to system if it has setTransformer method
-    if (typeof system.setTransformer === 'function' && this.transformer) {
-      system.setTransformer(this.transformer)
-    }
+    // Systems now access transformer via gameEngine.transformer
   }
 
   removeSystem (system) {

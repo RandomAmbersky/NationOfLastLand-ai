@@ -4,11 +4,9 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
-import { TransformerProvider } from '../utils/TransformerMixin.js'
 
-export class InputSystem extends TransformerProvider {
+export class InputSystem {
   constructor (gameEngine, rendererSystem = null) {
-    super()
     this.gameEngine = gameEngine
     this.app = null
     this.rendererSystem = rendererSystem
@@ -24,8 +22,6 @@ export class InputSystem extends TransformerProvider {
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {
       this.rendererSystem = this.gameEngine.rendererSystem
     }
-
-    // Transformer initialized by GameEngine or explicitly set
 
     this.setupEventListeners()
   }
@@ -151,7 +147,7 @@ export class InputSystem extends TransformerProvider {
     }
 
     const { screenX, screenY } = this._getCanvasCoords(event)
-    const transformer = this.getTransformer()
+    const transformer = this.gameEngine.transformer
     const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
 
     const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
@@ -349,7 +345,7 @@ export class InputSystem extends TransformerProvider {
     const entities = this.gameEngine.state.get('entities')
     if (!(entities instanceof Map)) return null
 
-    const transformer = this.getTransformer()
+    const transformer = this.gameEngine.transformer
     const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
 
     // Ищем сущность, которая отрисована и содержит точку
@@ -392,7 +388,6 @@ export class InputSystem extends TransformerProvider {
     this.dragState = this._createDragState()
     this.boundHandlers = {}
     this.app = null
-    this.transformer = null
     this.gameEngine = null
   }
 }

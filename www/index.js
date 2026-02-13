@@ -24,7 +24,6 @@ export { calculateDistance, calculateDistanceBetween, clamp, lerp } from './util
 export { CoordinateTransformer, createCoordinateTransformer } from './utils/coordinateTransformer.js'
 export { createEntitySprite, getEntityColor, drawEntity, drawEntityShape, drawBaseShape, drawAlertShape } from './utils/entityDrawer.js'
 export { createDisposable, TimerManager, EventManager, GraphicsCleanup, Cleanupable } from './utils/cleanup.js'
-export { TransformerProvider, TransformerMixin } from './utils/TransformerMixin.js'
 export {
   createEntityData,
   findPlayerBase,

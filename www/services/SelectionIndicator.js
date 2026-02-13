@@ -5,26 +5,25 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
-import { TransformerProvider } from '../utils/TransformerMixin.js'
 
-export class SelectionIndicator extends TransformerProvider {
+export class SelectionIndicator {
   constructor (gameEngine, rendererSystem = null) {
-    super()
     this.gameEngine = gameEngine
     this.rendererSystem = rendererSystem
+    this.transformer = null
     this.isDestroyed = false
   }
 
-  init (app) {
-    // Initialize transformer from app
-    if (!this.transformer && this.app) {
-      this.transformer = this.getTransformer()
-    }
+  setTransformer (transformer) {
+    this.transformer = transformer
+  }
 
-    // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
-    if (!this.rendererSystem && this.gameEngine.rendererSystem) {
-      this.rendererSystem = this.gameEngine.rendererSystem
-    }
+  getTransformer () {
+    return this.transformer
+  }
+
+  init (app) {
+    // Transformer is set via setTransformer from gameEngine
   }
 
   createSelectionIndicator (entity, isEnemy = false) {

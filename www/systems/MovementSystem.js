@@ -3,11 +3,8 @@
  * Processes move commands from SelectionSystem and updates entity positions
  */
 
-import { TransformerProvider } from '../utils/TransformerMixin.js'
-
-export class MovementSystem extends TransformerProvider {
+export class MovementSystem {
   constructor (gameEngine) {
-    super()
     this.gameEngine = gameEngine
     this.moveCommands = new Map() // entityId -> {x, y, speed}
     this.isDestroyed = false

@@ -6,11 +6,9 @@
 import { GAME_CONFIG } from '../config/game-config.js'
 import { createRepository } from '../core/EntityRepository.js'
 import { createEntitySprite } from '../utils/entityDrawer.js'
-import { TransformerProvider } from '../utils/TransformerMixin.js'
 
-export class RendererSystem extends TransformerProvider {
+export class RendererSystem {
   constructor (gameEngine, coordinateService = null) {
-    super()
     this.gameEngine = gameEngine
     this.coordinateService = coordinateService
     this.app = null
@@ -28,10 +26,6 @@ export class RendererSystem extends TransformerProvider {
     this.setupGrid()
     this.gameEngine.app = app
     this.gameEngine.rendererSystem = this
-    // Initialize transformer from app
-    if (!this.transformer && this.app) {
-      this.transformer = this.getTransformer()
-    }
     // Subscribe to entity updates
     this._unsubscribeEntityUpdates = this.gameEngine.state.subscribe('entitiesUpdated', (entities) => {
       this.handleEntitiesUpdated(entities)
@@ -43,19 +37,6 @@ export class RendererSystem extends TransformerProvider {
    */
   getEntity (id) {
     return this.entityRepository.getById(id)
-  }
-
-  /**
-   * Get the coordinate transformer instance
-   * Override to support coordinateService, otherwise uses mixin's getTransformer()
-   */
-  getTransformer () {
-    if (this.transformer) return this.transformer
-    if (this.coordinateService && this.coordinateService.getTransformer) {
-      return this.coordinateService.getTransformer()
-    }
-    // Use mixin's getTransformer() which has fallback chain
-    return super.getTransformer()
   }
 
   // ============== Инкапсулирующий API для работы с контейнерами ==============
@@ -137,7 +118,7 @@ export class RendererSystem extends TransformerProvider {
    * Returns { x, y, scaleX, scaleY }
    */
   _toScreenCoords (gameX, gameY) {
-    const transformer = this.getTransformer()
+    const transformer = this.gameEngine.transformer
     if (!transformer) return { x: 0, y: 0, scaleX: 1, scaleY: 1 }
 
     const { x, y } = transformer.normalizeCoords(gameX, gameY)
@@ -335,7 +316,7 @@ export class RendererSystem extends TransformerProvider {
    * Get scale factors from transformer
    */
   _getScale () {
-    const transformer = this.getTransformer()
+    const transformer = this.gameEngine.transformer
     return transformer ? transformer.getScale() : { x: 1, y: 1 }
   }
 
