@@ -27,8 +27,8 @@ export class RendererSystem extends TransformerProvider {
     this.setupGrid()
     this.gameEngine.app = app
     this.gameEngine.rendererSystem = this
-    // Initialize transformer via mixin's getTransformer() fallback chain
-    if (!this.transformer) {
+    // Initialize transformer from app
+    if (!this.transformer && this.app) {
       this.transformer = this.getTransformer()
     }
   }

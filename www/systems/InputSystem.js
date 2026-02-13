@@ -25,10 +25,7 @@ export class InputSystem extends TransformerProvider {
       this.rendererSystem = this.gameEngine.rendererSystem
     }
     
-    // Initialize transformer via mixin's getTransformer() fallback chain
-    if (!this.transformer) {
-      // use TransformerProvider.getTransformer()
-    }
+    // Transformer initialized by GameEngine or explicitly set
     
     this.setupEventListeners()
   }

@@ -28,8 +28,8 @@ export class EntitySpawnSystem extends TransformerProvider {
       this.rendererSystem = this.gameEngine.rendererSystem
     }
     
-    // Initialize transformer via mixin's getTransformer() fallback chain
-    if (!this.transformer) {
+    // Initialize transformer from app
+    if (!this.transformer && this.app) {
       this.transformer = this.getTransformer()
     }
   }

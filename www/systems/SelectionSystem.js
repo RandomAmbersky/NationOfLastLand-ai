@@ -26,8 +26,8 @@ export class SelectionSystem extends TransformerProvider {
     this.selectionIndicator = new SelectionIndicator(this.gameEngine, this.rendererSystem)
     this.repository = createRepository(this.gameEngine.state)
     
-    // Initialize transformer via mixin's getTransformer() fallback chain
-    if (!this.transformer) {
+    // Initialize transformer from app
+    if (!this.transformer && this.app) {
       this.transformer = this.getTransformer()
     }
     
