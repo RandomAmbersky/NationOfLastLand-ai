@@ -38,24 +38,22 @@ export class SelectionIndicator extends TransformerProvider {
      indicatorGraphics.lineStyle(3, color, 1)
      indicatorGraphics.drawCircle(0, 0, 12)
      
-     // Используем RendererSystem для добавления в контейнер
-     this.rendererSystem?.addEntityToContainer({ container: indicatorGraphics }, entity.container)
+     // Add indicator to entity container
+     entity.container.addChild(indicatorGraphics)
      
      entity.selectionIndicator = indicatorGraphics
    }
 
   removeSelectionIndicator(entity) {
     if (entity && entity.selectionIndicator) {
-      // Используем RendererSystem для удаления из контейнера
-      this.rendererSystem?.removeEntityFromContainer({ container: entity.selectionIndicator })
+      entity.selectionIndicator.parent?.removeChild(entity.selectionIndicator)
       entity.selectionIndicator = null
     }
   }
 
   removeInfoIndicator(entity) {
     if (entity && entity.infoIndicator) {
-      // Используем RendererSystem для удаления из контейнера
-      this.rendererSystem?.removeEntityFromContainer({ container: entity.infoIndicator })
+      entity.infoIndicator.parent?.removeChild(entity.infoIndicator)
       
       if (entity.infoIndicator.destroy) {
         entity.infoIndicator.destroy({ children: true, texture: true, baseTexture: true })

@@ -1,33 +1,8 @@
 /**
- * Transformer helper - Provides transformer management utilities
- * 
- * NOTE: Deprecated. Use direct transformer property or dependency injection.
- * Kept for backward compatibility during refactoring.
- * 
- * @deprecated Use system.transformer = transformer or pass transformer in constructor
+ * Transformer mixin - Provides transformer property for coordinate transformation
+ * Used by systems that need to convert between game and screen coordinates
  */
 
-/**
- * @deprecated Use direct property assignment instead
- */
-export function withTransformer(BaseClass) {
-  return class extends BaseClass {
-    constructor(...args) {
-      super(...args)
-      this.transformer = null
-    }
-    setTransformer(transformer) {
-      this.transformer = transformer
-    }
-    getTransformer() {
-      return this.transformer
-    }
-  }
-}
-
-/**
- * @deprecated Use direct property assignment instead
- */
 export class TransformerProvider {
   constructor() {
     this.transformer = null
@@ -40,9 +15,11 @@ export class TransformerProvider {
   getTransformer() {
     return this.transformer
   }
-}
 
-/**
- * @deprecated Use TransformerProvider directly
- */
-export class TransformerMixin extends TransformerProvider { }
+  // Common init pattern for systems
+  _initTransformer(app) {
+    if (!this.transformer && app) {
+      this.transformer = app?.renderer?.transformer || null
+    }
+  }
+}

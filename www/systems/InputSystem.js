@@ -121,7 +121,7 @@ export class InputSystem extends TransformerProvider {
       this._processDragSelection()
     } else {
       if (drag.graphics) {
-        this.rendererSystem?.removeFromStage({ container: drag.graphics })
+        drag.graphics?.parent?.removeChild(drag.graphics)
         drag.graphics = null
       }
     }
@@ -232,7 +232,7 @@ export class InputSystem extends TransformerProvider {
       drag.isDragging = false
       drag.mouseLeftCanvas = false
       if (drag.graphics) {
-        this.rendererSystem?.removeFromStage({ container: drag.graphics })
+        drag.graphics?.parent?.removeChild(drag.graphics)
         drag.graphics = null
       }
     }

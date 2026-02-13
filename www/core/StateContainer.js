@@ -54,42 +54,6 @@ export class StateContainer {
     return newState
   }
 
-  mergeMap (key, updateFn, eventType = null) {
-    const state = this._state[key]
-    if (state instanceof Map) {
-      const updated = updateFn(state)
-      if (updated !== state) {
-        this._state[key] = updated
-        this._version++
-        if (eventType) {
-          this.emit(eventType, this._state)
-        } else {
-          this.emit('stateUpdated', this._state)
-        }
-      }
-      return state
-    }
-    return this.merge({ [key]: updateFn(state || new Map()) }, eventType)
-  }
-
-  mergeSet (key, updateFn, eventType = null) {
-    const state = this._state[key]
-    if (state instanceof Set) {
-      const updated = updateFn(state)
-      if (updated !== state) {
-        this._state[key] = updated
-        this._version++
-        if (eventType) {
-          this.emit(eventType, this._state)
-        } else {
-          this.emit('stateUpdated', this._state)
-        }
-      }
-      return state
-    }
-    return this.merge({ [key]: updateFn(state || new Set()) }, eventType)
-  }
-
   subscribe (event, handler) {
     if (!this._eventHandlers.has(event)) {
       this._eventHandlers.set(event, new Set())

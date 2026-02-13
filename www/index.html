@@ -142,6 +142,9 @@
         // Initialize systems
         const gameStateSystem = new GameStateSystem(gameEngine);
         const rendererSystem = new RendererSystem(gameEngine);
+        const inputSystem = new InputSystem(gameEngine);
+        const selectionSystem = new SelectionSystem(gameEngine);
+        const movementSystem = new MovementSystem(gameEngine);
         
         // Add systems to engine
         gameEngine.addSystem(gameStateSystem);

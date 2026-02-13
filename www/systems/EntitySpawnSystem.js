@@ -89,7 +89,7 @@ export class EntitySpawnSystem extends TransformerProvider {
         
         // Remove from stage using RendererSystem API
         if (this.rendererSystem && entity.container) {
-          this.rendererSystem.removeFromStage(entity.container)
+          entity.container.parent?.removeChild(entity.container)
           entity.container.destroy({ children: true, texture: true, baseTexture: true })
         }
         
@@ -149,8 +149,8 @@ export class EntitySpawnSystem extends TransformerProvider {
     container.gameY = entityData.position?.y ?? 0
     container.entityData = entityData
 
-    // Add to stage using RendererSystem
-    this.rendererSystem.addToStage(container)
+    // Add to stage
+    this.app.stage.addChild(container)
 
     return {
       id: entityData.id,

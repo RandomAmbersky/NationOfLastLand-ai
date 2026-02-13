@@ -15,6 +15,15 @@ export class MovementSystem extends TransformerProvider {
   }
 
   /**
+   * Initialize movement system with Pixi.js app
+   * @param {PIXI.Application} app - Pixi.js application
+   */
+  init(app) {
+    // Movement system doesn't need special initialization
+    console.log('MovementSystem initialized')
+  }
+
+  /**
    * Queue a move command for an entity
    * @param {number} entityId - Entity ID to move
    * @param {number} targetX - Target X coordinate

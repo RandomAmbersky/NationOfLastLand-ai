@@ -10,6 +10,11 @@ import { createRepository } from '../core/EntityRepository.js'
 import { TransformerProvider } from '../utils/TransformerMixin.js'
 import { canMove, isPlayerUnit } from '../utils/entityUtils.js'
 
+// Inline simple utility
+function entityExists(entities, entityId) {
+  return entities.has(entityId)
+}
+
 export class SelectionSystem extends TransformerProvider {
   constructor(gameEngine) {
     super()

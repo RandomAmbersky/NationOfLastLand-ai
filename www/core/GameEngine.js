@@ -92,27 +92,11 @@ export class GameEngine {
   update (_dt) {
     this.state.merge({ deltaTime: _dt, time: this.state.get('time') + _dt })
 
-    for (const system of this.systems) {
-      if (!system.isDestroyed) {
-        try {
-          system.update(_dt)
-        } catch (error) {
-          console.error('GameEngine: Error in system update:', error)
-        }
-      }
-    }
+    this.systems.forEach(s => { if (!s.isDestroyed) s.update(_dt) })
   }
 
   render () {
-    for (const system of this.systems) {
-      if (!system.isDestroyed) {
-        try {
-          system.render()
-        } catch (error) {
-          console.error('GameEngine: Error in system render:', error)
-        }
-      }
-    }
+    this.systems.forEach(s => { if (!s.isDestroyed) s.render() })
   }
 
   _loop (now) {
@@ -136,21 +120,11 @@ export class GameEngine {
   destroy () {
     this.stop()
 
-    for (const system of this.systems) {
-      try {
-        system.destroy()
-      } catch (error) {
-        console.error('GameEngine: Error in system destroy:', error)
-      }
-    }
+    this.systems.forEach(s => { if (!s.isDestroyed) s.destroy() })
 
     this.systems = []
     this.transformer = null
-    try {
-      this.state.destroy()
-    } catch (error) {
-      console.error('GameEngine: Error in state destroy:', error)
-    }
+    this.state.destroy()
   }
 }
 
