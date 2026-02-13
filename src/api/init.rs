@@ -63,10 +63,16 @@ pub fn init() -> Result<String, JsValue> {
         // Create initial player vehicles using the same logic as create_vehicle function
         use crate::api::create_vehicle::create_vehicle_in_world;
         let entity1 = create_vehicle_in_world(&mut world.world, "scout", 350.0, 250.0);
-        world.debug_messages.push(format!("Created player scout car at (350, 250) with entity ID {}", entity1.id()));
+        world.debug_messages.push(format!(
+            "Created player scout car at (350, 250) with entity ID {}",
+            entity1.id()
+        ));
 
         let entity2 = create_vehicle_in_world(&mut world.world, "scout", 450.0, 350.0);
-        world.debug_messages.push(format!("Created player scout car at (450, 350) with entity ID {}", entity2.id()));
+        world.debug_messages.push(format!(
+            "Created player scout car at (450, 350) with entity ID {}",
+            entity2.id()
+        ));
     }
 
     if let Some(world) = GAME_WORLD.get() {
@@ -85,8 +91,10 @@ pub fn init() -> Result<String, JsValue> {
             removed_entities: Vec::new(), // No entities removed during init
         };
 
-        serde_json::to_string(&state)
-            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+        let json_result = serde_json::to_string(&state)
+            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)));
+        eprintln!("init() serialization result: {:?}", json_result);
+        json_result
     } else {
         Err(JsValue::from_str("Failed to initialize game world"))
     }
@@ -120,31 +128,33 @@ pub fn get_entities_data(world: &World) -> Vec<EntityData> {
             )
         } else {
             // Other entity
-            (
-                "unknown".to_string(),
-                None,
-            )
+            ("unknown".to_string(), None)
         };
 
         // Читаем fraction отдельно для всех entity
-        let faction = world.get::<&FractionComponent>(entity_id).ok()
+        let faction = world
+            .get::<&FractionComponent>(entity_id)
+            .ok()
             .map(|fraction_component| fraction_component.fraction.name().to_string());
 
         // Читаем позицию отдельно для всех entity
         let position = world.get::<&Position>(entity_id).ok().map(|p| *p);
 
         // Проверяем состояние выделения
-        let is_selected = world.get::<&Selection>(entity_id).ok()
+        let is_selected = world
+            .get::<&Selection>(entity_id)
+            .ok()
             .map(|selection| selection.is_selected)
             .unwrap_or(false);
 
         // Получаем информацию о здоровье
-        let health = world.get::<&Health>(entity_id).ok()
+        let health = world
+            .get::<&Health>(entity_id)
+            .ok()
             .map(|h| (h.current, h.maximum));
 
         // Получаем информацию о движении
-        let movement = world.get::<&Movement>(entity_id).ok()
-            .map(|m| *m);
+        let movement = world.get::<&Movement>(entity_id).ok().map(|m| *m);
 
         entities.push(EntityData {
             id: entity_id.id(),

@@ -58,7 +58,9 @@ export class StateContainer {
     if (!this._eventHandlers.has(event)) {
       this._eventHandlers.set(event, new Set())
     }
-    this._eventHandlers.get(event).add(handler)
+    const handlers = this._eventHandlers.get(event)
+    const hadHandlers = handlers.size > 0
+    handlers.add(handler)
 
     return () => this.unsubscribe(event, handler)
   }
@@ -73,7 +75,6 @@ export class StateContainer {
   emit (event, data) {
     const handlers = this._eventHandlers.get(event)
     if (handlers) {
-      console.log('StateContainer.emit:', event, '- handlers count:', handlers.size, '- data:', data)
       const handlersCopy = new Set(handlers)
       handlersCopy.forEach(handler => {
         try {
@@ -83,7 +84,7 @@ export class StateContainer {
         }
       })
     } else {
-      console.log('StateContainer.emit:', event, '- NO HANDLERS!')
+
     }
   }
 

@@ -4,6 +4,7 @@
  */
 
 import { GameApi } from '../api/GameApi.js'
+import { init, create_vehicle, update, select_entity, deselect_entity, set_group_target, create_base, build_floor, get_entity_info, create_random_alert, clear_selection, handle_entity_selection, get_entities_data } from '../wasm-imports.js'
 import { createRepository } from '../core/EntityRepository.js'
 import { createEntityData } from '../utils/entityUtils.js'
 
@@ -20,8 +21,23 @@ export class GameStateSystem {
    * Initialize GameApi with WASM functions
    * @param {Object} wasm - WASM module with functions
    */
-  initWasm (wasm) {
-    this.gameApi = new GameApi(wasm)
+  initWasm () {
+    // Create GameApi with wrapped WASM functions
+    this.gameApi = new GameApi({
+      init: () => init(),
+      create_vehicle: (type, x, y) => create_vehicle(type, x, y),
+      update: (dt) => update(dt),
+      select_entity: (id) => select_entity(id),
+      deselect_entity: (id) => deselect_entity(id),
+      clear_selection: () => clear_selection(),
+      set_group_target: (x, y) => set_group_target(x, y),
+      handle_entity_selection: (x, y) => handle_entity_selection(x, y),
+      create_base: (x, y) => create_base(x, y),
+      build_floor: (baseId, floorType) => build_floor(baseId, floorType),
+      get_entity_info: (id) => get_entity_info(id),
+      create_random_alert: () => create_random_alert(),
+      get_entities_data: () => get_entities_data()
+    })
   }
 
   async initializeGame () {
@@ -31,8 +47,6 @@ export class GameStateSystem {
 
     try {
       const gameState = await this.gameApi.initialize()
-
-      console.log('GameStateSystem.initializeGame: gameState from WASM:', gameState)
 
       this.gameEngine.state.merge({
         isRunning: false,
@@ -46,15 +60,9 @@ export class GameStateSystem {
         const entitiesMap = this.repository.getEntities()
         for (const entity of gameState.entities) {
           const normalizedEntity = createEntityData(entity)
-          console.log('GameStateSystem: Parsing entity', entity.id, '->', normalizedEntity)
-          console.log('GameStateSystem: entity.gameX:', normalizedEntity.gameX, 'entity.gameY:', normalizedEntity.gameY)
           entitiesMap.set(entity.id, normalizedEntity)
         }
-        console.log('GameStateSystem: Merging entities, count:', entitiesMap.size)
-        console.log('GameStateSystem: entitiesMap contents:', Array.from(entitiesMap.entries()))
-        console.log('GameStateSystem: Emitting entitiesUpdated...')
         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
-        console.log('GameStateSystem: entitiesUpdated emitted!')
       } else {
         console.log('GameStateSystem: gameState.entities is null/undefined!')
       }
@@ -190,12 +198,8 @@ export class GameStateSystem {
         const entitiesMap = this.repository.getEntities()
         for (const entity of gameState.entities) {
           const normalizedEntity = createEntityData(entity)
-          console.log('GameStateSystem: updateGameLoop - Parsing entity', entity.id, '->', normalizedEntity)
-          console.log('GameStateSystem: updateGameLoop - entity.gameX:', normalizedEntity.gameX, 'entity.gameY:', normalizedEntity.gameY)
           entitiesMap.set(entity.id, normalizedEntity)
         }
-        console.log('GameStateSystem: updateGameLoop - Merging entities, count:', entitiesMap.size)
-        console.log('GameStateSystem: updateGameLoop - entitiesMap contents:', Array.from(entitiesMap.entries()))
         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
       }
 

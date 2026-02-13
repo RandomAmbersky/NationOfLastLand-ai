@@ -328,7 +328,7 @@ export class RendererSystem {
         console.log('RendererSystem: Entity container children:', storedEntity.container.children?.length)
         console.log('RendererSystem: graphics === container.children[0]:', storedEntity.graphics === storedEntity.container.children?.[0])
         console.log('RendererSystem: App stage children count:', this.app?.stage?.children?.length)
-      } else if (storedEntity && entity.gameX !== undefined && entity.gameY !== undefined) {
+      } else if (storedEntity && storedEntity.container && entity.gameX !== undefined && entity.gameY !== undefined) {
         // Update position of existing entity
         storedEntity.gameX = entity.gameX
         storedEntity.gameY = entity.gameY

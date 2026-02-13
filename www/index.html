@@ -237,7 +237,7 @@
             initWasm("./pkg/nation_of_last_land_bg.wasm")
                 .then((wasmModule) => {
                     // Initialize GameApi with WASM functions
-                    gameStateSystem.initWasm(wasmModule);
+                    gameStateSystem.initWasm();
 
                     // Now initialize the game
                     return gameStateSystem.initializeGame();
