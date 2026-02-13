@@ -1,12 +1,32 @@
 /**
- * TransformerProvider - Provides consistent transformer handling across systems
+ * Transformer helper - Provides transformer management utilities
+ * 
+ * NOTE: Deprecated. Use direct transformer property or dependency injection.
+ * Kept for backward compatibility during refactoring.
+ * 
+ * @deprecated Use system.transformer = transformer or pass transformer in constructor
  */
 
-import { createCoordinateTransformer } from './coordinate-transformer.js'
+/**
+ * @deprecated Use direct property assignment instead
+ */
+export function withTransformer(BaseClass) {
+  return class extends BaseClass {
+    constructor(...args) {
+      super(...args)
+      this.transformer = null
+    }
+    setTransformer(transformer) {
+      this.transformer = transformer
+    }
+    getTransformer() {
+      return this.transformer
+    }
+  }
+}
 
 /**
- * Shared transformer provider that can be composed into classes.
- * Manages transformer through explicit injection only.
+ * @deprecated Use direct property assignment instead
  */
 export class TransformerProvider {
   constructor() {
@@ -20,12 +40,9 @@ export class TransformerProvider {
   getTransformer() {
     return this.transformer
   }
-
-  initTransformerFromApp(app) {
-    if (!app) return null
-    this.transformer = createCoordinateTransformer(app)
-    return this.transformer
-  }
 }
 
-export class TransformerMixin extends TransformerProvider {}
+/**
+ * @deprecated Use TransformerProvider directly
+ */
+export class TransformerMixin extends TransformerProvider { }
