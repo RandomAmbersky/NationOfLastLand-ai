@@ -6,7 +6,6 @@ export default initWasmMock
 export const initWasm = initWasmMock
 export const initSync = jest.fn()
 export const init = jest.fn(() => Promise.resolve())
-export const gameInit = jest.fn(() => Promise.resolve())
 export const create_vehicle = jest.fn()
 export const update = jest.fn()
 export const select_entity = jest.fn()
