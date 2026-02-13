@@ -14,14 +14,13 @@
     "requestAnimationFrame": "readonly"
   },
   "rules": {
-    "no-unused-vars": [
+    "space-before-function-paren": [
       "error",
       {
-        "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_",
-        "caughtErrorsIgnorePattern": "^_"
+        "anonymous": "always",
+        "named": "always",
+        "asyncArrow": "always"
       }
-    ],
-    "camelcase": "off"
+    ]
   }
 }

@@ -2,7 +2,13 @@
  * Game cleanup module
  */
 
-import { createDisposable, TimerManager, EventManager, GraphicsCleanup, Cleanupable } from "../utils/cleanup.js"
+import {
+  createDisposable,
+  TimerManager,
+  EventManager,
+  GraphicsCleanup,
+  Cleanupable
+} from '../utils/cleanup.js'
 
 export class GameCleanup extends Cleanupable {
   constructor () {
@@ -40,9 +46,13 @@ export class GameCleanup extends Cleanupable {
     this.addCleanup({
       dispose: () => {
         try {
-          container.destroy({ children: true, texture: true, baseTexture: true })
+          container.destroy({
+            children: true,
+            texture: true,
+            baseTexture: true
+          })
         } catch (error) {
-          console.error("Error destroying container:", error)
+          console.error('Error destroying container:', error)
         }
       }
     })

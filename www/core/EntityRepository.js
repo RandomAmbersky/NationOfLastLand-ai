@@ -3,10 +3,14 @@
  * Provides clean abstraction over the Map-based entity storage
  */
 
-import { findPlayerBase as findPlayerBaseUtil, getEntitiesByType, getEntitiesByFraction } from '../utils/entityUtils.js'
+import {
+  findPlayerBase as findPlayerBaseUtil,
+  getEntitiesByType,
+  getEntitiesByFraction
+} from '../utils/entityUtils.js'
 
 export class EntityRepository {
-  constructor(stateContainer, key = 'entities') {
+  constructor (stateContainer, key = 'entities') {
     this.state = stateContainer
     this.key = key
   }
@@ -15,7 +19,7 @@ export class EntityRepository {
    * Get entities map from state
    * @returns {Map<number, Object>} Map of entities
    */
-  getEntities() {
+  getEntities () {
     const entities = this.state.get(this.key)
     if (!(entities instanceof Map)) {
       return new Map()
@@ -28,7 +32,7 @@ export class EntityRepository {
    * @param {number} id - Entity ID
    * @returns {Object|null} Entity object or null
    */
-  getById(id) {
+  getById (id) {
     return this.getEntities().get(id) || null
   }
 
@@ -37,7 +41,7 @@ export class EntityRepository {
    * @param {number} id - Entity ID
    * @returns {boolean}
    */
-  has(id) {
+  has (id) {
     return this.getEntities().has(id)
   }
 
@@ -46,7 +50,7 @@ export class EntityRepository {
    * @param {string} type - Entity type (vehicle, base, alert)
    * @returns {Array<Object>} Array of entities
    */
-  getByType(type) {
+  getByType (type) {
     return getEntitiesByType(this.getEntities(), type)
   }
 
@@ -55,7 +59,7 @@ export class EntityRepository {
    * @param {string} fraction - Faction name (Player, Enemy, Neutral, Wild)
    * @returns {Array<Object>} Array of entities
    */
-  getByFraction(fraction) {
+  getByFraction (fraction) {
     return getEntitiesByFraction(this.getEntities(), fraction)
   }
 
@@ -65,7 +69,7 @@ export class EntityRepository {
    * @param {string} fraction - Faction name
    * @returns {Array<Object>} Array of entities
    */
-  getByTypeAndFraction(type, fraction) {
+  getByTypeAndFraction (type, fraction) {
     const entities = this.getEntities()
     const result = []
     for (const [, entity] of entities) {
@@ -83,7 +87,7 @@ export class EntityRepository {
    * @param {Object} filter - Filter object with type/fraction properties
    * @returns {Object|null} First matching entity or null
    */
-  find(filter) {
+  find (filter) {
     const entities = this.getEntities()
     for (const [, entity] of entities) {
       if (this._matchesFilter(entity, filter)) {
@@ -97,7 +101,7 @@ export class EntityRepository {
    * Find player's base
    * @returns {Object|null} Base entity or null
    */
-  findPlayerBase() {
+  findPlayerBase () {
     return findPlayerBaseUtil(this.getEntities())
   }
 
@@ -105,7 +109,7 @@ export class EntityRepository {
    * Get all player units that can move
    * @returns {Array<Object>} Array of movable player units
    */
-  getMovablePlayerUnits() {
+  getMovablePlayerUnits () {
     const entities = this.getEntities()
     const result = []
     for (const [, entity] of entities) {
@@ -124,7 +128,7 @@ export class EntityRepository {
    * Add or update entity in repository
    * @param {Object} entity - Entity object
    */
-  add(entity) {
+  add (entity) {
     const entities = this.getEntities()
     entities.set(entity.id, entity)
     this.state.merge({ [this.key]: entities }, 'entitiesUpdated')
@@ -134,7 +138,7 @@ export class EntityRepository {
    * Remove entity by ID
    * @param {number} id - Entity ID
    */
-  remove(id) {
+  remove (id) {
     const entities = this.getEntities()
     entities.delete(id)
     this.state.merge({ [this.key]: entities }, 'entitiesUpdated')
@@ -147,9 +151,13 @@ export class EntityRepository {
    * @returns {boolean}
    * @private
    */
-  _matchesFilter(entity, filter) {
+  _matchesFilter (entity, filter) {
     if (!filter) return true
-    if (filter.type && entity.entityType !== filter.type && entity.type !== filter.type) {
+    if (
+      filter.type &&
+      entity.entityType !== filter.type &&
+      entity.type !== filter.type
+    ) {
       return false
     }
     if (filter.fraction && entity.fraction !== filter.fraction) {
@@ -164,7 +172,7 @@ export class EntityRepository {
   /**
    * Clear all entities
    */
-  clear() {
+  clear () {
     this.state.merge({ [this.key]: new Map() }, 'entitiesCleared')
   }
 
@@ -172,11 +180,11 @@ export class EntityRepository {
    * Get count of entities
    * @returns {number}
    */
-  count() {
+  count () {
     return this.getEntities().size
   }
 }
 
-export function createRepository(stateContainer, key = 'entities') {
+export function createRepository (stateContainer, key = 'entities') {
   return new EntityRepository(stateContainer, key)
 }
