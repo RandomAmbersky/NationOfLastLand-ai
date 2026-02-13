@@ -23,3 +23,24 @@ export class TransformerProvider {
     }
   }
 }
+
+export class TransformerMixin {
+  constructor() {
+    this.transformer = null
+  }
+
+  setTransformer(transformer) {
+    this.transformer = transformer
+  }
+
+  getTransformer() {
+    return this.transformer
+  }
+
+  // Common init pattern for systems
+  _initTransformer(app) {
+    if (!this.transformer && app) {
+      this.transformer = app?.renderer?.transformer || null
+    }
+  }
+}
