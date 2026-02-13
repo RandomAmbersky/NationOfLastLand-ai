@@ -1,13 +1,14 @@
 # Nation of Last Land - WebAssembly Demo
 
-This is a simple demonstration of WebAssembly functionality using Rust and Pixi.js for rendering.
+This is a demonstration of WebAssembly functionality using Rust and Pixi.js for rendering.
 
 ## Features
 
 - **WebAssembly Backend**: Game logic runs in Rust compiled to WebAssembly
 - **Real-time Rendering**: Pixi.js renders entities in real-time
 - **Entity Management**: ECS-based entity system with position tracking
-- **Interactive Demo**: Spawn vehicles and watch them move in circular patterns
+- **Interactive Demo**: Full selection and movement controls
+- **Movement System**: Entity movement based on game commands
 - **Memory Management**: Proper cleanup mechanism for Web resources
 
 ## How to Run
@@ -35,10 +36,13 @@ Then open http://localhost:3000 in your browser.
 ## Demo Controls
 
 1. **Initialize Game**: Click "Initialize Game" to set up the ECS world
-2. **Spawn Vehicles**: Select a vehicle type and position, then click "Spawn Vehicle"
-3. **Watch Animation**: Vehicles will automatically move in circular patterns around the center
-4. **Update Game**: Manually trigger game updates (normally happens automatically)
-5. **Cleanup & Reset**: Click "Cleanup & Reset" to destroy the game and all resources
+2. **Spawn Vehicles**: Use WASM commands to create vehicles
+3. **Select Entities**: Left-click to select entities
+4. **Move Entities**: Right-click to set a movement target
+5. **Multi-Select**: Hold Shift and click to select multiple entities
+6. **Rectangle Select**: Drag to select multiple entities at once
+7. **Clear Selection**: Press Esc to clear all selections
+8. **Watch Movement**: Selected entities will move toward their targets
 
 ## Architecture
 
@@ -50,7 +54,7 @@ Then open http://localhost:3000 in your browser.
 - **InputSystem** (`systems/InputSystem.js`): Mouse and keyboard input handling
 - **SelectionSystem** (`systems/SelectionSystem.js`): Entity selection and grouping
 - **GameStateSystem** (`systems/GameStateSystem.js`): WASM state management
-- **SelectionIndicator** (`services/SelectionIndicator.js`): Visual selection indicators
+- **MovementSystem** (`systems/MovementSystem.js`): Entity movement processing
 - **EntitySpawnSystem** (`systems/EntitySpawnSystem.js`): Entity spawn and deletion queue management
 
 ### Utility Modules
@@ -58,6 +62,7 @@ Then open http://localhost:3000 in your browser.
 - `utils/cleanup.js` - Cleanup utilities (TimerManager, EventManager, GraphicsCleanup)
 - `utils/math.js` - Mathematical utility functions
 - `utils/coordinate-transformer.js` - Coordinate conversion utilities
+- `utils/TransformerMixin.js` - Transformer provider for systems
 - `utils/entity-utils.js` - Entity operation utilities
 - `config/game-config.js` - Centralized game configuration
 
@@ -81,6 +86,7 @@ Then open http://localhost:3000 in your browser.
 - `systems/RendererSystem.js` - Entity rendering and visual effects
 - `systems/InputSystem.js` - Mouse and keyboard input handling
 - `systems/SelectionSystem.js` - Entity selection and grouping
+- `systems/MovementSystem.js` - Entity movement processing
 - `systems/EntitySpawnSystem.js` - Entity spawn/deletion queue
 
 ### Service Modules
@@ -92,6 +98,7 @@ Then open http://localhost:3000 in your browser.
 - `utils/cleanup.js` - Cleanup utilities (TimerManager, EventManager, GraphicsCleanup)
 - `utils/math.js` - Mathematical utility functions
 - `utils/coordinate-transformer.js` - Coordinate conversion utilities
+- `utils/TransformerMixin.js` - Transformer provider for systems
 - `utils/entity-utils.js` - Entity operation utilities
 
 ## Technical Details

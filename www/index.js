@@ -67,6 +67,8 @@ export default {
   createGameStateSystem,
   EntitySpawnSystem,
   createEntitySpawnSystem,
+  MovementSystem,
+  createMovementSystem,
   
   // Utils
   calculateDistance,

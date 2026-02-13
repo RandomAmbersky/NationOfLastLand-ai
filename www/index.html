@@ -135,7 +135,7 @@
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <script type="module">
-        import { GameEngine, GameStateSystem, RendererSystem } from './index.js';
+        import { GameEngine, GameStateSystem, RendererSystem, InputSystem, SelectionSystem, MovementSystem } from './index.js';
         
         const gameEngine = new GameEngine();
         
@@ -146,6 +146,9 @@
         // Add systems to engine
         gameEngine.addSystem(gameStateSystem);
         gameEngine.addSystem(rendererSystem);
+        gameEngine.addSystem(inputSystem);
+        gameEngine.addSystem(selectionSystem);
+        gameEngine.addSystem(movementSystem);
         
         // Initialize Pixi.js
         const canvasContainer = document.querySelector('.game-container');
@@ -166,10 +169,19 @@
         }
         
         // Store app in gameEngine for systems
-        gameEngine.app = app;
+        gameEngine.setApp(app);
         
         // Initialize renderer system
         rendererSystem.init(app);
+
+        // Initialize selection system
+        selectionSystem.init(app);
+
+        // Initialize input system
+        inputSystem.init(app);
+
+        // Initialize movement system
+        movementSystem.init(app);
         
         // Update status
         const statusEl = document.getElementById('status');
@@ -181,7 +193,7 @@
         gameStateSystem.initializeGame()
             .then(result => {
                 if (statusEl) {
-                    statusEl.textContent = result.success ? 'Game initialized successfully!' : `Error: ${result.error}`;
+                    statusEl.textContent = result.success ? 'Game initialized successfully! Controls: Left-click to select, Right-click to move, Shift+Click to multi-select, Drag to rectangle select, Esc to clear selection.' : `Error: ${result.error}`;
                 }
                 
                 if (result.success) {
