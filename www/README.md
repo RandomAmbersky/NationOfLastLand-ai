@@ -61,9 +61,9 @@ Then open http://localhost:3000 in your browser.
 
 - `utils/cleanup.js` - Cleanup utilities (TimerManager, EventManager, GraphicsCleanup)
 - `utils/math.js` - Mathematical utility functions
-- `utils/coordinate-transformer.js` - Coordinate conversion utilities
+- `utils/coordinateTransformer.js` - Coordinate conversion utilities
 - `utils/TransformerMixin.js` - Transformer provider for systems
-- `utils/entity-utils.js` - Entity operation utilities
+- `utils/entityUtils.js` - Entity operation utilities
 - `config/game-config.js` - Centralized game configuration
 
 ## Files
@@ -97,9 +97,9 @@ Then open http://localhost:3000 in your browser.
 
 - `utils/cleanup.js` - Cleanup utilities (TimerManager, EventManager, GraphicsCleanup)
 - `utils/math.js` - Mathematical utility functions
-- `utils/coordinate-transformer.js` - Coordinate conversion utilities
+- `utils/coordinateTransformer.js` - Coordinate conversion utilities
 - `utils/TransformerMixin.js` - Transformer provider for systems
-- `utils/entity-utils.js` - Entity operation utilities
+- `utils/entityUtils.js` - Entity operation utilities
 
 ## Technical Details
 

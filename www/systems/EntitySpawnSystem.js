@@ -3,7 +3,7 @@
  * Separates creation concerns from rendering logic
  */
 
-import { drawEntity } from '../utils/entity-drawer.js'
+import { drawEntity } from '../utils/entityDrawer.js'
 import { createRepository } from '../core/EntityRepository.js'
 import { TransformerProvider } from '../utils/TransformerMixin.js'
 

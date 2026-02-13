@@ -15,7 +15,7 @@ import {
   clear_selection as _clearSelection
 } from '../wasm-imports.js'
 import { createRepository } from '../core/EntityRepository.js'
-import { createEntityData } from '../utils/entity-utils.js'
+import { createEntityData } from '../utils/entityUtils.js'
 
 export class GameStateSystem {
   constructor(gameEngine) {

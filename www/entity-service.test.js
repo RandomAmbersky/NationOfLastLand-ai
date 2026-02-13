@@ -1,4 +1,4 @@
-const { createEntityData, findPlayerBase, isPlayerBaseSelected, getEntitiesByType, getEntitiesByFraction, entityExists } = require('./utils/entity-utils.js')
+const { createEntityData, findPlayerBase, isPlayerBaseSelected, getEntitiesByType, getEntitiesByFraction, entityExists } = require('./utils/entityUtils.js')
 
 describe('entity-utils', () => {
   describe('createEntityData', () => {

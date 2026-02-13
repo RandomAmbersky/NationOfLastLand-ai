@@ -5,7 +5,7 @@
 
 import { GAME_CONFIG } from '../config/game-config.js'
 import { createRepository } from '../core/EntityRepository.js'
-import { drawEntity, createEntitySprite } from '../utils/entity-drawer.js'
+import { drawEntity, createEntitySprite } from '../utils/entityDrawer.js'
 import { TransformerProvider } from '../utils/TransformerMixin.js'
 
 export class RendererSystem extends TransformerProvider {

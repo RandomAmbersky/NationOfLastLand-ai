@@ -3,7 +3,7 @@
  * Provides clean abstraction over the Map-based entity storage
  */
 
-import { findPlayerBase as findPlayerBaseUtil, getEntitiesByType, getEntitiesByFraction } from '../utils/entity-utils.js'
+import { findPlayerBase as findPlayerBaseUtil, getEntitiesByType, getEntitiesByFraction } from '../utils/entityUtils.js'
 
 export class EntityRepository {
   constructor(stateContainer, key = 'entities') {

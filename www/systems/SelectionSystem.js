@@ -8,7 +8,7 @@ import { GAME_CONFIG } from '../config/game-config.js'
 import { SelectionIndicator } from '../services/SelectionIndicator.js'
 import { createRepository } from '../core/EntityRepository.js'
 import { TransformerProvider } from '../utils/TransformerMixin.js'
-import { canMove, isPlayerUnit } from '../utils/entity-utils.js'
+import { canMove, isPlayerUnit } from '../utils/entityUtils.js'
 
 export class SelectionSystem extends TransformerProvider {
   constructor(gameEngine) {

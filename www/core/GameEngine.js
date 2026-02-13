@@ -4,7 +4,7 @@
  */
 
 import { StateContainer } from './StateContainer.js'
-import { createCoordinateTransformer } from '../utils/coordinate-transformer.js'
+import { createCoordinateTransformer } from '../utils/coordinateTransformer.js'
 
 export class System {
   constructor (gameEngine) {
