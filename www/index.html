@@ -179,6 +179,7 @@
                 InputSystem,
                 SelectionSystem,
                 MovementSystem,
+                initWasm,
             } from "./index.js";
 
             const gameEngine = new GameEngine();
@@ -232,14 +233,15 @@
             // Get status element
             const statusEl = document.getElementById("status");
 
-            // Update status
-            if (statusEl) {
-                statusEl.textContent = "Initializing WASM...";
-            }
+            // Initialize WASM first, then set up GameApi
+            initWasm("./pkg/nation_of_last_land_bg.wasm")
+                .then((wasmModule) => {
+                    // Initialize GameApi with WASM functions
+                    gameStateSystem.initWasm(wasmModule);
 
-            // Initialize game
-            gameStateSystem
-                .initializeGame()
+                    // Now initialize the game
+                    return gameStateSystem.initializeGame();
+                })
                 .then((result) => {
                     if (statusEl) {
                         statusEl.textContent = result.success
