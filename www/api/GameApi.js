@@ -3,6 +3,9 @@
  * Provides clean interface for game operations without exposing WASM internals
  */
 
+// Import WASM functions directly
+import { init, create_vehicle, update, select_entity, deselect_entity, set_group_target, create_base, build_floor, get_entity_info, create_random_alert, clear_selection, handle_entity_selection, get_entities_data } from '../wasm-imports.js'
+
 /**
  * @typedef {Object} EntityData
  * @property {number} id - Entity ID
@@ -33,23 +36,42 @@
  */
 export class GameApi {
   /**
-   * @param {Object} wasm - WASM module with async functions
-   * @param {Function} wasm.init - Initialize game world
-   * @param {Function} wasm.create_vehicle - Create vehicle entity
-   * @param {Function} wasm.update - Update game state
-   * @param {Function} wasm.select_entity - Select entity
-   * @param {Function} wasm.deselect_entity - Deselect entity
-   * @param {Function} wasm.clear_selection - Clear all selections
-   * @param {Function} wasm.set_group_target - Set target for selected group
-   * @param {Function} wasm.handle_entity_selection - Handle entity click
-   * @param {Function} wasm.create_base - Create player base
-   * @param {Function} wasm.build_floor - Build floor on base
-   * @param {Function} wasm.get_entity_info - Get entity info
-   * @param {Function} wasm.create_random_alert - Create random alert
-   * @param {Function} wasm.get_entities_data - Get all entities
+   * @param {Object} [wasm] - Optional WASM module with async functions. If not provided, uses default imports.
+   * @param {Function} [wasm.init] - Initialize game world
+   * @param {Function} [wasm.create_vehicle] - Create vehicle entity
+   * @param {Function} [wasm.update] - Update game state
+   * @param {Function} [wasm.select_entity] - Select entity
+   * @param {Function} [wasm.deselect_entity] - Deselect entity
+   * @param {Function} [wasm.clear_selection] - Clear all selections
+   * @param {Function} [wasm.set_group_target] - Set target for selected group
+   * @param {Function} [wasm.handle_entity_selection] - Handle entity click
+   * @param {Function} [wasm.create_base] - Create player base
+   * @param {Function} [wasm.build_floor] - Build floor on base
+   * @param {Function} [wasm.get_entity_info] - Get entity info
+   * @param {Function} [wasm.create_random_alert] - Create random alert
+   * @param {Function} [wasm.get_entities_data] - Get all entities
    */
-  constructor (wasm) {
-    this.wasm = wasm
+  constructor (wasm = null) {
+    // If no wasm provided, bind directly to imports
+    if (!wasm) {
+      this.wasm = {
+        init: () => init(),
+        create_vehicle: (type, x, y) => create_vehicle(type, x, y),
+        update: (dt) => update(dt),
+        select_entity: (id) => select_entity(id),
+        deselect_entity: (id) => deselect_entity(id),
+        clear_selection: () => clear_selection(),
+        set_group_target: (x, y) => set_group_target(x, y),
+        handle_entity_selection: (x, y) => handle_entity_selection(x, y),
+        create_base: (x, y) => create_base(x, y),
+        build_floor: (baseId, floorType) => build_floor(baseId, floorType),
+        get_entity_info: (id) => get_entity_info(id),
+        create_random_alert: () => create_random_alert(),
+        get_entities_data: () => get_entities_data()
+      }
+    } else {
+      this.wasm = wasm
+    }
   }
 
   /**
@@ -234,9 +256,9 @@ export class GameApi {
 
 /**
  * Create a new GameApi instance
- * @param {Object} wasm - WASM module with functions
+ * @param {Object} [wasm] - Optional WASM module with functions. If not provided, uses default imports.
  * @returns {GameApi} New GameApi instance
  */
-export function createGameApi (wasm) {
+export function createGameApi (wasm = null) {
   return new GameApi(wasm)
 }

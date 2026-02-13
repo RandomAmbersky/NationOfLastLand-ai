@@ -83,7 +83,7 @@ Then open http://localhost:3000 in your browser.
 
 ### System Modules
 
-- `systems/GameStateSystem.js` - WASM state management
+- `systems/GameStateSystem.js` - Game state management using GameApi (auto-binds to WASM)
 - `systems/RendererSystem.js` - Entity rendering and visual effects
 - `systems/InputSystem.js` - Mouse and keyboard input handling
 - `systems/SelectionSystem.js` - Entity selection and grouping
@@ -96,6 +96,7 @@ Then open http://localhost:3000 in your browser.
 
 ### Utility Modules
 
+- `api/GameApi.js` - Game API abstraction with auto-bound WASM functions
 - `utils/cleanup.js` - Cleanup utilities (TimerManager, EventManager, GraphicsCleanup, Cleanupable)
 - `utils/math.js` - Mathematical utility functions (calculateDistance, clamp, lerp)
 - `utils/coordinateTransformer.js` - Coordinate conversion utilities (CoordinateTransformer, createCoordinateTransformer)
@@ -123,6 +124,24 @@ The project includes a comprehensive cleanup mechanism to prevent memory leaks:
 - **GraphicsCleanup**: Destroys all Pixi.js graphics objects
 - **Cleanupable**: Base class for objects needing cleanup
 - **GameCleanup**: Main cleanup manager combining all subsystems
+
+### GameApi
+
+GameApi is automatically bound to WASM functions on instantiation. You can also pass custom WASM functions if needed:
+
+```javascript
+import { GameApi } from "./index.js";
+
+// Auto-bind to WASM functions
+const gameApi = new GameApi();
+
+// Or with custom WASM functions
+const customGameApi = new GameApi({
+  init: () => customInit(),
+  update: (dt) => customUpdate(dt),
+  // ... other functions
+});
+```
 
 ### Usage
 

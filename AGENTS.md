@@ -186,7 +186,7 @@ Systems run in specific order (see `src/game/world.rs:24-55`):
 - **RendererSystem.js**: Pixi.js rendering
 - **InputSystem.js**: Mouse/touch input handling
 - **SelectionSystem.js**: Unit selection logic
-- **GameStateSystem.js**: Game state synchronization
+- **GameStateSystem.js**: Game state management using GameApi (auto-binds to WASM)
 - **EntitySpawnSystem.js**: Entity creation and management
 
 ### Utilities (www/utils/)
@@ -197,6 +197,7 @@ Systems run in specific order (see `src/game/world.rs:24-55`):
 
 ### Configuration
 - **game-config.js**: Centralized game settings, colors, limits, distances
+- **api/GameApi.js**: Game API abstraction with auto-bound WASM functions
 
 ## Testing Approach
 
@@ -227,6 +228,7 @@ Systems run in specific order (see `src/game/world.rs:24-55`):
 
 ### JavaScript State Management
 - **StateContainer**: Immutable state with versioning and event emission
+- **GameApi**: Auto-binds to WASM functions, no manual initialization needed
 - **Event-driven**: Systems subscribe to state changes via `subscribe()`
 - **EntityRepository**: Map-based entity storage with `get()`, `set()`, `delete()`
 - **Cleanup Patterns**: `createDisposable()`, `TimerManager`, `EventManager`, `GraphicsCleanup`
@@ -256,14 +258,15 @@ Systems run in specific order (see `src/game/world.rs:24-55`):
    - Group selection filters only movable units
    - Click enemy while selecting = assign target (no reset)
    - Click immobile unit = reset and select new
-   - Click enemy = reset and select new
 10. **Cleanup Required**: Pixi.js graphics must be destroyed to prevent memory leaks
 11. **Timer/Event Management**: Use TimerManager and EventManager for automatic cleanup
+12. **GameApi Auto-Bind**: GameApi automatically binds to WASM functions - no manual initialization needed. Remove `initWasm()` calls from code.
+13. **WASM Function Imports**: WASM functions are now imported directly in `api/GameApi.js` - no need to wrap them in `wasm-imports.js`
 
 ### Configuration Gotchas
-12. **YAML Validation**: No runtime validation - invalid YAML causes parse errors
-13. **Device Conflicts**: Some devices can't be combined - documented in config
-14. **Slot Blocking**: Helmets block glasses/headphones, armor blocks sleeves/gloves
+14. **YAML Validation**: No runtime validation - invalid YAML causes parse errors
+15. **Device Conflicts**: Some devices can't be combined - documented in config
+16. **Slot Blocking**: Helmets block glasses/headphones, armor blocks sleeves/gloves
 
 ## Commands Reference
 
