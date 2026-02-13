@@ -1,36 +1,36 @@
 /**
- * GameState System - Handles game state management and WASM communication
- * Extracted from original GameStateManager for better separation of concerns
+ * GameState System - Handles game state management via GameApi
+ * Uses GameApi abstraction instead of direct WASM calls
  */
 
-import {
-  initWasm,
-  gameInit,
-  create_vehicle,
-  update,
-  set_group_target,
-  create_base,
-  build_floor,
-  create_random_alert,
-  clear_selection as _clearSelection
-} from '../wasm-imports.js'
+import { GameApi } from '../api/GameApi.js'
 import { createRepository } from '../core/EntityRepository.js'
 import { createEntityData } from '../utils/entityUtils.js'
 
 export class GameStateSystem {
-  constructor (gameEngine) {
+  constructor (gameEngine, gameApi = null) {
     this.gameEngine = gameEngine
+    this.gameApi = gameApi
     this.repository = createRepository(gameEngine.state)
     this.isDestroyed = false
     this._unsubscribeHandlers = []
   }
 
+  /**
+   * Initialize GameApi with WASM functions
+   * @param {Object} wasm - WASM module with functions
+   */
+  initWasm (wasm) {
+    this.gameApi = new GameApi(wasm)
+  }
+
   async initializeGame () {
+    if (!this.gameApi) {
+      return { success: false, error: 'GameApi not initialized. Call initWasm() first.' }
+    }
+
     try {
-      // Initialize WASM if not already initialized
-      await initWasm()
-      const result = gameInit()
-      const gameState = JSON.parse(result)
+      const gameState = await this.gameApi.initialize()
 
       this.gameEngine.state.merge({
         isRunning: false,
@@ -85,6 +85,10 @@ export class GameStateSystem {
   }
 
   async spawnVehicle (vehicleType, baseEntity) {
+    if (!this.gameApi) {
+      return { success: false, error: 'GameApi not initialized' }
+    }
+
     if (!baseEntity) {
       return { success: false, error: 'No base selected' }
     }
@@ -99,62 +103,72 @@ export class GameStateSystem {
     const spawnY = baseY + Math.sin(angle) * distance
 
     try {
-      const result = create_vehicle(vehicleType, spawnX, spawnY)
-      const creationResult = JSON.parse(result)
-
-      if (creationResult.success) {
-        return { success: true, data: creationResult }
-      }
-      return { success: false, error: creationResult.message }
+      const vehicleData = await this.gameApi.spawnVehicle(vehicleType, spawnX, spawnY)
+      return { success: true, data: vehicleData }
     } catch (error) {
       return { success: false, error: error.message }
     }
   }
 
   async createBase (x, y) {
+    if (!this.gameApi) {
+      return { success: false, error: 'GameApi not initialized' }
+    }
+
     try {
-      const result = create_base(x, y)
-      const baseInfo = JSON.parse(result)
-      return { success: true, data: baseInfo }
+      const baseData = await this.gameApi.createBase(x, y)
+      return { success: true, data: baseData }
     } catch (error) {
       return { success: false, error: error.message }
     }
   }
 
   async buildFloor (baseId, floorType) {
+    if (!this.gameApi) {
+      return { success: false, error: 'GameApi not initialized' }
+    }
+
     try {
-      const result = build_floor(baseId, floorType)
-      const updatedBase = JSON.parse(result)
-      return { success: true, data: updatedBase }
+      const baseData = await this.gameApi.buildFloor(baseId, floorType)
+      return { success: true, data: baseData }
     } catch (error) {
       return { success: false, error: error.message }
     }
   }
 
   async createRandomAlert () {
+    if (!this.gameApi) {
+      return { success: false, error: 'GameApi not initialized' }
+    }
+
     try {
-      const result = create_random_alert()
-      const alertResult = JSON.parse(result)
-      return { success: true, data: alertResult }
+      const alertData = await this.gameApi.createRandomAlert()
+      return { success: true, data: alertData }
     } catch (error) {
       return { success: false, error: error.message }
     }
   }
 
   async setGroupTarget (x, y) {
+    if (!this.gameApi) {
+      return { success: false, error: 'GameApi not initialized' }
+    }
+
     try {
-      const result = set_group_target(x, y)
-      const groupResult = JSON.parse(result)
-      return { success: true, data: groupResult }
+      this.gameApi.setGroupTarget(x, y)
+      return { success: true, data: { x, y } }
     } catch (error) {
       return { success: false, error: error.message }
     }
   }
 
-  updateGameLoop (dt) {
+  async updateGameLoop (dt) {
+    if (!this.gameApi) {
+      return { success: false, error: 'GameApi not initialized' }
+    }
+
     try {
-      const result = update(dt)
-      const gameState = JSON.parse(result)
+      const gameState = await this.gameApi.update(dt)
 
       this.gameEngine.state.merge({
         time: gameState.time,
@@ -195,7 +209,8 @@ export class GameStateSystem {
     this._unsubscribeHandlers.forEach(unsubscribe => unsubscribe())
     this._unsubscribeHandlers = []
 
-    this.repository = createRepository(this.gameEngine.state)
+    this.gameApi = null
+    this.repository = null
     this.gameEngine = null
   }
 
@@ -209,14 +224,19 @@ export class GameStateSystem {
   }
 
   clearSelection () {
+    if (!this.gameApi) {
+      return null
+    }
+
     try {
-      return _clearSelection()
+      this.gameApi.clearSelection()
+      return null
     } catch (error) {
       return null
     }
   }
 }
 
-export function createGameStateSystem (gameEngine) {
-  return new GameStateSystem(gameEngine)
+export function createGameStateSystem (gameEngine, gameApi = null) {
+  return new GameStateSystem(gameEngine, gameApi)
 }
