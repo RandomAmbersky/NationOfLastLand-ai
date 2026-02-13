@@ -46,6 +46,7 @@ export class GameStateSystem {
           const normalizedEntity = createEntityData(entity)
           entitiesMap.set(entity.id, normalizedEntity)
         }
+        console.log('GameStateSystem: Merging entities, count:', entitiesMap.size)
         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
       }
 
@@ -182,6 +183,7 @@ export class GameStateSystem {
           const normalizedEntity = createEntityData(entity)
           entitiesMap.set(entity.id, normalizedEntity)
         }
+        console.log('GameStateSystem: updateGameLoop - Merging entities, count:', entitiesMap.size)
         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
       }
 

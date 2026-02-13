@@ -131,6 +131,7 @@ export class EntityRepository {
   add (entity) {
     const entities = this.getEntities()
     entities.set(entity.id, entity)
+    console.log('EntityRepository.add: Adding entity', entity.id, 'to entities map, size before:', entities.size)
     this.state.merge({ [this.key]: entities }, 'entitiesUpdated')
   }
 

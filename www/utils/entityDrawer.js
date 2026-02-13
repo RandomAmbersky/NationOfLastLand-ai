@@ -12,6 +12,7 @@ import { GAME_CONFIG } from '../config/game-config.js'
  * @returns {number} Color value
  */
 export function getEntityColor (vehicleType, faction) {
+  console.log('getEntityColor: vehicleType:', vehicleType, 'faction:', faction)
   const colors = {
     scout: {
       Player: GAME_CONFIG.COLORS.player.scout,
@@ -87,6 +88,8 @@ export function drawEntity (graphics, entityData) {
   const vehicleType = entityData.subtype || entityData.vehicleType || 'scout'
   const faction = entityData.fraction || null
 
+  console.log('drawEntity: entityType:', entityType, 'vehicleType:', vehicleType, 'faction:', faction)
+
   let color
 
   if (entityType === 'base') {
@@ -119,6 +122,8 @@ export function createEntitySprite (id, x, y, entityData) {
   const vehicleType = entityData.subtype || entityData.vehicleType || 'scout'
   const fraction = entityData.fraction || null
 
+  console.log('createEntitySprite: Creating entity', id, 'at', x, y, 'with data', entityData)
+
   // Create graphics
   const graphics = new PIXI.Graphics()
   drawEntity(graphics, { ...entityData, fraction })
@@ -132,7 +137,7 @@ export function createEntitySprite (id, x, y, entityData) {
   container.gameY = y
   container.entityData = entityData
 
-  return {
+  const entity = {
     id,
     container,
     graphics,
@@ -144,4 +149,7 @@ export function createEntitySprite (id, x, y, entityData) {
     screenX: x,
     screenY: y
   }
+
+  console.log('createEntitySprite: Created entity', id, 'with container:', container)
+  return entity
 }
