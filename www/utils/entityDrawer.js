@@ -5,6 +5,12 @@
 
 import { GAME_CONFIG } from '../config/game-config.js'
 
+// PIXI is expected to be available globally (loaded via script tag in index.html)
+const PIXI_AVAILABLE = typeof PIXI !== 'undefined'
+if (!PIXI_AVAILABLE) {
+  console.error('PIXI is not available in entityDrawer.js!')
+}
+
 /**
  * Get entity color based on type and faction
  * @param {string} vehicleType - Vehicle type (scout, tank, transport)
@@ -44,6 +50,7 @@ export function getEntityColor (vehicleType, faction) {
  * @param {string} vehicleType - Vehicle type (scout, tank, transport)
  */
 export function drawEntityShape (graphics, vehicleType) {
+  console.log('drawEntityShape: drawing', vehicleType)
   switch (vehicleType) {
     case 'scout':
       graphics.drawRect(-4, -4, 8, 8)
@@ -57,6 +64,7 @@ export function drawEntityShape (graphics, vehicleType) {
     default:
       graphics.drawRect(-4, -4, 8, 8)
   }
+  console.log('drawEntityShape: done, graphics children:', graphics.children?.length)
 }
 
 /**
@@ -64,7 +72,9 @@ export function drawEntityShape (graphics, vehicleType) {
  * @param {PIXI.Graphics} graphics - Graphics object
  */
 export function drawBaseShape (graphics) {
+  console.log('drawBaseShape: drawing')
   graphics.drawRect(-15, -15, 30, 30)
+  console.log('drawBaseShape: done, graphics children:', graphics.children?.length)
 }
 
 /**
@@ -72,10 +82,12 @@ export function drawBaseShape (graphics) {
  * @param {PIXI.Graphics} graphics - Graphics object
  */
 export function drawAlertShape (graphics) {
+  console.log('drawAlertShape: drawing')
   graphics.moveTo(0, -8)
   graphics.lineTo(6, 6)
   graphics.lineTo(-6, 6)
   graphics.closePath()
+  console.log('drawAlertShape: done, graphics children:', graphics.children?.length)
 }
 
 /**
@@ -123,14 +135,34 @@ export function createEntitySprite (id, x, y, entityData) {
   const fraction = entityData.fraction || null
 
   console.log('createEntitySprite: Creating entity', id, 'at', x, y, 'with data', entityData)
+  console.log('createEntitySprite: PIXI available:', typeof PIXI !== 'undefined')
 
   // Create graphics
   const graphics = new PIXI.Graphics()
+  if (!graphics) {
+    console.error('createEntitySprite: Failed to create graphics!')
+    return null
+  }
+  console.log('createEntitySprite: graphics created:', graphics, 'type:', graphics.constructor?.name)
+  console.log('createEntitySprite: calling drawEntity with entityData:', entityData)
   drawEntity(graphics, { ...entityData, fraction })
+  console.log('createEntitySprite: after drawEntity, graphics has beginFill/endFill')
+
+  // Verify graphics is drawing by checking if beginFill/endFill work
+  try {
+    graphics.beginFill(0xFF0000)
+    graphics.drawRect(-5, -5, 10, 10)
+    graphics.endFill()
+    console.log('createEntitySprite: graphics.beginFill/drawRect/endFill worked')
+  } catch (e) {
+    console.error('createEntitySprite: Error with graphics methods:', e)
+  }
 
   // Create container
   const container = new PIXI.Container()
+  console.log('createEntitySprite: container created:', container)
   container.addChild(graphics)
+  console.log('createEntitySprite: after addChild, container.children.length:', container.children?.length)
   container.x = x
   container.y = y
   container.gameX = x
@@ -150,6 +182,10 @@ export function createEntitySprite (id, x, y, entityData) {
     screenY: y
   }
 
-  console.log('createEntitySprite: Created entity', id, 'with container:', container)
+  console.log('createEntitySprite: container children after addChild:', container.children?.length)
+  console.log('createEntitySprite: Created entity', id, 'with container children:', container.children?.length)
+  console.log('createEntitySprite: graphics === container.children[0]:', graphics === container.children?.[0])
+  // Verify the graphics is actually drawing something by checking if it has drawing commands
+  console.log('createEntitySprite: graphics is valid:', !!graphics)
   return entity
 }

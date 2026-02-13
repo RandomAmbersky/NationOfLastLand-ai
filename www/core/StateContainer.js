@@ -73,6 +73,7 @@ export class StateContainer {
   emit (event, data) {
     const handlers = this._eventHandlers.get(event)
     if (handlers) {
+      console.log('StateContainer.emit:', event, '- handlers count:', handlers.size, '- data:', data)
       const handlersCopy = new Set(handlers)
       handlersCopy.forEach(handler => {
         try {
@@ -81,6 +82,8 @@ export class StateContainer {
           console.error('StateContainer: Error in handler for event:', event, error)
         }
       })
+    } else {
+      console.log('StateContainer.emit:', event, '- NO HANDLERS!')
     }
   }
 

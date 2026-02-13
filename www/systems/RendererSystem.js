@@ -138,6 +138,7 @@ export class RendererSystem {
     const { x, y } = transformer.normalizeCoords(gameX, gameY)
     const { x: scaleX, y: scaleY } = transformer.getScale()
     const result = { x: x * scaleX, y: y * scaleY, scaleX, scaleY }
+    console.log('_toScreenCoords:', { gameX, gameY, normalized: { x, y }, scale: { scaleX, scaleY }, result })
     return result
   }
 
@@ -290,6 +291,7 @@ export class RendererSystem {
    * Updates positions of existing entities and creates new ones
    */
   handleEntitiesUpdated (entities) {
+    console.log('RendererSystem.handleEntitiesUpdated: START - entities:', entities, 'isMap:', entities instanceof Map)
     if (!entities) {
       console.error('RendererSystem: entities is null/undefined')
       return
@@ -299,7 +301,7 @@ export class RendererSystem {
       return
     }
 
-    console.log('RendererSystem: Processing', entities.size, 'entities')
+    console.log('RendererSystem.handleEntitiesUpdated: Processing', entities.size, 'entities')
 
     for (const [id, entity] of entities) {
       // Check if entity already exists in repository
@@ -310,6 +312,11 @@ export class RendererSystem {
         const coords = this._toScreenCoords(entity.gameX, entity.gameY)
         console.log('RendererSystem: Creating entity', id, 'at', coords, 'from entity data', entity)
         storedEntity = createEntitySprite(id, coords.x, coords.y, entity)
+        console.log('RendererSystem: createEntitySprite returned:', storedEntity)
+        if (!storedEntity) {
+          console.error('RendererSystem: createEntitySprite returned null!')
+          continue
+        }
         storedEntity.screenX = coords.x
         storedEntity.screenY = coords.y
         storedEntity.gameX = entity.gameX
@@ -317,7 +324,10 @@ export class RendererSystem {
         // Add container to stage (Pixi.js rendering)
         this.addToStage(storedEntity.container)
         this.entityRepository.add(storedEntity)
-        console.log('RendererSystem: Created entity', id, 'with container:', storedEntity.container)
+        console.log('RendererSystem: Created entity', id, 'with container at (', storedEntity.container.x, ',', storedEntity.container.y, ')')
+        console.log('RendererSystem: Entity container children:', storedEntity.container.children?.length)
+        console.log('RendererSystem: graphics === container.children[0]:', storedEntity.graphics === storedEntity.container.children?.[0])
+        console.log('RendererSystem: App stage children count:', this.app?.stage?.children?.length)
       } else if (storedEntity && entity.gameX !== undefined && entity.gameY !== undefined) {
         // Update position of existing entity
         storedEntity.gameX = entity.gameX

@@ -32,6 +32,8 @@ export class GameStateSystem {
     try {
       const gameState = await this.gameApi.initialize()
 
+      console.log('GameStateSystem.initializeGame: gameState from WASM:', gameState)
+
       this.gameEngine.state.merge({
         isRunning: false,
         lastUpdate: Date.now(),
@@ -44,10 +46,17 @@ export class GameStateSystem {
         const entitiesMap = this.repository.getEntities()
         for (const entity of gameState.entities) {
           const normalizedEntity = createEntityData(entity)
+          console.log('GameStateSystem: Parsing entity', entity.id, '->', normalizedEntity)
+          console.log('GameStateSystem: entity.gameX:', normalizedEntity.gameX, 'entity.gameY:', normalizedEntity.gameY)
           entitiesMap.set(entity.id, normalizedEntity)
         }
         console.log('GameStateSystem: Merging entities, count:', entitiesMap.size)
+        console.log('GameStateSystem: entitiesMap contents:', Array.from(entitiesMap.entries()))
+        console.log('GameStateSystem: Emitting entitiesUpdated...')
         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
+        console.log('GameStateSystem: entitiesUpdated emitted!')
+      } else {
+        console.log('GameStateSystem: gameState.entities is null/undefined!')
       }
 
       // Подписываемся на событие клика по юниту - отправляем в state для обработки
@@ -181,9 +190,12 @@ export class GameStateSystem {
         const entitiesMap = this.repository.getEntities()
         for (const entity of gameState.entities) {
           const normalizedEntity = createEntityData(entity)
+          console.log('GameStateSystem: updateGameLoop - Parsing entity', entity.id, '->', normalizedEntity)
+          console.log('GameStateSystem: updateGameLoop - entity.gameX:', normalizedEntity.gameX, 'entity.gameY:', normalizedEntity.gameY)
           entitiesMap.set(entity.id, normalizedEntity)
         }
         console.log('GameStateSystem: updateGameLoop - Merging entities, count:', entitiesMap.size)
+        console.log('GameStateSystem: updateGameLoop - entitiesMap contents:', Array.from(entitiesMap.entries()))
         this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
       }
 
