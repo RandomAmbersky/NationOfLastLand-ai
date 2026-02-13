@@ -59,13 +59,13 @@ Then open http://localhost:3000 in your browser.
 
 ### Utility Modules
 
-- `utils/cleanup.js` - Cleanup utilities (TimerManager, EventManager, GraphicsCleanup)
+- `utils/cleanup.js` - Cleanup utilities (TimerManager, EventManager, GraphicsCleanup, Cleanupable)
 - `utils/math.js` - Mathematical utility functions (calculateDistance, clamp, lerp)
-- `utils/coordinateTransformer.js` - Coordinate conversion utilities
-- `utils/TransformerMixin.js` - Transformer provider for systems
-- `utils/entityUtils.js` - Entity operation utilities (createEntityData, findPlayerBase, canMove, etc.)
-- `utils/entityDrawer.js` - Entity rendering utilities (drawEntity, createEntitySprite, getEntityColor)
-- `config/game-config.js` - Centralized game configuration
+- `utils/coordinateTransformer.js` - Coordinate conversion utilities (CoordinateTransformer, createCoordinateTransformer)
+- `utils/TransformerMixin.js` - Transformer provider for systems (TransformerProvider, TransformerMixin)
+- `utils/entityUtils.js` - Entity operation utilities (createEntityData, findPlayerBase, isPlayerBaseSelected, getEntitiesByType, getEntitiesByFraction, entityExists, canMove, isPlayerUnit)
+- `utils/entityDrawer.js` - Entity rendering utilities (drawEntity, createEntitySprite, getEntityColor, drawEntityShape, drawBaseShape, drawAlertShape)
+- `config/game-config.js` - Centralized game configuration (GAME_CONFIG)
 
 ## Files
 
@@ -96,12 +96,12 @@ Then open http://localhost:3000 in your browser.
 
 ### Utility Modules
 
-- `utils/cleanup.js` - Cleanup utilities (TimerManager, EventManager, GraphicsCleanup)
+- `utils/cleanup.js` - Cleanup utilities (TimerManager, EventManager, GraphicsCleanup, Cleanupable)
 - `utils/math.js` - Mathematical utility functions (calculateDistance, clamp, lerp)
-- `utils/coordinateTransformer.js` - Coordinate conversion utilities
-- `utils/TransformerMixin.js` - Transformer provider for systems
-- `utils/entityUtils.js` - Entity operation utilities (createEntityData, findPlayerBase, canMove, etc.)
-- `utils/entityDrawer.js` - Entity rendering utilities (drawEntity, createEntitySprite, getEntityColor)
+- `utils/coordinateTransformer.js` - Coordinate conversion utilities (CoordinateTransformer, createCoordinateTransformer)
+- `utils/TransformerMixin.js` - Transformer provider for systems (TransformerProvider, TransformerMixin)
+- `utils/entityUtils.js` - Entity operation utilities (createEntityData, findPlayerBase, isPlayerBaseSelected, getEntitiesByType, getEntitiesByFraction, entityExists, canMove, isPlayerUnit)
+- `utils/entityDrawer.js` - Entity rendering utilities (drawEntity, createEntitySprite, getEntityColor, drawEntityShape, drawBaseShape, drawAlertShape)
 
 
 ## Technical Details
