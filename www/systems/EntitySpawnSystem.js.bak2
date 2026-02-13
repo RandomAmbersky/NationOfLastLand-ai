@@ -57,6 +57,10 @@ export class EntitySpawnSystem extends TransformerProvider {
   processSpawns() {
     if (this.spawnQueue.length === 0) return []
 
+    // Ensure repository is initialized
+    if (!this.repository) {
+      this.repository = createRepository(this.gameEngine.state)
+    }
     
     const createdEntities = []
     const entities = this.repository.getEntities()

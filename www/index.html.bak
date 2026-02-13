@@ -185,9 +185,7 @@
 
         // Initialize movement system
         movementSystem.init(app);
-
-        // Initialize game state system
-        gameStateSystem.init(app);        
+        
         // Update status
         const statusEl = document.getElementById('status');
         if (statusEl) {
