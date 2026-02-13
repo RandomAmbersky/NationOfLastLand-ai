@@ -6,7 +6,6 @@
 export { StateContainer, createContainer } from './core/StateContainer.js'
 export { GameEngine, System, createEngine } from './core/GameEngine.js'
 export { EntityRepository, createRepository } from './core/EntityRepository.js'
-export { GameCleanup, createCleanupScope } from './core/GameCleanup.js'
 
 // Selection service
 export { SelectionIndicator, createSelectionIndicator } from './services/SelectionIndicator.js'
@@ -23,7 +22,7 @@ export { MovementSystem, createMovementSystem } from './systems/MovementSystem.j
 export { calculateDistance, calculateDistanceBetween, clamp, lerp } from './utils/math.js'
 export { CoordinateTransformer, createCoordinateTransformer } from './utils/coordinateTransformer.js'
 export { createEntitySprite, getEntityColor, drawEntity, drawEntityShape, drawBaseShape, drawAlertShape } from './utils/entityDrawer.js'
-export { createDisposable, TimerManager, EventManager, GraphicsCleanup, Cleanupable } from './utils/cleanup.js'
+export { createDisposable, TimerManager, EventManager, GraphicsCleanup } from './utils/cleanup.js'
 export {
   createEntityData,
   findPlayerBase,
