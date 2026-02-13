@@ -6,9 +6,8 @@
 import { drawEntity } from '../utils/entityDrawer.js'
 import { createRepository } from '../core/EntityRepository.js'
 export class EntitySpawnSystem {
-  constructor (gameEngine, rendererSystem = null) {
+  constructor (gameEngine) {
     this.gameEngine = gameEngine
-    this.rendererSystem = rendererSystem
     this.spawnQueue = []
     this.deletionQueue = new Set()
     this.repository = null
@@ -19,11 +18,6 @@ export class EntitySpawnSystem {
     this.app = app
     this.renderer = this.app || null
     this.repository = createRepository(this.gameEngine.state)
-
-    // If RendererSystem was not passed to constructor, try to get it from gameEngine
-    if (!this.rendererSystem && this.gameEngine.rendererSystem) {
-      this.rendererSystem = this.gameEngine.rendererSystem
-    }
   }
 
   /**
@@ -79,8 +73,8 @@ export class EntitySpawnSystem {
       if (entities.has(id)) {
         const entity = entities.get(id)
 
-        // Remove from stage using RendererSystem API
-        if (this.rendererSystem && entity.container) {
+        // Remove from stage
+        if (entity.container) {
           entity.container.parent?.removeChild(entity.container)
           entity.container.destroy({ children: true, texture: true, baseTexture: true })
         }
@@ -112,8 +106,7 @@ export class EntitySpawnSystem {
    * @private
    */
   _createEntity (entityData) {
-    const renderer = this.rendererSystem || this.renderer
-    const transformer = renderer?.transformer || this.gameEngine.transformer
+    const transformer = this.gameEngine.transformer
     if (!transformer) {
       console.error('EntitySpawnSystem: transformer not available')
       return null
@@ -166,7 +159,6 @@ export class EntitySpawnSystem {
     this.repository = null
     this.gameEngine = null
     this.app = null
-    this.rendererSystem = null
   }
 }
 

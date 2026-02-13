@@ -40,19 +40,11 @@ describe('EntitySpawnSystem', () => {
   let gameEngine
   let entitySpawnSystem
   let mockApp
-  let mockRendererSystem
 
   beforeEach(() => {
     jest.clearAllMocks()
 
     mockApp = new MockApplication()
-    mockRendererSystem = {
-      addToStage: jest.fn(),
-      removeFromStage: jest.fn(),
-      transformer: {
-        gameToScreen: jest.fn((x, y) => ({ x, y }))
-      }
-    }
 
     const mockState = {
       get: jest.fn((key) => {
@@ -67,11 +59,10 @@ describe('EntitySpawnSystem', () => {
 
     gameEngine = {
       state: mockState,
-      app: mockApp,
-      rendererSystem: mockRendererSystem
+      app: mockApp
     }
 
-    entitySpawnSystem = new EntitySpawnSystem(gameEngine, mockRendererSystem)
+    entitySpawnSystem = new EntitySpawnSystem(gameEngine)
     entitySpawnSystem.init(mockApp)
   })
 
