@@ -167,6 +167,14 @@
                         <label>Status:</label>
                         <div id="status">Initializing...</div>
                     </div>
+                    <div class="control-group">
+                        <button id="update-once-btn">Update Once</button>
+                        <button id="update-auto-btn">Update Auto</button>
+                    </div>
+                    <div class="control-group">
+                        <button id="spawn-vehicle-btn">Spawn Scout</button>
+                        <button id="spawn-base-btn">Spawn Base</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -233,6 +241,13 @@
             // Get status element
             const statusEl = document.getElementById("status");
 
+            // Update timer variables
+            let autoUpdateInterval = null;
+            let baseEntity = null;
+            const updateOnceBtn = document.getElementById("update-once-btn");
+            const updateAutoBtn = document.getElementById("update-auto-btn");
+            let isAutoUpdating = false;
+
             // Initialize WASM first, then set up GameApi
             initWasm("./pkg/nation_of_last_land_bg.wasm")
                 .then((wasmModule) => {
@@ -251,6 +266,71 @@
 
                     if (result.success) {
                         gameEngine.start();
+
+                        // Setup update buttons
+                        updateOnceBtn.addEventListener("click", () => {
+                            console.log("Update Once clicked");
+                            gameStateSystem.update(0.016);
+                        });
+
+                        updateAutoBtn.addEventListener("click", () => {
+                            if (isAutoUpdating) {
+                                clearInterval(autoUpdateInterval);
+                                autoUpdateInterval = null;
+                                isAutoUpdating = false;
+                                updateAutoBtn.textContent = "Update Auto";
+                                updateAutoBtn.style.background = "#4caf50";
+                                updateAutoBtn.style.opacity = "1";
+                            } else {
+                                autoUpdateInterval = setInterval(() => {
+                                    gameStateSystem.update(0.016);
+                                }, 100);
+                                isAutoUpdating = true;
+                                updateAutoBtn.textContent = "Stop Auto";
+                                updateAutoBtn.style.background = "#f44336";
+                                updateAutoBtn.style.opacity = "0.8";
+                            }
+                        });
+
+                        // Setup spawn vehicle button
+                        const spawnVehicleBtn =
+                            document.getElementById("spawn-vehicle-btn");
+                        spawnVehicleBtn.addEventListener("click", () => {
+                            if (baseEntity) {
+                                gameStateSystem
+                                    .spawnVehicle("scout", baseEntity)
+                                    .then((result) => {
+                                        console.log(
+                                            "Spawn vehicle result:",
+                                            result,
+                                        );
+                                        if (result.success) {
+                                            gameStateSystem.update(0.016);
+                                        }
+                                    });
+                            } else {
+                                statusEl.textContent =
+                                    "Error: No base selected. Click on a base first.";
+                                console.error("No base selected");
+                            }
+                        });
+
+                        // Setup spawn base button
+                        const spawnBaseBtn =
+                            document.getElementById("spawn-base-btn");
+                        spawnBaseBtn.addEventListener("click", () => {
+                            gameStateSystem
+                                .createBase(400, 300)
+                                .then((result) => {
+                                    console.log("Spawn base result:", result);
+                                    if (result.success) {
+                                        baseEntity = result.data;
+                                        statusEl.textContent =
+                                            "Base spawned at (400, 300)";
+                                        gameStateSystem.update(0.016);
+                                    }
+                                });
+                        });
                     }
                 })
                 .catch((error) => {

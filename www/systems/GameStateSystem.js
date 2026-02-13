@@ -62,14 +62,12 @@ export class GameStateSystem {
           const normalizedEntity = createEntityData(entity)
           entitiesMap.set(entity.id, normalizedEntity)
         }
-        // Use 'initialEntitiesLoaded' instead of 'entitiesUpdated' to avoid infinite loop with RendererSystem
-        this.gameEngine.state.merge({ entities: entitiesMap }, 'initialEntitiesLoaded')
+        this.gameEngine.state.merge({ entities: entitiesMap }, 'entitiesUpdated')
       }
 
       // Подписываемся на событие клика по юниту - отправляем в state для обработки
       this._unsubscribeHandlers.push(
         this.gameEngine.state.subscribe('entityClicked', (data) => {
-          console.log('GameStateSystem: entityClicked event received', data)
           this.gameEngine.state.emit('entityClickedProcessed', data)
         })
       )

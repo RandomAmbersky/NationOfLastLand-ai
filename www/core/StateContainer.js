@@ -83,8 +83,6 @@ export class StateContainer {
           console.error('StateContainer: Error in handler for event:', event, error)
         }
       })
-    } else {
-
     }
   }
 

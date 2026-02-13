@@ -118,26 +118,12 @@ export function createEntitySprite (id, x, y, entityData) {
   const vehicleType = entityData.subtype || entityData.vehicleType || 'scout'
   const fraction = entityData.fraction || null
 
-  // Check if PIXI is available
-  if (typeof PIXI === 'undefined') {
-    console.error('createEntitySprite: PIXI is not available!')
-    return null
-  }
-
   // Create graphics
   const graphics = new PIXI.Graphics()
-  if (!graphics) {
-    console.error('createEntitySprite: Failed to create graphics!')
-    return null
-  }
   drawEntity(graphics, { ...entityData, fraction })
 
   // Create container
   const container = new PIXI.Container()
-  if (!container) {
-    console.error('createEntitySprite: Failed to create container!')
-    return null
-  }
   container.addChild(graphics)
   container.x = x
   container.y = y

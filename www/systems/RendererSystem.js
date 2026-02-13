@@ -30,13 +30,6 @@ export class RendererSystem {
     this._unsubscribeEntityUpdates = this.gameEngine.state.subscribe('entitiesUpdated', (state) => {
       // StateContainer merge() passes the entire state object, not just the updated field
       const entities = state.entities
-      console.log('RendererSystem: entitiesUpdated event received, entities count:', entities?.size)
-      this.handleEntitiesUpdated(entities)
-    })
-    // Also subscribe to initialEntitiesLoaded for first load
-    this._unsubscribeInitialEntities = this.gameEngine.state.subscribe('initialEntitiesLoaded', (state) => {
-      const entities = state.entities
-      console.log('RendererSystem: initialEntitiesLoaded event received, entities count:', entities?.size)
       this.handleEntitiesUpdated(entities)
     })
   }
@@ -136,16 +129,10 @@ export class RendererSystem {
    */
   _toScreenCoords (gameX, gameY) {
     const transformer = this.gameEngine.transformer
-    if (!transformer) {
-      console.warn('RendererSystem: _toScreenCoords called but transformer is null! gameX:', gameX, 'gameY:', gameY)
-      return { x: 0, y: 0, scaleX: 1, scaleY: 1 }
-    }
-
+    if (!transformer) return { x: 0, y: 0, scaleX: 1, scaleY: 1 }
     const { x, y } = transformer.normalizeCoords(gameX, gameY)
     const { x: scaleX, y: scaleY } = transformer.getScale()
-    const result = { x: x * scaleX, y: y * scaleY, scaleX, scaleY }
-    console.log('_toScreenCoords:', { gameX, gameY, normalized: { x, y }, scale: { scaleX, scaleY }, result })
-    return result
+    return { x: x * scaleX, y: y * scaleY, scaleX, scaleY }
   }
 
   /**
@@ -297,57 +284,28 @@ export class RendererSystem {
    * Updates positions of existing entities and creates new ones
    */
   handleEntitiesUpdated (entities) {
-    console.log('RendererSystem.handleEntitiesUpdated: START - entities:', entities, 'isMap:', entities instanceof Map)
-    if (!entities) {
-      console.error('RendererSystem: entities is null/undefined')
-      return
-    }
-    if (!(entities instanceof Map)) {
-      console.error('RendererSystem: entities is not a Map', entities)
-      return
-    }
-
-    console.log('RendererSystem.handleEntitiesUpdated: Processing', entities.size, 'entities')
+    if (!entities || !(entities instanceof Map)) return
 
     for (const [id, entity] of entities) {
-      // Check if entity already exists in repository
       let storedEntity = this.getEntity(id)
 
       if (!storedEntity && entity.gameX !== undefined && entity.gameY !== undefined) {
-        // Create new entity sprite
         const coords = this._toScreenCoords(entity.gameX, entity.gameY)
-        console.log('RendererSystem: Creating entity', id, 'at', coords, 'from entity data', entity)
         storedEntity = createEntitySprite(id, coords.x, coords.y, entity)
-        console.log('RendererSystem: createEntitySprite returned:', storedEntity)
-        if (!storedEntity) {
-          console.error('RendererSystem: createEntitySprite returned null!')
-          continue
-        }
         storedEntity.screenX = coords.x
         storedEntity.screenY = coords.y
         storedEntity.gameX = entity.gameX
         storedEntity.gameY = entity.gameY
-        // Add container to stage (Pixi.js rendering)
         this.addToStage(storedEntity.container)
-        // Add to entities map directly to avoid triggering entitiesUpdated loop
-        const entities = this.entityRepository.getEntities()
-        entities.set(id, storedEntity)
-        this.state.merge({ entities }, 'entitiesUpdated')
-        console.log('RendererSystem: Created entity', id, 'with container at (', storedEntity.container.x, ',', storedEntity.container.y, ')')
-        console.log('RendererSystem: Entity container children:', storedEntity.container.children?.length)
-        console.log('RendererSystem: graphics === container.children[0]:', storedEntity.graphics === storedEntity.container.children?.[0])
-        console.log('RendererSystem: App stage children count:', this.app?.stage?.children?.length)
+        this.entityRepository.add(storedEntity)
       } else if (storedEntity && storedEntity.container && entity.gameX !== undefined && entity.gameY !== undefined) {
-        // Update position of existing entity
         storedEntity.gameX = entity.gameX
         storedEntity.gameY = entity.gameY
-        // Update container position
         const coords = this._toScreenCoords(entity.gameX, entity.gameY)
         storedEntity.container.x = coords.x
         storedEntity.container.y = coords.y
         storedEntity.x = coords.x
         storedEntity.y = coords.y
-        console.log('RendererSystem: Updated entity', id, 'to', coords)
       }
     }
   }
@@ -357,11 +315,6 @@ export class RendererSystem {
    */
   render () {
     // В текущей реализации отрисовка происходит при создании/обновлении сущностей
-    // Этот метод может быть использован для дополнительной отрисовки (эффекты и т.д.)
-    const entities = this.entityRepository.getEntities()
-    if (entities.size > 0 && !this.app) {
-      console.warn('RendererSystem: render() called but app is null!')
-    }
   }
 
   /**
@@ -383,10 +336,6 @@ export class RendererSystem {
     if (this._unsubscribeEntityUpdates) {
       this._unsubscribeEntityUpdates()
       this._unsubscribeEntityUpdates = null
-    }
-    if (this._unsubscribeInitialEntities) {
-      this._unsubscribeInitialEntities()
-      this._unsubscribeInitialEntities = null
     }
 
     if (this.targetIndicator) {
