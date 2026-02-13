@@ -10,13 +10,8 @@ import { createRepository } from '../core/EntityRepository.js'
 import { TransformerProvider } from '../utils/TransformerMixin.js'
 import { canMove, isPlayerUnit } from '../utils/entityUtils.js'
 
-// Inline simple utility
-function entityExists(entities, entityId) {
-  return entities.has(entityId)
-}
-
 export class SelectionSystem extends TransformerProvider {
-  constructor(gameEngine) {
+  constructor (gameEngine) {
     super()
     this.gameEngine = gameEngine
     this.selectionIndicator = null
@@ -24,18 +19,18 @@ export class SelectionSystem extends TransformerProvider {
     this.isDestroyed = false
   }
 
-  init(app) {
+  init (app) {
     this.app = app
     // Получаем rendererSystem из gameEngine (устанавливается при инициализации RendererSystem)
     this.rendererSystem = this.gameEngine.rendererSystem || null
     this.selectionIndicator = new SelectionIndicator(this.gameEngine, this.rendererSystem)
     this.repository = createRepository(this.gameEngine.state)
-    
+
     // Initialize transformer from app
     if (!this.transformer && this.app) {
       this.transformer = this.getTransformer()
     }
-    
+
     // Set transformer on selection indicator
     if (this.selectionIndicator && this.transformer) {
       this.selectionIndicator.setTransformer(this.transformer)
@@ -45,21 +40,21 @@ export class SelectionSystem extends TransformerProvider {
   /**
    * Проверяет, может ли юнит двигаться
    */
-  _canMove(entity) {
+  _canMove (entity) {
     return canMove(entity)
   }
 
   /**
    * Проверяет, принадлежит ли юнит игроку
    */
-  _isPlayerUnit(entity) {
+  _isPlayerUnit (entity) {
     return isPlayerUnit(entity)
   }
 
   /**
    * Обработка клика по юниту (правила из units_moving_rules.md)
    */
-  handleEntityClicked(data) {
+  handleEntityClicked (data) {
     const { entityId, isMultiSelect, gameX, gameY } = data
     const state = this.gameEngine.state
     const selections = state.get('selections')
@@ -156,14 +151,13 @@ export class SelectionSystem extends TransformerProvider {
       selections.add(entityId)
       state.merge({ selections }, 'selectionsChanged')
       this.selectionIndicator.updateIndicators(selections)
-      return
     }
   }
 
   /**
    * Обработка клика правой кнопкой мыши на юните
    */
-  handleEntitySelected(data) {
+  handleEntitySelected (data) {
     const { entityId } = data
     const state = this.gameEngine.state
     const selections = state.get('selections')
@@ -182,7 +176,7 @@ export class SelectionSystem extends TransformerProvider {
   /**
    * Обработка клика правой кнопкой мыши на пустом месте
    */
-  handleSelectionCleared() {
+  handleSelectionCleared () {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -196,7 +190,7 @@ export class SelectionSystem extends TransformerProvider {
   /**
    * Обработка группового выделения прямоугольником
    */
-  handleRectangleSelection(data) {
+  handleRectangleSelection (data) {
     const { bounds } = data
     const state = this.gameEngine.state
     const entities = state.get('entities')
@@ -230,7 +224,7 @@ export class SelectionSystem extends TransformerProvider {
     return addedCount
   }
 
-  selectEntity(entityId, isMultiSelect = false) {
+  selectEntity (entityId, isMultiSelect = false) {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -249,7 +243,7 @@ export class SelectionSystem extends TransformerProvider {
     return true
   }
 
-  deselectEntity(entityId) {
+  deselectEntity (entityId) {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -264,7 +258,7 @@ export class SelectionSystem extends TransformerProvider {
     return false
   }
 
-  clearAll() {
+  clearAll () {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -279,7 +273,7 @@ export class SelectionSystem extends TransformerProvider {
     return false
   }
 
-  selectAllPlayerUnits() {
+  selectAllPlayerUnits () {
     const state = this.gameEngine.state
     const selections = state.get('selections')
     const maxGroupSize = GAME_CONFIG.LIMITS.maxGroupSize
@@ -301,7 +295,7 @@ export class SelectionSystem extends TransformerProvider {
     return count
   }
 
-  selectEntitiesInRectangle(bounds) {
+  selectEntitiesInRectangle (bounds) {
     const state = this.gameEngine.state
     const entities = state.get('entities')
     const selections = state.get('selections')
@@ -327,7 +321,7 @@ export class SelectionSystem extends TransformerProvider {
     return limitedEntities.length
   }
 
-  _isEntityInBounds(entity, bounds) {
+  _isEntityInBounds (entity, bounds) {
     if (!entity) return false
 
     // Используем gameX/gameY из state.entities (координаты в игровом мире)
@@ -345,12 +339,12 @@ export class SelectionSystem extends TransformerProvider {
       entityScreenY <= bounds.y + bounds.height
   }
 
-  _getScale() {
+  _getScale () {
     if (!this.transformer) return { x: 1, y: 1 }
     return this.transformer.getScale()
   }
 
-  setGroupTarget(gameX, gameY) {
+  setGroupTarget (gameX, gameY) {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -361,17 +355,17 @@ export class SelectionSystem extends TransformerProvider {
     })
   }
 
-  updateIndicators(selections) {
+  updateIndicators (selections) {
     if (this.selectionIndicator) {
       this.selectionIndicator.updateIndicators(selections)
     }
   }
 
-  update(_dt) {}
+  update (_dt) {}
 
-  render() {}
+  render () {}
 
-  destroy() {
+  destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
 
@@ -386,6 +380,6 @@ export class SelectionSystem extends TransformerProvider {
   }
 }
 
-export function createSelectionSystem(gameEngine) {
+export function createSelectionSystem (gameEngine) {
   return new SelectionSystem(gameEngine)
 }

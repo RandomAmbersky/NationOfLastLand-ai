@@ -8,53 +8,53 @@ import { GAME_CONFIG } from '../config/game-config.js'
 import { TransformerProvider } from '../utils/TransformerMixin.js'
 
 export class SelectionIndicator extends TransformerProvider {
-  constructor(gameEngine, rendererSystem = null) {
+  constructor (gameEngine, rendererSystem = null) {
     super()
     this.gameEngine = gameEngine
     this.rendererSystem = rendererSystem
     this.isDestroyed = false
   }
 
-  init(app) {
+  init (app) {
     // Initialize transformer from app
     if (!this.transformer && this.app) {
       this.transformer = this.getTransformer()
     }
-    
+
     // Если RendererSystem не был передан в конструктор, пытаемся получить его из gameEngine
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {
       this.rendererSystem = this.gameEngine.rendererSystem
     }
   }
 
-  createSelectionIndicator(entity, isEnemy = false) {
-     if (!this.transformer) return
-     if (!entity || !entity.container) return
-     
-     const indicatorGraphics = new PIXI.Graphics()
-     const color = isEnemy
-       ? GAME_CONFIG.COLORS.selection.enemy
-       : GAME_CONFIG.COLORS.selection.player
-     indicatorGraphics.lineStyle(3, color, 1)
-     indicatorGraphics.drawCircle(0, 0, 12)
-     
-     // Add indicator to entity container
-     entity.container.addChild(indicatorGraphics)
-     
-     entity.selectionIndicator = indicatorGraphics
-   }
+  createSelectionIndicator (entity, isEnemy = false) {
+    if (!this.transformer) return
+    if (!entity || !entity.container) return
 
-  removeSelectionIndicator(entity) {
+    const indicatorGraphics = new PIXI.Graphics()
+    const color = isEnemy
+      ? GAME_CONFIG.COLORS.selection.enemy
+      : GAME_CONFIG.COLORS.selection.player
+    indicatorGraphics.lineStyle(3, color, 1)
+    indicatorGraphics.drawCircle(0, 0, 12)
+
+    // Add indicator to entity container
+    entity.container.addChild(indicatorGraphics)
+
+    entity.selectionIndicator = indicatorGraphics
+  }
+
+  removeSelectionIndicator (entity) {
     if (entity && entity.selectionIndicator) {
       entity.selectionIndicator.parent?.removeChild(entity.selectionIndicator)
       entity.selectionIndicator = null
     }
   }
 
-  removeInfoIndicator(entity) {
+  removeInfoIndicator (entity) {
     if (entity && entity.infoIndicator) {
       entity.infoIndicator.parent?.removeChild(entity.infoIndicator)
-      
+
       if (entity.infoIndicator.destroy) {
         entity.infoIndicator.destroy({ children: true, texture: true, baseTexture: true })
       }
@@ -62,40 +62,40 @@ export class SelectionIndicator extends TransformerProvider {
     }
   }
 
-  updateIndicators(selections) {
-     if (!this.transformer) return
-     
-     // Get entities from gameEngine state
-     const entities = this.gameEngine.state.get('entities')
+  updateIndicators (selections) {
+    if (!this.transformer) return
 
-     // Remove infoIndicator from all entities
-     for (const [, entity] of entities) {
-       if (entity && entity.infoIndicator) {
-         this.removeInfoIndicator(entity)
-       }
-     }
+    // Get entities from gameEngine state
+    const entities = this.gameEngine.state.get('entities')
 
-     // Remove selection indicators from non-selected entities
-     for (const [entityId, entity] of entities) {
-       if (entity && entity.selectionIndicator && !selections.has(entityId)) {
-         this.removeSelectionIndicator(entity)
-       }
-     }
+    // Remove infoIndicator from all entities
+    for (const [, entity] of entities) {
+      if (entity && entity.infoIndicator) {
+        this.removeInfoIndicator(entity)
+      }
+    }
 
-     // Add selection indicators for selected entities
-     for (const entityId of selections) {
-       const entity = entities.get(entityId)
-       if (entity && !entity.selectionIndicator) {
-         const isEnemy =
+    // Remove selection indicators from non-selected entities
+    for (const [entityId, entity] of entities) {
+      if (entity && entity.selectionIndicator && !selections.has(entityId)) {
+        this.removeSelectionIndicator(entity)
+      }
+    }
+
+    // Add selection indicators for selected entities
+    for (const entityId of selections) {
+      const entity = entities.get(entityId)
+      if (entity && !entity.selectionIndicator) {
+        const isEnemy =
            entity.fraction === 'Enemy' ||
            entity.fraction === 'Wild' ||
            entity.entityType === 'alert'
-         this.createSelectionIndicator(entity, isEnemy)
-       }
-     }
-   }
+        this.createSelectionIndicator(entity, isEnemy)
+      }
+    }
+  }
 
-  destroy() {
+  destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
 
@@ -114,7 +114,7 @@ export class SelectionIndicator extends TransformerProvider {
     this.rendererSystem = null
   }
 
-  validateAndFixSelectionState() {
+  validateAndFixSelectionState () {
     const selections = this.gameEngine.state.get('selections')
     const entities = this.gameEngine.state.get('entities')
     let hadFixes = false
@@ -152,6 +152,6 @@ export class SelectionIndicator extends TransformerProvider {
   }
 }
 
-export function createSelectionIndicator(gameEngine) {
+export function createSelectionIndicator (gameEngine) {
   return new SelectionIndicator(gameEngine)
 }

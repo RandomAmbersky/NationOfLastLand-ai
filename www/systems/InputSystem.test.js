@@ -17,14 +17,14 @@ const GAME_CONFIG = {
 
 // Import InputSystem
 class InputSystem {
-  constructor(gameEngine) {
+  constructor (gameEngine) {
     this.gameEngine = gameEngine
     this.app = null
     this.dragState = this._createDragState()
     this.isDestroyed = false
   }
 
-  _createDragState() {
+  _createDragState () {
     return {
       isDragging: false,
       startX: 0,
@@ -38,12 +38,12 @@ class InputSystem {
     }
   }
 
-  init(app) {
+  init (app) {
     this.app = app
     this.setupEventListeners()
   }
 
-  setupEventListeners() {
+  setupEventListeners () {
     if (!this.app) return
     const canvas = this.app.view
     canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e))
@@ -56,7 +56,7 @@ class InputSystem {
     document.addEventListener('keydown', (e) => this.handleKeyDown(e))
   }
 
-  handleMouseDown(event) {
+  handleMouseDown (event) {
     if (!this.gameEngine.state.get('isRunning')) return
 
     if (event.button === 2) {
@@ -68,7 +68,7 @@ class InputSystem {
     this._startDragSelection(event)
   }
 
-  _handleRightMouseDown(event) {
+  _handleRightMouseDown (event) {
     const { screenX, screenY } = this._getCanvasCoords(event)
     const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
 
@@ -79,7 +79,7 @@ class InputSystem {
     }
   }
 
-  handleMouseMove(event) {
+  handleMouseMove (event) {
     const drag = this.dragState
     if (!drag.isDragging) return
 
@@ -91,7 +91,7 @@ class InputSystem {
     this._updateDragSelection(event)
   }
 
-  handleMouseUp(_event) {
+  handleMouseUp (_event) {
     this._cleanupDragGraphics()
 
     const drag = this.dragState
@@ -115,7 +115,7 @@ class InputSystem {
     }
   }
 
-  handleMouseLeave(_event) {
+  handleMouseLeave (_event) {
     const drag = this.dragState
     if (!drag.isDragging) return
 
@@ -129,7 +129,7 @@ class InputSystem {
     }
   }
 
-  handleCanvasClick(event) {
+  handleCanvasClick (event) {
     if (!this.gameEngine.state.get('isRunning')) return
 
     const drag = this.dragState
@@ -156,7 +156,7 @@ class InputSystem {
     }
   }
 
-  handleDoubleClick(event) {
+  handleDoubleClick (event) {
     if (!this.gameEngine.state.get('isRunning')) return
 
     const { screenX, screenY } = this._getCanvasCoords(event)
@@ -169,7 +169,7 @@ class InputSystem {
     }
   }
 
-  handleKeyDown(event) {
+  handleKeyDown (event) {
     if (!this.gameEngine.state.get('isRunning')) return
 
     if (event.ctrlKey && event.key === 'a') {
@@ -196,7 +196,7 @@ class InputSystem {
     }
   }
 
-  _cleanupDragGraphics() {
+  _cleanupDragGraphics () {
     const drag = this.dragState
     if (drag.graphics && !drag.isDragging) {
       this._removeDragGraphics(drag.graphics)
@@ -204,7 +204,7 @@ class InputSystem {
     }
   }
 
-  _setupDragGraphics() {
+  _setupDragGraphics () {
     const drag = this.dragState
     if (drag.graphics) {
       this._removeDragGraphics(drag.graphics)
@@ -213,21 +213,21 @@ class InputSystem {
     this._addDragGraphics(drag.graphics)
   }
 
-  _addDragGraphics(graphics) {
+  _addDragGraphics (graphics) {
     // Mock implementation for test - in real code would use RendererSystem
     if (this.app && this.app.stage) {
       this.app.stage.addChild(graphics)
     }
   }
 
-  _removeDragGraphics(graphics) {
+  _removeDragGraphics (graphics) {
     // Mock implementation for test - in real code would use RendererSystem
     if (this.app && this.app.stage) {
       this.app.stage.removeChild(graphics)
     }
   }
 
-  _startDragSelection(event) {
+  _startDragSelection (event) {
     this._cleanupDragGraphics()
 
     const { screenX, screenY } = this._getCanvasCoords(event)
@@ -253,7 +253,7 @@ class InputSystem {
     this._setupDragGraphics()
   }
 
-  _updateDragSelection(event) {
+  _updateDragSelection (event) {
     const { screenX, screenY } = this._getCanvasCoords(event)
     const drag = this.dragState
 
@@ -280,7 +280,7 @@ class InputSystem {
     }
   }
 
-  _cancelDragSelection() {
+  _cancelDragSelection () {
     const drag = this.dragState
     drag.isDragging = false
     drag.mouseLeftCanvas = false
@@ -291,7 +291,7 @@ class InputSystem {
     }
   }
 
-  _processDragSelection() {
+  _processDragSelection () {
     const bounds = this._calculateSelectionBounds()
     const drag = this.dragState
 
@@ -308,7 +308,7 @@ class InputSystem {
     }
   }
 
-  _calculateSelectionBounds() {
+  _calculateSelectionBounds () {
     const drag = this.dragState
     return {
       x: Math.min(drag.startX, drag.currentX),
@@ -318,14 +318,14 @@ class InputSystem {
     }
   }
 
-  _isValidSelectionBounds(bounds) {
+  _isValidSelectionBounds (bounds) {
     return (
       bounds.width > GAME_CONFIG.LIMITS.dragThreshold &&
       bounds.height > GAME_CONFIG.LIMITS.dragThreshold
     )
   }
 
-  _getCanvasCoords(event) {
+  _getCanvasCoords (event) {
     const rect = this.app.view.getBoundingClientRect()
     return {
       screenX: event.clientX - rect.left,
@@ -333,21 +333,21 @@ class InputSystem {
     }
   }
 
-  _toGameCoords(screenX, screenY) {
+  _toGameCoords (screenX, screenY) {
     return {
       gameX: (screenX / this.app.screen.width) * GAME_CONFIG.WORLD_SIZE.width,
       gameY: (screenY / this.app.screen.height) * GAME_CONFIG.WORLD_SIZE.height
     }
   }
 
-  _getScale() {
+  _getScale () {
     return {
       x: this.app.screen.width / GAME_CONFIG.WORLD_SIZE.width,
       y: this.app.screen.height / GAME_CONFIG.WORLD_SIZE.height
     }
   }
 
-  _findEntityAtPosition(screenX, screenY) {
+  _findEntityAtPosition (screenX, screenY) {
     const entities = this.gameEngine.state.get('entities')
     if (!(entities instanceof Map)) return null
 
@@ -369,11 +369,11 @@ class InputSystem {
     return null
   }
 
-  update(_dt) {}
+  update (_dt) {}
 
-  render() {}
+  render () {}
 
-  destroy() {
+  destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
     this.dragState = this._createDragState()
@@ -382,7 +382,7 @@ class InputSystem {
   }
 }
 
-function createInputSystem(gameEngine) {
+function createInputSystem (gameEngine) {
   return new InputSystem(gameEngine)
 }
 
@@ -394,7 +394,7 @@ describe('InputSystem', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    
+
     mockApp = {
       view: {
         addEventListener: jest.fn(),
@@ -692,7 +692,7 @@ describe('InputSystem', () => {
     let localMockApp
 
     beforeEach(() => {
-      localMockApp = { 
+      localMockApp = {
         screen: { width: 800, height: 600 },
         view: { getBoundingClientRect: () => ({ left: 0, top: 0 }) }
       }
@@ -704,7 +704,7 @@ describe('InputSystem', () => {
       }
       localInputSystem = new InputSystem({ state: mockState, app: null })
       localInputSystem.app = localMockApp
-      localInputSystem.dragState.graphics = { clear: jest.fn(), lineStyle: jest.fn(), beginFill: jest.fn(), drawRect: jest.fn(), alpha: 0, drawRect: jest.fn() }
+      localInputSystem.dragState.graphics = { clear: jest.fn(), lineStyle: jest.fn(), beginFill: jest.fn(), drawRect: jest.fn(), alpha: 0 }
     })
 
     it('should update drag graphics', () => {
@@ -755,13 +755,17 @@ describe('InputSystem', () => {
   describe('_calculateSelectionBounds', () => {
     it('should calculate bounds correctly', () => {
       inputSystem.dragState = {
-        startX: 100, startY: 100,
-        currentX: 200, currentY: 200
+        startX: 100,
+        startY: 100,
+        currentX: 200,
+        currentY: 200
       }
       const bounds = inputSystem._calculateSelectionBounds()
       expect(bounds).toEqual({
-        x: 100, y: 100,
-        width: 100, height: 100
+        x: 100,
+        y: 100,
+        width: 100,
+        height: 100
       })
     })
   })

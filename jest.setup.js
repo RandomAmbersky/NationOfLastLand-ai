@@ -1,80 +1,87 @@
 // Mock PIXI globally
 global.PIXI = {
   Graphics: class {
-    constructor() {
+    constructor () {
       this.children = []
       this.alpha = 1
       this.x = 0
       this.y = 0
-      this.scale = { 
-        x: 1, 
+      this.scale = {
+        x: 1,
         y: 1,
-        set: jest.fn(function(scale) {
-          this.x = scale;
-          this.y = scale;
+        set: jest.fn(function (scale) {
+          this.x = scale
+          this.y = scale
         })
       }
     }
-    lineStyle() { return this }
-    beginFill() { return this }
-    endFill() { return this }
-    drawCircle() { return this }
-    drawRect() { return this }
-    moveTo() { return this }
-    lineTo() { return this }
-    clear() { return this }
-    addChild(child) {
+
+    lineStyle () { return this }
+    beginFill () { return this }
+    endFill () { return this }
+    drawCircle () { return this }
+    drawRect () { return this }
+    moveTo () { return this }
+    lineTo () { return this }
+    clear () { return this }
+    addChild (child) {
       this.children.push(child)
       return child
     }
-    addChildAt(child, index) {
+
+    addChildAt (child, index) {
       this.children.splice(index, 0, child)
       return child
     }
-    removeChild(child) {
+
+    removeChild (child) {
       const idx = this.children.indexOf(child)
       if (idx > -1) this.children.splice(idx, 1)
       return child
     }
-    destroy() { return this }
+
+    destroy () { return this }
   },
   Container: class {
-    constructor() {
+    constructor () {
       this.children = []
       this.x = 0
       this.y = 0
       this.alpha = 1
     }
-    addChild(child) {
+
+    addChild (child) {
       this.children.push(child)
       return child
     }
-    addChildAt(child, index) {
+
+    addChildAt (child, index) {
       this.children.splice(index, 0, child)
       return child
     }
-    removeChild(child) {
+
+    removeChild (child) {
       const idx = this.children.indexOf(child)
       if (idx > -1) this.children.splice(idx, 1)
       return child
     }
   },
   Text: class {
-    constructor(text, style = {}) {
+    constructor (text, style = {}) {
       this.text = text
       this.style = { fontSize: 16, fill: 0xffffff, align: 'left', ...style }
       this.x = 0
       this.y = 0
       this.alpha = 1
-      this.anchor = { 
-        x: 0, 
+      this.anchor = {
+        x: 0,
         y: 0,
         set: jest.fn()
       }
     }
   },
   Application: class {
-    constructor(options = {}) {
+    constructor (options = {}) {
       this.screen = {
         width: options.width || 800,
         height: options.height || 600
@@ -86,8 +93,8 @@ global.PIXI = {
       }
       this.stage = {
         children: [],
-        addChild(child) { this.children.push(child) },
-        removeChild(child) {
+        addChild (child) { this.children.push(child) },
+        removeChild (child) {
           const idx = this.children.indexOf(child)
           if (idx > -1) this.children.splice(idx, 1)
         }
@@ -95,7 +102,7 @@ global.PIXI = {
     }
   },
   Sprite: class {
-    constructor() {
+    constructor () {
       this.x = 0
       this.y = 0
       this.alpha = 1
@@ -103,8 +110,9 @@ global.PIXI = {
       this.height = 0
       this.anchor = { x: 0.5, y: 0.5 }
     }
-    setTexture() { return this }
-    destroy() {}
+
+    setTexture () { return this }
+    destroy () {}
   }
 }
 

@@ -15,12 +15,12 @@ const update = jest.fn(() => JSON.stringify({ time: 1, entities_count: 0, alerts
 const clear_selection = jest.fn(() => undefined)
 
 class GameStateSystem {
-  constructor(gameEngine) {
+  constructor (gameEngine) {
     this.gameEngine = gameEngine
     this.isDestroyed = false
   }
 
-  async initializeGame() {
+  async initializeGame () {
     try {
       await initWasm()
       const result = gameInit()
@@ -62,7 +62,7 @@ class GameStateSystem {
     }
   }
 
-  async spawnVehicle(vehicleType, baseEntity) {
+  async spawnVehicle (vehicleType, baseEntity) {
     if (!baseEntity) {
       return { success: false, error: 'No base selected' }
     }
@@ -85,7 +85,7 @@ class GameStateSystem {
     }
   }
 
-  async createBase(x, y) {
+  async createBase (x, y) {
     try {
       const result = create_base(x, y)
       const baseInfo = JSON.parse(result)
@@ -95,7 +95,7 @@ class GameStateSystem {
     }
   }
 
-  async buildFloor(baseId, floorType) {
+  async buildFloor (baseId, floorType) {
     try {
       const result = build_floor(baseId, floorType)
       const updatedBase = JSON.parse(result)
@@ -105,7 +105,7 @@ class GameStateSystem {
     }
   }
 
-  async createRandomAlert() {
+  async createRandomAlert () {
     try {
       const result = create_random_alert()
       const alertResult = JSON.parse(result)
@@ -115,7 +115,7 @@ class GameStateSystem {
     }
   }
 
-  async setGroupTarget(x, y) {
+  async setGroupTarget (x, y) {
     try {
       const result = set_group_target(x, y)
       const groupResult = JSON.parse(result)
@@ -125,7 +125,7 @@ class GameStateSystem {
     }
   }
 
-  updateGameLoop(dt) {
+  updateGameLoop (dt) {
     try {
       const result = update(dt)
       const gameState = JSON.parse(result)
@@ -161,19 +161,19 @@ class GameStateSystem {
     }
   }
 
-  destroy() {
+  destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
     this.gameEngine = null
   }
 
-  update(dt) {
+  update (dt) {
     return this.updateGameLoop(dt)
   }
 
-  render() {}
+  render () {}
 
-  clearSelection() {
+  clearSelection () {
     try {
       return clear_selection()
     } catch (error) {
@@ -182,7 +182,7 @@ class GameStateSystem {
   }
 }
 
-function createGameStateSystem(gameEngine) {
+function createGameStateSystem (gameEngine) {
   return new GameStateSystem(gameEngine)
 }
 
@@ -193,7 +193,7 @@ describe('GameStateSystem', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    
+
     const mockState = {
       get: jest.fn((key) => {
         if (key === 'entities') return new Map()

@@ -8,7 +8,7 @@ import { createRepository } from '../core/EntityRepository.js'
 import { TransformerProvider } from '../utils/TransformerMixin.js'
 
 export class EntitySpawnSystem extends TransformerProvider {
-  constructor(gameEngine, rendererSystem = null) {
+  constructor (gameEngine, rendererSystem = null) {
     super()
     this.gameEngine = gameEngine
     this.rendererSystem = rendererSystem
@@ -18,16 +18,16 @@ export class EntitySpawnSystem extends TransformerProvider {
     this.isDestroyed = false
   }
 
-  init(app) {
+  init (app) {
     this.app = app
     this.renderer = this.app || null
     this.repository = createRepository(this.gameEngine.state)
-    
+
     // If RendererSystem was not passed to constructor, try to get it from gameEngine
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {
       this.rendererSystem = this.gameEngine.rendererSystem
     }
-    
+
     // Initialize transformer from app
     if (!this.transformer && this.app) {
       this.transformer = this.getTransformer()
@@ -38,7 +38,7 @@ export class EntitySpawnSystem extends TransformerProvider {
    * Queue entity for spawning
    * @param {Object} entityData - Entity data from WASM
    */
-  queueSpawn(entityData) {
+  queueSpawn (entityData) {
     this.spawnQueue.push(entityData)
   }
 
@@ -46,7 +46,7 @@ export class EntitySpawnSystem extends TransformerProvider {
    * Queue entity for deletion
    * @param {number} id - Entity ID to delete
    */
-  queueDeletion(id) {
+  queueDeletion (id) {
     this.deletionQueue.add(id)
   }
 
@@ -54,10 +54,9 @@ export class EntitySpawnSystem extends TransformerProvider {
    * Process all pending spawns
    * @returns {Array<Object>} Array of created entities
    */
-  processSpawns() {
+  processSpawns () {
     if (this.spawnQueue.length === 0) return []
 
-    
     const createdEntities = []
     const entities = this.repository.getEntities()
 
@@ -78,23 +77,22 @@ export class EntitySpawnSystem extends TransformerProvider {
    * Process all pending deletions
    * @returns {number} Count of deleted entities
    */
-  processDeletions() {
+  processDeletions () {
     if (this.deletionQueue.size === 0) return 0
 
-    
     let deletedCount = 0
     const entities = this.repository.getEntities()
 
     for (const id of this.deletionQueue) {
       if (entities.has(id)) {
         const entity = entities.get(id)
-        
+
         // Remove from stage using RendererSystem API
         if (this.rendererSystem && entity.container) {
           entity.container.parent?.removeChild(entity.container)
           entity.container.destroy({ children: true, texture: true, baseTexture: true })
         }
-        
+
         entities.delete(id)
         deletedCount++
       }
@@ -109,7 +107,7 @@ export class EntitySpawnSystem extends TransformerProvider {
    * Process all pending spawns and deletions
    * @returns {Object} Processing results
    */
-  process() {
+  process () {
     const created = this.processSpawns()
     const deleted = this.processDeletions()
     return { created, deleted }
@@ -121,7 +119,7 @@ export class EntitySpawnSystem extends TransformerProvider {
    * @returns {Object|null} Created entity or null
    * @private
    */
-  _createEntity(entityData) {
+  _createEntity (entityData) {
     const renderer = this.rendererSystem || this.renderer
     if (!renderer || !renderer.transformer) {
       console.error('EntitySpawnSystem: renderer not initialized or no transformer')
@@ -167,7 +165,7 @@ export class EntitySpawnSystem extends TransformerProvider {
     }
   }
 
-  destroy() {
+  destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
 
@@ -181,6 +179,6 @@ export class EntitySpawnSystem extends TransformerProvider {
   }
 }
 
-export function createEntitySpawnSystem(gameEngine) {
+export function createEntitySpawnSystem (gameEngine) {
   return new EntitySpawnSystem(gameEngine)
 }

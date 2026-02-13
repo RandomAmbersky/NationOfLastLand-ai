@@ -117,11 +117,11 @@ export function drawEntity (graphics, entityData) {
 export function createEntitySprite (id, x, y, entityData) {
   const entityType = entityData.entity_type || 'vehicle'
   const vehicleType = entityData.subtype || entityData.vehicleType || 'scout'
-  const faction = entityData.fraction || null
+  const fraction = entityData.fraction || null
 
   // Create graphics
   const graphics = new PIXI.Graphics()
-  drawEntity(graphics, entityData)
+  drawEntity(graphics, { ...entityData, fraction })
 
   // Create container
   const container = new PIXI.Container()

@@ -8,7 +8,7 @@
  * @param {Object} entityData - Raw entity data
  * @returns {Object} Normalized entity object
  */
-export function createEntityData(entityData) {
+export function createEntityData (entityData) {
   // Определяем тип сущности и подтип
   let vehicleType = 'scout' // По умолчанию
   const entityType = entityData.entity_type || 'vehicle'
@@ -73,7 +73,7 @@ export function createEntityData(entityData) {
  * @param {Map<number, Object>} entities - Entities Map
  * @returns {Object|null} Base entity or null
  */
-export function findPlayerBase(entities) {
+export function findPlayerBase (entities) {
   for (const [, entity] of entities) {
     if (entity.entityType === 'base' && entity.fraction === 'Player') {
       return entity
@@ -88,7 +88,7 @@ export function findPlayerBase(entities) {
  * @param {Map<number, Object>} entities - Entities Map
  * @returns {boolean}
  */
-export function isPlayerBaseSelected(selections, entities) {
+export function isPlayerBaseSelected (selections, entities) {
   for (const entityId of selections) {
     const entity = entities.get(entityId)
     if (entity && entity.entityType === 'base' && entity.fraction === 'Player') {
@@ -104,7 +104,7 @@ export function isPlayerBaseSelected(selections, entities) {
  * @param {string} type - Entity type
  * @returns {Array<Object>} Array of entities
  */
-export function getEntitiesByType(entities, type) {
+export function getEntitiesByType (entities, type) {
   const result = []
   for (const [, entity] of entities) {
     if (entity.entityType === type) {
@@ -120,7 +120,7 @@ export function getEntitiesByType(entities, type) {
  * @param {string} fraction - Fraction name
  * @returns {Array<Object>} Array of entities
  */
-export function getEntitiesByFraction(entities, fraction) {
+export function getEntitiesByFraction (entities, fraction) {
   const result = []
   for (const [, entity] of entities) {
     if (entity.fraction === fraction) {
@@ -136,7 +136,7 @@ export function getEntitiesByFraction(entities, fraction) {
  * @param {number} entityId - Entity ID
  * @returns {boolean}
  */
-export function entityExists(entities, entityId) {
+export function entityExists (entities, entityId) {
   return entities.has(entityId)
 }
 
@@ -145,7 +145,7 @@ export function entityExists(entities, entityId) {
  * @param {Object} entity - Entity object
  * @returns {boolean}
  */
-export function canMove(entity) {
+export function canMove (entity) {
   // Базы не могут двигаться
   if (entity.entityType === 'base') return false
   // Алерты не могут двигаться
@@ -161,6 +161,6 @@ export function canMove(entity) {
  * @param {Object} entity - Entity object
  * @returns {boolean}
  */
-export function isPlayerUnit(entity) {
+export function isPlayerUnit (entity) {
   return entity.fraction === 'Player' && entity.entityType !== 'base'
 }

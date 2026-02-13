@@ -19,14 +19,14 @@ export class InputSystem extends TransformerProvider {
 
   init (app) {
     this.app = app
-    
+
     // If RendererSystem was not passed to constructor, try to get it from gameEngine
     if (!this.rendererSystem && this.gameEngine.rendererSystem) {
       this.rendererSystem = this.gameEngine.rendererSystem
     }
-    
+
     // Transformer initialized by GameEngine or explicitly set
-    
+
     this.setupEventListeners()
   }
 
@@ -47,7 +47,7 @@ export class InputSystem extends TransformerProvider {
   setupEventListeners () {
     if (!this.app) return
     const canvas = this.app.view
-    
+
     // Create bound handlers for later removal
     this.boundHandlers.mouseDown = (e) => this.handleMouseDown(e)
     this.boundHandlers.mouseMove = (e) => this.handleMouseMove(e)
@@ -57,7 +57,7 @@ export class InputSystem extends TransformerProvider {
     this.boundHandlers.doubleClick = (e) => this.handleDoubleClick(e)
     this.boundHandlers.contextMenu = (e) => e.preventDefault()
     this.boundHandlers.keyDown = (e) => this.handleKeyDown(e)
-    
+
     canvas.addEventListener('mousedown', this.boundHandlers.mouseDown)
     canvas.addEventListener('mousemove', this.boundHandlers.mouseMove)
     canvas.addEventListener('mouseup', this.boundHandlers.mouseUp)
@@ -80,7 +80,7 @@ export class InputSystem extends TransformerProvider {
     this._startDragSelection(event)
   }
 
-   _handleRightMouseDown (event) {
+  _handleRightMouseDown (event) {
     const { screenX, screenY } = this._getCanvasCoords(event)
     const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
 
@@ -142,76 +142,75 @@ export class InputSystem extends TransformerProvider {
   }
 
   handleCanvasClick (event) {
-     if (!this.gameEngine.state.get('isRunning')) return
+    if (!this.gameEngine.state.get('isRunning')) return
 
-     const drag = this.dragState
-     if (drag.justFinishedDrag) {
-       drag.justFinishedDrag = false
-       return
-     }
+    const drag = this.dragState
+    if (drag.justFinishedDrag) {
+      drag.justFinishedDrag = false
+      return
+    }
 
-     const { screenX, screenY } = this._getCanvasCoords(event)
-     const transformer = this.getTransformer()
-     const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
+    const { screenX, screenY } = this._getCanvasCoords(event)
+    const transformer = this.getTransformer()
+    const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
 
-     const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
+    const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
 
-      if (entityAtPosition !== null) {
-        // Клик по юниту
-        const isMultiSelect = event.shiftKey
-        this.gameEngine.state.emit('entityClicked', {
-          entityId: entityAtPosition,
-          isMultiSelect,
-          gameX,
-          gameY
-        })
-      } else {
-       // Клик по пустому месту - сбрасываем выделение
-       this.gameEngine.state.emit('selectionCleared')
-     }
-   }
+    if (entityAtPosition !== null) {
+      // Клик по юниту
+      const isMultiSelect = event.shiftKey
+      this.gameEngine.state.emit('entityClicked', {
+        entityId: entityAtPosition,
+        isMultiSelect,
+        gameX,
+        gameY
+      })
+    } else {
+      // Клик по пустому месту - сбрасываем выделение
+      this.gameEngine.state.emit('selectionCleared')
+    }
+  }
 
   handleDoubleClick (event) {
     if (!this.gameEngine.state.get('isRunning')) return
 
     const { screenX, screenY } = this._getCanvasCoords(event)
-    const transformer = this.getTransformer()
     const entityId = this._findEntityAtPosition(screenX, screenY)
 
-     if (entityId !== null) {
-       this.gameEngine.state.emit('entityDoubleClicked', { entityId })
-     } else {
-       this.gameEngine.state.emit('selectAllPlayerUnits')
-     }
+    if (entityId !== null) {
+      this.gameEngine.state.emit('entityDoubleClicked', { entityId })
+    } else {
+      this.gameEngine.state.emit('selectAllPlayerUnits')
+    }
   }
 
   handleKeyDown (event) {
     if (!this.gameEngine.state.get('isRunning')) return
 
-     if (event.ctrlKey && event.key === 'a') {
-       event.preventDefault()
-       this.gameEngine.state.emit('selectAllPlayerUnitsAtBase')
-       return
-     }
+    if (event.ctrlKey && event.key === 'a') {
+      event.preventDefault()
+      this.gameEngine.state.emit('selectAllPlayerUnitsAtBase')
+      return
+    }
 
-     switch (event.key) {
-       case 'Escape':
-         this.gameEngine.state.emit('selectionCleared')
-         break
+    switch (event.key) {
+      case 'Escape':
+        this.gameEngine.state.emit('selectionCleared')
+        break
 
-       case ' ':
-         if (this.gameEngine.state.get('selections').size > 0) {
-           this.gameEngine.state.emit('groupStop')
-         }
-         event.preventDefault()
-         break
+      case ' ':
+        if (this.gameEngine.state.get('selections').size > 0) {
+          this.gameEngine.state.emit('groupStop')
+        }
+        event.preventDefault()
+        break
 
-       case 'Delete':
-         if (this.gameEngine.state.get('selections').size > 0) {
-           this.gameEngine.state.emit('groupCancelCommand')
-         }
-         break
-     }
+      case 'Delete':
+        if (this.gameEngine.state.get('selections').size > 0) {
+          this.gameEngine.state.emit('groupCancelCommand')
+        }
+        break
+    }
   }
 
   _cleanupDragGraphics () {
@@ -308,12 +307,12 @@ export class InputSystem extends TransformerProvider {
     const bounds = this._calculateSelectionBounds()
     const drag = this.dragState
 
-     if (this._isValidSelectionBounds(bounds)) {
-       drag.justFinishedDrag = true
-       this.gameEngine.state.emit('rectangleSelection', { bounds })
-     } else {
-       drag.justFinishedDrag = false
-     }
+    if (this._isValidSelectionBounds(bounds)) {
+      drag.justFinishedDrag = true
+      this.gameEngine.state.emit('rectangleSelection', { bounds })
+    } else {
+      drag.justFinishedDrag = false
+    }
 
     if (drag.graphics) {
       this.rendererSystem?.removeFromStage({ container: drag.graphics })
@@ -346,28 +345,28 @@ export class InputSystem extends TransformerProvider {
     }
   }
 
-    _findEntityAtPosition (screenX, screenY) {
-     const entities = this.gameEngine.state.get('entities')
-     if (!(entities instanceof Map)) return null
+  _findEntityAtPosition (screenX, screenY) {
+    const entities = this.gameEngine.state.get('entities')
+    if (!(entities instanceof Map)) return null
 
-     const transformer = this.getTransformer()
-     const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
-     
-     // Ищем сущность, которая отрисована и содержит точку
-     const hitRadius = GAME_CONFIG.LIMITS.entityHitRadius ?? 15
-     
-     for (const [id, entity] of entities) {
-       const entityGameX = entity.gameX ?? entity.position?.x ?? 0
-       const entityGameY = entity.gameY ?? entity.position?.y ?? 0
-       
-       // Сравниваем в игровых координатах
-       if (Math.abs(gameX - entityGameX) <= hitRadius &&
+    const transformer = this.getTransformer()
+    const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
+
+    // Ищем сущность, которая отрисована и содержит точку
+    const hitRadius = GAME_CONFIG.LIMITS.entityHitRadius ?? 15
+
+    for (const [id, entity] of entities) {
+      const entityGameX = entity.gameX ?? entity.position?.x ?? 0
+      const entityGameY = entity.gameY ?? entity.position?.y ?? 0
+
+      // Сравниваем в игровых координатах
+      if (Math.abs(gameX - entityGameX) <= hitRadius &&
            Math.abs(gameY - entityGameY) <= hitRadius) {
-         return id
-       }
-     }
-     return null
-   }
+        return id
+      }
+    }
+    return null
+  }
 
   update (_dt) {}
 
@@ -376,7 +375,7 @@ export class InputSystem extends TransformerProvider {
   destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
-    
+
     // Remove event listeners to prevent memory leaks
     if (this.app && this.boundHandlers) {
       const canvas = this.app.view
@@ -389,7 +388,7 @@ export class InputSystem extends TransformerProvider {
       canvas.removeEventListener('contextmenu', this.boundHandlers.contextMenu)
       document.removeEventListener('keydown', this.boundHandlers.keyDown)
     }
-    
+
     this.dragState = this._createDragState()
     this.boundHandlers = {}
     this.app = null

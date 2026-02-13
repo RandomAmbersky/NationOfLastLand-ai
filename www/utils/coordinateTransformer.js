@@ -36,7 +36,7 @@ export class CoordinateTransformer {
    */
   getScale () {
     if (!this.app) return { x: 1, y: 1 }
-    
+
     if (!this._scaleCache) {
       const canvas = this.app.view
       this._scaleCache = {
@@ -74,7 +74,7 @@ export class CoordinateTransformer {
    */
   screenToGame (screenX, screenY) {
     if (!this.app) return { x: 0, y: 0 }
-    
+
     const width = this.app.screen.width
     const height = this.app.screen.height
     return {

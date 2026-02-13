@@ -5,7 +5,7 @@
 
 import { GAME_CONFIG } from '../config/game-config.js'
 import { createRepository } from '../core/EntityRepository.js'
-import { drawEntity, createEntitySprite } from '../utils/entityDrawer.js'
+import { createEntitySprite } from '../utils/entityDrawer.js'
 import { TransformerProvider } from '../utils/TransformerMixin.js'
 
 export class RendererSystem extends TransformerProvider {
@@ -49,7 +49,7 @@ export class RendererSystem extends TransformerProvider {
    * Get the coordinate transformer instance
    * Override to support coordinateService, otherwise uses mixin's getTransformer()
    */
-  getTransformer() {
+  getTransformer () {
     if (this.transformer) return this.transformer
     if (this.coordinateService && this.coordinateService.getTransformer) {
       return this.coordinateService.getTransformer()
@@ -65,7 +65,7 @@ export class RendererSystem extends TransformerProvider {
    * @param {number} id - Entity ID
    * @returns {PIXI.Container|null} Entity container or null
    */
-  getEntityContainer(id) {
+  getEntityContainer (id) {
     const entity = this.getEntity(id)
     return entity ? entity.container : null
   }
@@ -75,7 +75,7 @@ export class RendererSystem extends TransformerProvider {
    * @param {number} id - Entity ID
    * @returns {PIXI.Graphics|null} Entity graphics or null
    */
-  getEntityGraphics(id) {
+  getEntityGraphics (id) {
     const entity = this.getEntity(id)
     return entity ? entity.graphics : null
   }
@@ -85,7 +85,7 @@ export class RendererSystem extends TransformerProvider {
    * @param {number} id - Entity ID
    * @returns {{gameX: number, gameY: number}|null} Game coordinates or null
    */
-  getEntityCoordinates(id) {
+  getEntityCoordinates (id) {
     const entity = this.getEntity(id)
     if (!entity) return null
     return { gameX: entity.gameX, gameY: entity.gameY }
@@ -96,7 +96,7 @@ export class RendererSystem extends TransformerProvider {
    * @param {Object} entity - Entity object
    * @param {PIXI.Container} container - Parent container
    */
-  addEntityToContainer(entity, container) {
+  addEntityToContainer (entity, container) {
     if (!entity || !entity.container || !container) return
     container.addChild(entity.container)
   }
@@ -105,7 +105,7 @@ export class RendererSystem extends TransformerProvider {
    * Remove entity from its container (abstracts removeChild)
    * @param {Object} entity - Entity object
    */
-  removeEntityFromContainer(entity) {
+  removeEntityFromContainer (entity) {
     if (!entity || !entity.container) return
     if (entity.container.parent) {
       entity.container.parent.removeChild(entity.container)
@@ -116,7 +116,7 @@ export class RendererSystem extends TransformerProvider {
    * Add container to stage (abstracts addChild)
    * @param {PIXI.Container} container - Container to add
    */
-  addToStage(container) {
+  addToStage (container) {
     if (!container || !this.app) return
     this.app.stage.addChild(container)
   }
@@ -125,7 +125,7 @@ export class RendererSystem extends TransformerProvider {
    * Remove container from stage (abstracts removeChild)
    * @param {PIXI.Container} container - Container to remove
    */
-  removeFromStage(container) {
+  removeFromStage (container) {
     if (!container || !this.app) return
     if (container.parent) {
       container.parent.removeChild(container)
@@ -136,10 +136,10 @@ export class RendererSystem extends TransformerProvider {
    * Transform game coordinates to screen coordinates
    * Returns { x, y, scaleX, scaleY }
    */
-  _toScreenCoords(gameX, gameY) {
+  _toScreenCoords (gameX, gameY) {
     const transformer = this.getTransformer()
     if (!transformer) return { x: 0, y: 0, scaleX: 1, scaleY: 1 }
-    
+
     const { x, y } = transformer.normalizeCoords(gameX, gameY)
     const { x: scaleX, y: scaleY } = transformer.getScale()
     return { x: x * scaleX, y: y * scaleY, scaleX, scaleY }
@@ -165,7 +165,7 @@ export class RendererSystem extends TransformerProvider {
   /**
    * Установить систему для спавна сущностей
    */
-  setEntitySpawnSystem(entitySpawnSystem) {
+  setEntitySpawnSystem (entitySpawnSystem) {
     this.entitySpawnSystem = entitySpawnSystem
   }
 
@@ -203,7 +203,7 @@ export class RendererSystem extends TransformerProvider {
    */
   removeEntity (id) {
     this.entityRepository.remove(id)
-    
+
     // Also remove from stage if exists
     const entities = this.gameEngine.state.get('entities')
     const entity = entities.get(id)
@@ -296,12 +296,10 @@ export class RendererSystem extends TransformerProvider {
   handleEntitiesUpdated (entities) {
     if (!(entities instanceof Map)) return
 
-    const entitiesMap = this.entityRepository.getEntities()
-    
     for (const [id, entity] of entities) {
       // Check if entity already exists in repository
       let storedEntity = this.getEntity(id)
-      
+
       if (!storedEntity && entity.gameX !== undefined && entity.gameY !== undefined) {
         // Create new entity sprite
         const coords = this._toScreenCoords(entity.gameX, entity.gameY)
@@ -336,7 +334,7 @@ export class RendererSystem extends TransformerProvider {
   /**
    * Get scale factors from transformer
    */
-  _getScale() {
+  _getScale () {
     const transformer = this.getTransformer()
     return transformer ? transformer.getScale() : { x: 1, y: 1 }
   }

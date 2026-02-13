@@ -4,20 +4,20 @@
  */
 
 export class TransformerProvider {
-  constructor() {
+  constructor () {
     this.transformer = null
   }
 
-  setTransformer(transformer) {
+  setTransformer (transformer) {
     this.transformer = transformer
   }
 
-  getTransformer() {
+  getTransformer () {
     return this.transformer
   }
 
   // Common init pattern for systems
-  _initTransformer(app) {
+  _initTransformer (app) {
     if (!this.transformer && app) {
       this.transformer = app?.renderer?.transformer || null
     }
@@ -25,20 +25,20 @@ export class TransformerProvider {
 }
 
 export class TransformerMixin {
-  constructor() {
+  constructor () {
     this.transformer = null
   }
 
-  setTransformer(transformer) {
+  setTransformer (transformer) {
     this.transformer = transformer
   }
 
-  getTransformer() {
+  getTransformer () {
     return this.transformer
   }
 
   // Common init pattern for systems
-  _initTransformer(app) {
+  _initTransformer (app) {
     if (!this.transformer && app) {
       this.transformer = app?.renderer?.transformer || null
     }

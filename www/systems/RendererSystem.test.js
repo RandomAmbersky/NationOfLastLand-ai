@@ -5,7 +5,7 @@
 
 // Mock PIXI
 class MockGraphics {
-  constructor() {
+  constructor () {
     this.clear = jest.fn()
     this.lineStyle = jest.fn()
     this.beginFill = jest.fn()
@@ -22,7 +22,7 @@ class MockGraphics {
 }
 
 class MockContainer {
-  constructor() {
+  constructor () {
     this.x = 0
     this.y = 0
     this.addChild = jest.fn()
@@ -32,7 +32,7 @@ class MockContainer {
 }
 
 class MockApplication {
-  constructor() {
+  constructor () {
     this.stage = {
       addChild: jest.fn(),
       removeChild: jest.fn(),
@@ -61,18 +61,18 @@ const mockTransformer = {
 
 // Mock EntityService
 class EntityService {
-  constructor(gameEngine) { this.gameEngine = gameEngine }
-  createEntity(data) { return { id: data.id, ...data } }
-  findPlayerBase() { return null }
-  isPlayerBaseSelected() { return false }
-  getEntitiesByType(type) { return [] }
-  getEntitiesByFraction(fraction) { return [] }
-  entityExists(id) { return false }
+  constructor (gameEngine) { this.gameEngine = gameEngine }
+  createEntity (data) { return { id: data.id, ...data } }
+  findPlayerBase () { return null }
+  isPlayerBaseSelected () { return false }
+  getEntitiesByType (type) { return [] }
+  getEntitiesByFraction (fraction) { return [] }
+  entityExists (id) { return false }
 }
 
 // Import RendererSystem
 class RendererSystem {
-  constructor(gameEngine, coordinateService = null) {
+  constructor (gameEngine, coordinateService = null) {
     this.gameEngine = gameEngine
     this.coordinateService = coordinateService
     this.transformer = coordinateService
@@ -85,17 +85,17 @@ class RendererSystem {
     this.entityService = new EntityService(gameEngine)
   }
 
-  init(app) {
+  init (app) {
     this.app = app
     this.setupGrid()
     this.gameEngine.app = app
   }
 
-  getEntity(id) {
+  getEntity (id) {
     return this._renderedEntities.get(id)
   }
 
-  updateEntityPosition(id, gameX, gameY) {
+  updateEntityPosition (id, gameX, gameY) {
     const entity = this._renderedEntities.get(id)
     if (!entity || !entity.container) return
     const { x, y } = this.transformer?.normalizeCoords(gameX, gameY) ?? { x: 0, y: 0 }
@@ -106,7 +106,7 @@ class RendererSystem {
     entity.y = y * scaleY
   }
 
-  createEntitySprite(id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
+  createEntitySprite (id, x, y, vehicleType, faction = null, entityType = 'vehicle') {
     const entity = {
       id,
       container: new MockContainer(),
@@ -121,7 +121,7 @@ class RendererSystem {
     return entity
   }
 
-  removeEntity(id) {
+  removeEntity (id) {
     const entity = this._renderedEntities.get(id)
     if (entity) {
       if (entity.container) {
@@ -132,7 +132,7 @@ class RendererSystem {
     }
   }
 
-  showTargetIndicator(gameX, gameY) {
+  showTargetIndicator (gameX, gameY) {
     if (this.targetIndicator) {
       this.app?.stage.removeChild(this.targetIndicator)
       this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
@@ -141,7 +141,7 @@ class RendererSystem {
     this.app?.stage.addChild(this.targetIndicator)
   }
 
-  clearTargetIndicator() {
+  clearTargetIndicator () {
     if (this.targetIndicator) {
       this.app?.stage.removeChild(this.targetIndicator)
       this.targetIndicator.destroy({ children: true, texture: true, baseTexture: true })
@@ -149,7 +149,7 @@ class RendererSystem {
     }
   }
 
-  setupGrid() {
+  setupGrid () {
     if (this.gridContainer) {
       this.app?.stage.removeChild(this.gridContainer)
       this.gridContainer.destroy({ children: true, texture: true, baseTexture: true })
@@ -161,7 +161,7 @@ class RendererSystem {
     this.app?.stage.addChildAt(this.gridContainer, 0)
   }
 
-  updateGrid() {
+  updateGrid () {
     if (this.gridContainer) {
       this.app?.stage.removeChild(this.gridContainer)
       this.gridContainer.destroy({ children: true, texture: true, baseTexture: true })
@@ -169,11 +169,11 @@ class RendererSystem {
     this.setupGrid()
   }
 
-  update(_dt) {}
+  update (_dt) {}
 
-  render() {}
+  render () {}
 
-  destroy() {
+  destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
 
@@ -209,7 +209,7 @@ class RendererSystem {
   }
 }
 
-function createRenderer(gameEngine, coordinateService = null) {
+function createRenderer (gameEngine, coordinateService = null) {
   return new RendererSystem(gameEngine, coordinateService)
 }
 
@@ -221,9 +221,9 @@ describe('RendererSystem', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    
+
     mockApp = new MockApplication()
-    
+
     const mockState = {
       get: jest.fn((key) => {
         if (key === 'entities') return new Map()

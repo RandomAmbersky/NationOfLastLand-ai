@@ -5,7 +5,7 @@
 import { EntitySpawnSystem } from './EntitySpawnSystem.js'
 
 class MockContainer {
-  constructor() {
+  constructor () {
     this.x = 0
     this.y = 0
     this.addChild = jest.fn()
@@ -15,7 +15,7 @@ class MockContainer {
 }
 
 class MockApplication {
-  constructor() {
+  constructor () {
     this.stage = {
       addChild: jest.fn(),
       removeChild: jest.fn(),
@@ -44,16 +44,16 @@ describe('EntitySpawnSystem', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    
+
     mockApp = new MockApplication()
     mockRendererSystem = {
       addToStage: jest.fn(),
       removeFromStage: jest.fn(),
       transformer: {
-        gameToScreen: jest.fn((x, y) => ({ x: x, y: y }))
+        gameToScreen: jest.fn((x, y) => ({ x, y }))
       }
     }
-    
+
     const mockState = {
       get: jest.fn((key) => {
         if (key === 'entities') return new Map()
@@ -109,7 +109,7 @@ describe('EntitySpawnSystem', () => {
         entity_type: 'vehicle'
       }
       entitySpawnSystem.queueSpawn(entityData)
-      
+
       const newEntities = entitySpawnSystem.processSpawns()
       expect(newEntities.length).toBe(1)
       expect(newEntities[0].id).toBe(1)
@@ -127,7 +127,7 @@ describe('EntitySpawnSystem', () => {
       const stateEntities = new Map()
       stateEntities.set(1, { container: new MockContainer() })
       gameEngine.state.get = jest.fn((key) => key === 'entities' ? stateEntities : null)
-      
+
       entitySpawnSystem.queueDeletion(1)
       const deletedCount = entitySpawnSystem.processDeletions()
       expect(deletedCount).toBe(1)

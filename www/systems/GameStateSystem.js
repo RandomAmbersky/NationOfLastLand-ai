@@ -18,14 +18,14 @@ import { createRepository } from '../core/EntityRepository.js'
 import { createEntityData } from '../utils/entityUtils.js'
 
 export class GameStateSystem {
-  constructor(gameEngine) {
+  constructor (gameEngine) {
     this.gameEngine = gameEngine
     this.repository = createRepository(gameEngine.state)
     this.isDestroyed = false
     this._unsubscribeHandlers = []
   }
 
-  async initializeGame() {
+  async initializeGame () {
     try {
       // Initialize WASM if not already initialized
       await initWasm()
@@ -84,7 +84,7 @@ export class GameStateSystem {
     }
   }
 
-  async spawnVehicle(vehicleType, baseEntity) {
+  async spawnVehicle (vehicleType, baseEntity) {
     if (!baseEntity) {
       return { success: false, error: 'No base selected' }
     }
@@ -111,7 +111,7 @@ export class GameStateSystem {
     }
   }
 
-  async createBase(x, y) {
+  async createBase (x, y) {
     try {
       const result = create_base(x, y)
       const baseInfo = JSON.parse(result)
@@ -121,7 +121,7 @@ export class GameStateSystem {
     }
   }
 
-  async buildFloor(baseId, floorType) {
+  async buildFloor (baseId, floorType) {
     try {
       const result = build_floor(baseId, floorType)
       const updatedBase = JSON.parse(result)
@@ -131,7 +131,7 @@ export class GameStateSystem {
     }
   }
 
-  async createRandomAlert() {
+  async createRandomAlert () {
     try {
       const result = create_random_alert()
       const alertResult = JSON.parse(result)
@@ -141,7 +141,7 @@ export class GameStateSystem {
     }
   }
 
-  async setGroupTarget(x, y) {
+  async setGroupTarget (x, y) {
     try {
       const result = set_group_target(x, y)
       const groupResult = JSON.parse(result)
@@ -151,7 +151,7 @@ export class GameStateSystem {
     }
   }
 
-  updateGameLoop(dt) {
+  updateGameLoop (dt) {
     try {
       const result = update(dt)
       const gameState = JSON.parse(result)
@@ -187,28 +187,28 @@ export class GameStateSystem {
     }
   }
 
-  destroy() {
+  destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
-    
+
     // Unsubscribe from all state events to prevent memory leaks
     this._unsubscribeHandlers.forEach(unsubscribe => unsubscribe())
     this._unsubscribeHandlers = []
-    
-    this.repository = createRepository(gameEngine.state)
+
+    this.repository = createRepository(this.gameEngine.state)
     this.gameEngine = null
   }
 
-  update(dt) {
+  update (dt) {
     // Call updateGameLoop for game state updates
     return this.updateGameLoop(dt)
   }
 
-  render() {
+  render () {
     // GameStateSystem does not render anything
   }
 
-  clearSelection() {
+  clearSelection () {
     try {
       return _clearSelection()
     } catch (error) {
@@ -217,6 +217,6 @@ export class GameStateSystem {
   }
 }
 
-export function createGameStateSystem(gameEngine) {
+export function createGameStateSystem (gameEngine) {
   return new GameStateSystem(gameEngine)
 }

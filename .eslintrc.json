@@ -21,6 +21,8 @@
         "named": "always",
         "asyncArrow": "always"
       }
-    ]
-  }
+    ],
+    "camelcase": "off"
+  },
+  "ignorePatterns": ["www/pkg/", "node_modules/", "target/"]
 }

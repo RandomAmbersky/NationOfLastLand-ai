@@ -3,11 +3,10 @@
  * Processes move commands from SelectionSystem and updates entity positions
  */
 
-import { GAME_CONFIG } from '../config/game-config.js'
 import { TransformerProvider } from '../utils/TransformerMixin.js'
 
 export class MovementSystem extends TransformerProvider {
-  constructor(gameEngine) {
+  constructor (gameEngine) {
     super()
     this.gameEngine = gameEngine
     this.moveCommands = new Map() // entityId -> {x, y, speed}
@@ -18,7 +17,7 @@ export class MovementSystem extends TransformerProvider {
    * Initialize movement system with Pixi.js app
    * @param {PIXI.Application} app - Pixi.js application
    */
-  init(app) {
+  init (app) {
     // Movement system doesn't need special initialization
     console.log('MovementSystem initialized')
   }
@@ -30,7 +29,7 @@ export class MovementSystem extends TransformerProvider {
    * @param {number} targetY - Target Y coordinate
    * @param {number} speed - Movement speed (optional)
    */
-  queueMoveCommand(entityId, targetX, targetY, speed = null) {
+  queueMoveCommand (entityId, targetX, targetY, speed = null) {
     const entity = this.getEntity(entityId)
     if (!entity) {
       console.warn('MovementSystem: Entity not found', entityId)
@@ -70,7 +69,7 @@ export class MovementSystem extends TransformerProvider {
    * @param {Object} entity - Entity object
    * @returns {number} Default speed
    */
-  getDefaultSpeed(entity) {
+  getDefaultSpeed (entity) {
     const type = entity.vehicleType || entity.type || 'scout'
     const speeds = {
       scout: 60,
@@ -88,7 +87,7 @@ export class MovementSystem extends TransformerProvider {
    * @param {number} entityId - Entity ID
    * @returns {Object|null} Entity object or null
    */
-  getEntity(entityId) {
+  getEntity (entityId) {
     const entities = this.gameEngine.state.get('entities')
     if (!(entities instanceof Map)) return null
     return entities.get(entityId)
@@ -98,7 +97,7 @@ export class MovementSystem extends TransformerProvider {
    * Process all pending movement commands
    * @param {number} dt - Delta time in seconds
    */
-  processMovements(dt) {
+  processMovements (dt) {
     if (this.moveCommands.size === 0) return
 
     const entities = this.gameEngine.state.get('entities')
@@ -149,27 +148,27 @@ export class MovementSystem extends TransformerProvider {
    * Clear all pending move commands for an entity
    * @param {number} entityId - Entity ID
    */
-  clearMoveCommand(entityId) {
+  clearMoveCommand (entityId) {
     this.moveCommands.delete(entityId)
   }
 
   /**
    * Clear all pending move commands
    */
-  clearAllCommands() {
+  clearAllCommands () {
     this.moveCommands.clear()
   }
 
-  update(dt) {
+  update (dt) {
     this.processMovements(dt)
   }
 
-  render() {
+  render () {
     // Movement doesn't render anything directly
     // RendererSystem will render updated positions
   }
 
-  destroy() {
+  destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
     this.moveCommands.clear()
@@ -177,6 +176,6 @@ export class MovementSystem extends TransformerProvider {
   }
 }
 
-export function createMovementSystem(gameEngine) {
+export function createMovementSystem (gameEngine) {
   return new MovementSystem(gameEngine)
 }

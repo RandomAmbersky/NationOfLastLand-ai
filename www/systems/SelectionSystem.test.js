@@ -26,7 +26,7 @@ const GAME_CONFIG = {
 
 // Mock SelectionIndicator
 class MockSelectionIndicator {
-  constructor(gameEngine, rendererSystem = null) {
+  constructor (gameEngine, rendererSystem = null) {
     this.gameEngine = gameEngine
     this.rendererSystem = rendererSystem
     this.updateIndicators = jest.fn()
@@ -36,7 +36,7 @@ class MockSelectionIndicator {
 
 // Mock EntityService
 class MockEntityService {
-  constructor(gameEngine) {
+  constructor (gameEngine) {
     this.gameEngine = gameEngine
     this.createEntity = jest.fn()
     this.findPlayerBase = jest.fn()
@@ -49,7 +49,7 @@ class MockEntityService {
 
 // Import SelectionSystem
 class SelectionSystem {
-  constructor(gameEngine) {
+  constructor (gameEngine) {
     this.gameEngine = gameEngine
     this.selectionIndicator = null
     this.entityService = null
@@ -58,7 +58,7 @@ class SelectionSystem {
     this._factionIndex = new Map()
   }
 
-  init(app) {
+  init (app) {
     this.app = app
     this.rendererSystem = this.gameEngine.rendererSystem || null
     this.selectionIndicator = new MockSelectionIndicator(this.gameEngine, this.rendererSystem)
@@ -66,7 +66,7 @@ class SelectionSystem {
     this._buildIndices()
   }
 
-  _buildIndices() {
+  _buildIndices () {
     const entities = this.gameEngine.state.get('entities')
     this._typeIndex.clear()
     this._factionIndex.clear()
@@ -88,13 +88,13 @@ class SelectionSystem {
     }
   }
 
-  _getIndex(key, value) {
+  _getIndex (key, value) {
     if (key === 'type') return this._typeIndex.get(value) || []
     if (key === 'faction') return this._factionIndex.get(value) || []
     return []
   }
 
-  _getScale() {
+  _getScale () {
     if (!this.gameEngine.app) return { x: 1, y: 1 }
     return {
       x: this.gameEngine.app.screen.width / GAME_CONFIG.WORLD_SIZE.width,
@@ -102,18 +102,18 @@ class SelectionSystem {
     }
   }
 
-  _canMove(entity) {
+  _canMove (entity) {
     if (entity.entityType === 'base') return false
     if (entity.entityType === 'alert') return false
     if (entity.movement && entity.movement.canMove === false) return false
     return true
   }
 
-  _isPlayerUnit(entity) {
+  _isPlayerUnit (entity) {
     return entity.fraction === 'Player' && entity.entityType !== 'base'
   }
 
-  handleEntityClicked(data) {
+  handleEntityClicked (data) {
     const { entityId, isMultiSelect, gameX, gameY } = data
     const state = this.gameEngine.state
     const selections = state.get('selections')
@@ -207,11 +207,10 @@ class SelectionSystem {
       if (this.selectionIndicator) {
         this.selectionIndicator.updateIndicators(selections)
       }
-      return
     }
   }
 
-  handleEntitySelected(data) {
+  handleEntitySelected (data) {
     const { entityId } = data
     const state = this.gameEngine.state
     const selections = state.get('selections')
@@ -228,7 +227,7 @@ class SelectionSystem {
     }
   }
 
-  handleSelectionCleared() {
+  handleSelectionCleared () {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -241,7 +240,7 @@ class SelectionSystem {
     }
   }
 
-  handleRectangleSelection(data) {
+  handleRectangleSelection (data) {
     const { bounds } = data
     const state = this.gameEngine.state
     const entities = state.get('entities')
@@ -274,7 +273,7 @@ class SelectionSystem {
     return addedCount
   }
 
-  _isEntityInBounds(entity, bounds) {
+  _isEntityInBounds (entity, bounds) {
     if (!entity) return false
     const gameX = entity.gameX ?? entity.position?.x ?? 0
     const gameY = entity.gameY ?? entity.position?.y ?? 0
@@ -288,7 +287,7 @@ class SelectionSystem {
       entityScreenY <= bounds.y + bounds.height
   }
 
-  selectEntity(entityId, isMultiSelect = false) {
+  selectEntity (entityId, isMultiSelect = false) {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -307,7 +306,7 @@ class SelectionSystem {
     return true
   }
 
-  deselectEntity(entityId) {
+  deselectEntity (entityId) {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -322,7 +321,7 @@ class SelectionSystem {
     return false
   }
 
-  clearAll() {
+  clearAll () {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -337,7 +336,7 @@ class SelectionSystem {
     return false
   }
 
-  selectAllPlayerUnits() {
+  selectAllPlayerUnits () {
     const state = this.gameEngine.state
     const selections = state.get('selections')
     const maxGroupSize = GAME_CONFIG.LIMITS.maxGroupSize
@@ -359,7 +358,7 @@ class SelectionSystem {
     return count
   }
 
-  selectSameType(entityId) {
+  selectSameType (entityId) {
     const state = this.gameEngine.state
     const selections = state.get('selections')
     const maxGroupSize = GAME_CONFIG.LIMITS.maxGroupSize
@@ -391,7 +390,7 @@ class SelectionSystem {
     return addedCount
   }
 
-  setGroupTarget(gameX, gameY) {
+  setGroupTarget (gameX, gameY) {
     const state = this.gameEngine.state
     const selections = state.get('selections')
 
@@ -402,19 +401,19 @@ class SelectionSystem {
     })
   }
 
-  updateIndicators(selections) {
+  updateIndicators (selections) {
     if (this.selectionIndicator) {
       this.selectionIndicator.updateIndicators(selections)
     }
   }
 
-  update(_dt) {
+  update (_dt) {
     this._buildIndices()
   }
 
-  render() {}
+  render () {}
 
-  destroy() {
+  destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
 
@@ -428,7 +427,7 @@ class SelectionSystem {
   }
 }
 
-function createSelectionSystem(gameEngine) {
+function createSelectionSystem (gameEngine) {
   return new SelectionSystem(gameEngine)
 }
 
@@ -440,7 +439,7 @@ describe('SelectionSystem', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    
+
     const mockState = {
       get: jest.fn((key) => {
         if (key === 'entities') return new Map()
