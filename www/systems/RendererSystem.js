@@ -33,6 +33,12 @@ export class RendererSystem {
       console.log('RendererSystem: entitiesUpdated event received, entities count:', entities?.size)
       this.handleEntitiesUpdated(entities)
     })
+    // Also subscribe to initialEntitiesLoaded for first load
+    this._unsubscribeInitialEntities = this.gameEngine.state.subscribe('initialEntitiesLoaded', (state) => {
+      const entities = state.entities
+      console.log('RendererSystem: initialEntitiesLoaded event received, entities count:', entities?.size)
+      this.handleEntitiesUpdated(entities)
+    })
   }
 
   /**
@@ -323,7 +329,10 @@ export class RendererSystem {
         storedEntity.gameY = entity.gameY
         // Add container to stage (Pixi.js rendering)
         this.addToStage(storedEntity.container)
-        this.entityRepository.add(storedEntity)
+        // Add to entities map directly to avoid triggering entitiesUpdated loop
+        const entities = this.entityRepository.getEntities()
+        entities.set(id, storedEntity)
+        this.state.merge({ entities }, 'entitiesUpdated')
         console.log('RendererSystem: Created entity', id, 'with container at (', storedEntity.container.x, ',', storedEntity.container.y, ')')
         console.log('RendererSystem: Entity container children:', storedEntity.container.children?.length)
         console.log('RendererSystem: graphics === container.children[0]:', storedEntity.graphics === storedEntity.container.children?.[0])
@@ -374,6 +383,10 @@ export class RendererSystem {
     if (this._unsubscribeEntityUpdates) {
       this._unsubscribeEntityUpdates()
       this._unsubscribeEntityUpdates = null
+    }
+    if (this._unsubscribeInitialEntities) {
+      this._unsubscribeInitialEntities()
+      this._unsubscribeInitialEntities = null
     }
 
     if (this.targetIndicator) {

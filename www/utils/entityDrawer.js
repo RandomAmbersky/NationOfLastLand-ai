@@ -138,6 +138,7 @@ export function createEntitySprite (id, x, y, entityData) {
     console.error('createEntitySprite: Failed to create container!')
     return null
   }
+  container.addChild(graphics)
   container.x = x
   container.y = y
   container.gameX = x
