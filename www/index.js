@@ -19,7 +19,6 @@ export { GameStateSystem, createGameStateSystem } from "./systems/GameStateSyste
 export { EntitySpawnSystem, createEntitySpawnSystem } from "./systems/EntitySpawnSystem.js"
 export { MovementSystem, createMovementSystem } from "./systems/MovementSystem.js"
 
-
 // Utils
 export { calculateDistance, calculateDistanceBetween, clamp, lerp } from "./utils/math.js"
 export { CoordinateTransformer, createCoordinateTransformer } from "./utils/coordinateTransformer.js"
@@ -39,80 +38,3 @@ export {
 
 // WASM imports
 export { initWasm, init, gameInit, create_vehicle, update, select_entity, deselect_entity, set_group_target, create_base, build_floor, get_entity_info, create_random_alert, clear_selection, handle_entity_selection, get_entities_data } from "./wasm-imports.js"
-
-export default {
-  // Core
-  StateContainer,
-  createContainer,
-  GameEngine,
-  System,
-  createEngine,
-  EntityRepository,
-  createRepository,
-  GameCleanup,
-  createCleanupScope,
-  
-  // Selection
-  SelectionIndicator,
-  createSelectionIndicator,
-  
-  // Systems
-  RendererSystem,
-  createRenderer,
-  InputSystem,
-  createInputSystem,
-  SelectionSystem,
-  createSelectionSystem,
-  GameStateSystem,
-  createGameStateSystem,
-  EntitySpawnSystem,
-  createEntitySpawnSystem,
-  MovementSystem,
-  createMovementSystem,
-  
-  // Utils
-  calculateDistance,
-  calculateDistanceBetween,
-  clamp,
-  lerp,
-  CoordinateTransformer,
-  createCoordinateTransformer,
-  createEntitySprite,
-  getEntityColor,
-  drawEntity,
-  drawEntityShape,
-  drawBaseShape,
-  drawAlertShape,
-  createEntityData,
-  findPlayerBase,
-  isPlayerBaseSelected,
-  getEntitiesByType,
-  getEntitiesByFraction,
-  entityExists,
-  canMove,
-  isPlayerUnit,
-  createDisposable,
-  TimerManager,
-  EventManager,
-  GraphicsCleanup,
-  Cleanupable,
-  TransformerProvider,
-  TransformerMixin,
-  
-  // WASM
-  initWasm,
-  init,
-  gameInit,
-  create_vehicle,
-  update,
-  select_entity,
-  deselect_entity,
-  set_group_target,
-  create_base,
-  build_floor,
-  get_entity_info,
-  create_random_alert,
-  clear_selection,
-  handle_entity_selection,
-  get_entities_data
-}
