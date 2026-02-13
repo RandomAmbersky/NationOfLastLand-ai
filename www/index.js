@@ -5,7 +5,6 @@
 // Core modules
 export { StateContainer, createContainer } from './core/StateContainer.js'
 export { GameEngine, System, createEngine } from './core/GameEngine.js'
-export { EntityRepository, createRepository } from './core/EntityRepository.js'
 
 // Game API
 export { GameApi, createGameApi } from './api/GameApi.js'

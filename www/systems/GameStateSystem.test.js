@@ -65,7 +65,6 @@ describe('GameStateSystem', () => {
 
       expect(gameStateSystem.isDestroyed).toBe(true)
       expect(gameStateSystem.gameApi).toBeNull()
-      expect(gameStateSystem.repository).toBeNull()
       expect(gameStateSystem.gameEngine).toBeNull()
     })
   })

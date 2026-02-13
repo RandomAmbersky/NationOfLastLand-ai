@@ -59,6 +59,7 @@ export class StateContainer {
       this._eventHandlers.set(event, new Set())
     }
     const handlers = this._eventHandlers.get(event)
+    // eslint-disable-next-line no-unused-vars
     const hadHandlers = handlers.size > 0
     handlers.add(handler)
 

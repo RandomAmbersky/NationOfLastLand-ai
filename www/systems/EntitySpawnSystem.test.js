@@ -40,15 +40,17 @@ describe('EntitySpawnSystem', () => {
   let gameEngine
   let entitySpawnSystem
   let mockApp
+  let mockEntities
 
   beforeEach(() => {
     jest.clearAllMocks()
 
     mockApp = new MockApplication()
+    mockEntities = new Map()
 
     const mockState = {
       get: jest.fn((key) => {
-        if (key === 'entities') return new Map()
+        if (key === 'entities') return mockEntities
         if (key === 'isRunning') return true
         return null
       }),
@@ -59,7 +61,10 @@ describe('EntitySpawnSystem', () => {
 
     gameEngine = {
       state: mockState,
-      app: mockApp
+      app: mockApp,
+      transformer: {
+        gameToScreen: (x, y) => ({ x: x * 2, y: y * 2 })
+      }
     }
 
     entitySpawnSystem = new EntitySpawnSystem(gameEngine)
@@ -104,6 +109,22 @@ describe('EntitySpawnSystem', () => {
       const newEntities = entitySpawnSystem.processSpawns()
       expect(newEntities.length).toBe(1)
       expect(newEntities[0].id).toBe(1)
+    })
+
+    it('should add entities to state.entities', () => {
+      const entityData = {
+        id: 1,
+        position: { x: 100, y: 200 },
+        subtype: 'scout',
+        fraction: 'Player',
+        entity_type: 'vehicle'
+      }
+      entitySpawnSystem.queueSpawn(entityData)
+      entitySpawnSystem.processSpawns()
+
+      const entities = gameEngine.state.get('entities')
+      expect(entities.has(1)).toBe(true)
+      expect(entities.get(1).id).toBe(1)
     })
 
     it('should return empty array when queue is empty', () => {

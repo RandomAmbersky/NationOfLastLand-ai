@@ -4,7 +4,7 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
-import { createRepository } from '../core/EntityRepository.js'
+
 import { createEntitySprite } from '../utils/entityDrawer.js'
 
 export class RendererSystem {
@@ -16,13 +16,11 @@ export class RendererSystem {
     this.alertHighlight = null
     this.gridContainer = null
     this.isDestroyed = false
-    this.entityRepository = null
     this._unsubscribeEntityUpdates = null
   }
 
   init (app) {
     this.app = app
-    this.entityRepository = createRepository(this.gameEngine.state)
     this.setupGrid()
     this.gameEngine.app = app
     this.gameEngine.rendererSystem = this
@@ -38,7 +36,8 @@ export class RendererSystem {
    * Получить отрисованную сущность по ID
    */
   getEntity (id) {
-    return this.entityRepository.getById(id)
+    const entities = this.gameEngine.state.get('entities')
+    return entities.get(id) || null
   }
 
   // ============== Инкапсулирующий API для работы с контейнерами ==============
@@ -182,8 +181,10 @@ export class RendererSystem {
 
     this.addToStage(entity.container)
 
-    // Добавляем в state.entities через репозиторий
-    this.entityRepository.add(entity)
+    // Добавляем в state.entities
+    const entities = this.gameEngine.state.get('entities')
+    entities.set(entity.id, entity)
+    this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
 
     return entity
   }
@@ -192,10 +193,11 @@ export class RendererSystem {
    * Удалить сущность из state.entities
    */
   removeEntity (id) {
-    this.entityRepository.remove(id)
+    const entities = this.gameEngine.state.get('entities')
+    entities.delete(id)
+    this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
 
     // Also remove from stage if exists
-    const entities = this.gameEngine.state.get('entities')
     const entity = entities.get(id)
     if (entity && entity.container) {
       this.removeFromStage(entity.container)
@@ -297,7 +299,10 @@ export class RendererSystem {
         storedEntity.gameX = entity.gameX
         storedEntity.gameY = entity.gameY
         this.addToStage(storedEntity.container)
-        this.entityRepository.add(storedEntity)
+        // Добавляем в state.entities
+        const entities = this.gameEngine.state.get('entities')
+        entities.set(storedEntity.id, storedEntity)
+        this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
       } else if (storedEntity && storedEntity.container && entity.gameX !== undefined && entity.gameY !== undefined) {
         storedEntity.gameX = entity.gameX
         storedEntity.gameY = entity.gameY
@@ -363,7 +368,6 @@ export class RendererSystem {
 
     this.gameEngine = null
     this.app = null
-    this.entityRepository = null
   }
 }
 

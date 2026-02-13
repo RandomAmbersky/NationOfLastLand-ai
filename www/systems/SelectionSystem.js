@@ -6,14 +6,12 @@
 
 import { GAME_CONFIG } from '../config/game-config.js'
 import { SelectionIndicator } from '../services/SelectionIndicator.js'
-import { createRepository } from '../core/EntityRepository.js'
 import { canMove, isPlayerUnit } from '../utils/entityUtils.js'
 
 export class SelectionSystem {
   constructor (gameEngine) {
     this.gameEngine = gameEngine
     this.selectionIndicator = null
-    this.repository = null
     this.isDestroyed = false
   }
 
@@ -22,7 +20,6 @@ export class SelectionSystem {
     // Получаем rendererSystem из gameEngine (устанавливается при инициализации RendererSystem)
     this.rendererSystem = this.gameEngine.rendererSystem || null
     this.selectionIndicator = new SelectionIndicator(this.gameEngine, this.rendererSystem)
-    this.repository = createRepository(this.gameEngine.state)
 
     // Pass transformer to selection indicator
     if (this.selectionIndicator && this.gameEngine.transformer) {
@@ -367,7 +364,6 @@ export class SelectionSystem {
       this.selectionIndicator = null
     }
 
-    this.repository = null
     this.gameEngine = null
   }
 }

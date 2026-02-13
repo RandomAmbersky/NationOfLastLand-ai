@@ -4,14 +4,12 @@
  */
 
 import { GameApi } from '../api/GameApi.js'
-import { createRepository } from '../core/EntityRepository.js'
 import { createEntityData } from '../utils/entityUtils.js'
 
 export class GameStateSystem {
   constructor (gameEngine, gameApi = null) {
     this.gameEngine = gameEngine
     this.gameApi = gameApi || new GameApi()
-    this.repository = createRepository(gameEngine.state)
     this.isDestroyed = false
     this._unsubscribeHandlers = []
   }
@@ -34,7 +32,7 @@ export class GameStateSystem {
       }, 'gameInitialized')
 
       if (gameState.entities) {
-        const entitiesMap = this.repository.getEntities()
+        const entitiesMap = this.gameEngine.state.get('entities')
         for (const entity of gameState.entities) {
           const normalizedEntity = createEntityData(entity)
           entitiesMap.set(entity.id, normalizedEntity)
@@ -169,7 +167,7 @@ export class GameStateSystem {
       }, 'gameStateUpdated')
 
       if (gameState.entities) {
-        const entitiesMap = this.repository.getEntities()
+        const entitiesMap = this.gameEngine.state.get('entities')
         for (const entity of gameState.entities) {
           const normalizedEntity = createEntityData(entity)
           entitiesMap.set(entity.id, normalizedEntity)
@@ -202,7 +200,6 @@ export class GameStateSystem {
     this._unsubscribeHandlers = []
 
     this.gameApi = null
-    this.repository = null
     this.gameEngine = null
   }
 

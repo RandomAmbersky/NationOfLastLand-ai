@@ -4,20 +4,17 @@
  */
 
 import { drawEntity } from '../utils/entityDrawer.js'
-import { createRepository } from '../core/EntityRepository.js'
 export class EntitySpawnSystem {
   constructor (gameEngine) {
     this.gameEngine = gameEngine
     this.spawnQueue = []
     this.deletionQueue = new Set()
-    this.repository = null
     this.isDestroyed = false
   }
 
   init (app) {
     this.app = app
     this.renderer = this.app || null
-    this.repository = createRepository(this.gameEngine.state)
   }
 
   /**
@@ -44,7 +41,7 @@ export class EntitySpawnSystem {
     if (this.spawnQueue.length === 0) return []
 
     const createdEntities = []
-    const entities = this.repository.getEntities()
+    const entities = this.gameEngine.state.get('entities')
 
     for (const entityData of this.spawnQueue) {
       const entity = this._createEntity(entityData)
@@ -67,7 +64,7 @@ export class EntitySpawnSystem {
     if (this.deletionQueue.size === 0) return 0
 
     let deletedCount = 0
-    const entities = this.repository.getEntities()
+    const entities = this.gameEngine.state.get('entities')
 
     for (const id of this.deletionQueue) {
       if (entities.has(id)) {
@@ -156,7 +153,6 @@ export class EntitySpawnSystem {
     // Clear queues
     this.spawnQueue = []
     this.deletionQueue.clear()
-    this.repository = null
     this.gameEngine = null
     this.app = null
   }
