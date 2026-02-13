@@ -19,6 +19,7 @@ export class RendererSystem extends TransformerProvider {
     this.gridContainer = null
     this.isDestroyed = false
     this.entityRepository = null
+    this._unsubscribeEntityUpdates = null
   }
 
   init (app) {
@@ -31,6 +32,10 @@ export class RendererSystem extends TransformerProvider {
     if (!this.transformer && this.app) {
       this.transformer = this.getTransformer()
     }
+    // Subscribe to entity updates
+    this._unsubscribeEntityUpdates = this.gameEngine.state.subscribe('entitiesUpdated', (entities) => {
+      this.handleEntitiesUpdated(entities)
+    })
   }
 
   /**
@@ -285,6 +290,42 @@ export class RendererSystem extends TransformerProvider {
   }
 
   /**
+   * Handle entitiesUpdated event from state
+   * Updates positions of existing entities and creates new ones
+   */
+  handleEntitiesUpdated (entities) {
+    if (!(entities instanceof Map)) return
+
+    const entitiesMap = this.entityRepository.getEntities()
+    
+    for (const [id, entity] of entities) {
+      // Check if entity already exists in repository
+      let storedEntity = this.getEntity(id)
+      
+      if (!storedEntity && entity.gameX !== undefined && entity.gameY !== undefined) {
+        // Create new entity sprite
+        const coords = this._toScreenCoords(entity.gameX, entity.gameY)
+        storedEntity = createEntitySprite(id, coords.x, coords.y, entity)
+        storedEntity.screenX = coords.x
+        storedEntity.screenY = coords.y
+        storedEntity.gameX = entity.gameX
+        storedEntity.gameY = entity.gameY
+        this.entityRepository.add(storedEntity)
+      } else if (storedEntity && entity.gameX !== undefined && entity.gameY !== undefined) {
+        // Update position of existing entity
+        storedEntity.gameX = entity.gameX
+        storedEntity.gameY = entity.gameY
+        // Update container position
+        const coords = this._toScreenCoords(entity.gameX, entity.gameY)
+        storedEntity.container.x = coords.x
+        storedEntity.container.y = coords.y
+        storedEntity.x = coords.x
+        storedEntity.y = coords.y
+      }
+    }
+  }
+
+  /**
    * Отрисовка сущностей (вызывается из GameEngine.render())
    */
   render () {
@@ -303,6 +344,12 @@ export class RendererSystem extends TransformerProvider {
   destroy () {
     if (this.isDestroyed) return
     this.isDestroyed = true
+
+    // Unsubscribe from entity updates
+    if (this._unsubscribeEntityUpdates) {
+      this._unsubscribeEntityUpdates()
+      this._unsubscribeEntityUpdates = null
+    }
 
     if (this.targetIndicator) {
       this.removeFromStage(this.targetIndicator)

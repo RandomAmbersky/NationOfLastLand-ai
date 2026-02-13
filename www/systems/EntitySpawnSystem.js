@@ -141,7 +141,6 @@ export class EntitySpawnSystem extends TransformerProvider {
 
     const graphics = new PIXI.Graphics()
     drawEntity(graphics, entityData)
-    graphics.endFill()
 
     const container = new PIXI.Container()
     container.addChild(graphics)

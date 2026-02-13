@@ -145,13 +145,13 @@
         const inputSystem = new InputSystem(gameEngine);
         const selectionSystem = new SelectionSystem(gameEngine);
         const movementSystem = new MovementSystem(gameEngine);
-        
         // Add systems to engine
         gameEngine.addSystem(gameStateSystem);
         gameEngine.addSystem(rendererSystem);
         gameEngine.addSystem(inputSystem);
         gameEngine.addSystem(selectionSystem);
         gameEngine.addSystem(movementSystem);
+        
         
         // Initialize Pixi.js
         const canvasContainer = document.querySelector('.game-container');
@@ -186,7 +186,6 @@
         // Initialize movement system
         movementSystem.init(app);
         // Update status
-        const statusEl = document.getElementById('status');
         if (statusEl) {
             statusEl.textContent = 'Initializing WASM...';
         }
