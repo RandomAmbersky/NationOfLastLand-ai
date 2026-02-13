@@ -1,213 +1,262 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nation of Last Land - WebAssembly Demo</title>
-    <style>
-        * { box-sizing: border-box; }
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            font-family: Arial, sans-serif;
-            background-color: #1a1a1a;
-            color: #ffffff;
-            overflow: hidden;
-        }
-        .container {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            padding: 10px;
-            gap: 10px;
-        }
-        h1 {
-            text-align: center;
-            color: #4CAF50;
-            margin: 0;
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-        .demo-section {
-            flex: 1;
-            display: flex;
-            gap: 15px;
-            min-height: 0;
-        }
-        .game-container {
-            flex: 0 0 800px;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-        }
-        #game-canvas {
-            flex: 1;
-            border: 2px solid #4CAF50;
-            border-radius: 8px;
-            background-color: #2a2a2a;
-            min-height: 300px;
-            max-height: calc(100vh - 200px);
-        }
-        .controls {
-            background-color: #2a2a2a;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #444;
-            min-width: 280px;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            overflow-y: auto;
-        }
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        label { font-weight: bold; font-size: 0.9rem; }
-        input, select, button {
-            padding: 8px;
-            border: 1px solid #555;
-            border-radius: 4px;
-            background-color: #333;
-            color: #fff;
-            font-size: 0.9rem;
-        }
-        button {
-            background-color: #4CAF50;
-            border: none;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.2s;
-        }
-        button:hover { background-color: #45a049; }
-        #status, #entity-info {
-            padding: 10px;
-            background-color: #333;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.8rem;
-            white-space: pre-wrap;
-            overflow-y: auto;
-            min-height: 40px;
-        }
-        #entity-info { border: 1px solid #4CAF50; }
-        @media (max-width: 768px) {
-            .container { padding: 5px; gap: 5px; }
-            h1 { font-size: 1.2rem; margin-bottom: 5px; }
-            .demo-section { flex-direction: column; gap: 10px; }
-            .controls {
-                min-width: unset;
-                max-width: unset;
-                flex-direction: row;
-                flex-wrap: wrap;
-                padding: 10px;
-                gap: 8px;
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Nation of Last Land - WebAssembly Demo</title>
+        <style>
+            * {
+                box-sizing: border-box;
             }
-            .control-group { flex: 1; min-width: 120px; }
-            #status, #entity-info { font-size: 0.75rem; }
-        }
-        @media (max-width: 480px) {
-            .controls { flex-direction: column; gap: 5px; }
-            .control-group { min-width: unset; }
-            input, select, button { font-size: 0.85rem; padding: 6px; }
-        }
-    </style>
-</head>
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                font-family: Arial, sans-serif;
+                background-color: #1a1a1a;
+                color: #ffffff;
+                overflow: hidden;
+            }
+            .container {
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                padding: 10px;
+                gap: 10px;
+            }
+            h1 {
+                text-align: center;
+                color: #4caf50;
+                margin: 0;
+                font-size: 1.5rem;
+                flex-shrink: 0;
+            }
+            .demo-section {
+                flex: 1;
+                display: flex;
+                gap: 15px;
+                min-height: 0;
+            }
+            .game-container {
+                flex: 0 0 800px;
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+            }
+            #game-canvas {
+                flex: 1;
+                border: 2px solid #4caf50;
+                border-radius: 8px;
+                background-color: #2a2a2a;
+                min-height: 300px;
+                max-height: calc(100vh - 200px);
+            }
+            .controls {
+                background-color: #2a2a2a;
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid #444;
+                min-width: 280px;
+                max-width: 400px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                overflow-y: auto;
+            }
+            .control-group {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+            label {
+                font-weight: bold;
+                font-size: 0.9rem;
+            }
+            input,
+            select,
+            button {
+                padding: 8px;
+                border: 1px solid #555;
+                border-radius: 4px;
+                background-color: #333;
+                color: #fff;
+                font-size: 0.9rem;
+            }
+            button {
+                background-color: #4caf50;
+                border: none;
+                cursor: pointer;
+                font-weight: bold;
+                transition: background-color 0.2s;
+            }
+            button:hover {
+                background-color: #45a049;
+            }
+            #status,
+            #entity-info {
+                padding: 10px;
+                background-color: #333;
+                border-radius: 4px;
+                font-family: monospace;
+                font-size: 0.8rem;
+                white-space: pre-wrap;
+                overflow-y: auto;
+                min-height: 40px;
+            }
+            #entity-info {
+                border: 1px solid #4caf50;
+            }
+            @media (max-width: 768px) {
+                .container {
+                    padding: 5px;
+                    gap: 5px;
+                }
+                h1 {
+                    font-size: 1.2rem;
+                    margin-bottom: 5px;
+                }
+                .demo-section {
+                    flex-direction: column;
+                    gap: 10px;
+                }
+                .controls {
+                    min-width: unset;
+                    max-width: unset;
+                    flex-direction: row;
+                    flex-wrap: wrap;
+                    padding: 10px;
+                    gap: 8px;
+                }
+                .control-group {
+                    flex: 1;
+                    min-width: 120px;
+                }
+                #status,
+                #entity-info {
+                    font-size: 0.75rem;
+                }
+            }
+            @media (max-width: 480px) {
+                .controls {
+                    flex-direction: column;
+                    gap: 5px;
+                }
+                .control-group {
+                    min-width: unset;
+                }
+                input,
+                select,
+                button {
+                    font-size: 0.85rem;
+                    padding: 6px;
+                }
+            }
+        </style>
+    </head>
 
-<body>
-    <div class="container">
-        <h1>Nation of Last Land - WebAssembly Demo</h1>
-        <div class="demo-section">
-            <div class="game-container">
-                <canvas id="game-canvas" width="800" height="600"></canvas>
-            </div>
-            <div class="controls">
-                <div class="control-group">
-                    <label>Status:</label>
-                    <div id="status">Initializing...</div>
+    <body>
+        <div class="container">
+            <h1>Nation of Last Land - WebAssembly Demo</h1>
+            <div class="demo-section">
+                <div class="game-container">
+                    <canvas id="game-canvas" width="800" height="600"></canvas>
+                </div>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Status:</label>
+                        <div id="status">Initializing...</div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
-    <script type="module">
-        import { GameEngine, GameStateSystem, RendererSystem, InputSystem, SelectionSystem, MovementSystem } from './index.js';
-        
-        const gameEngine = new GameEngine();
-        
-        // Initialize systems
-        const gameStateSystem = new GameStateSystem(gameEngine);
-        const rendererSystem = new RendererSystem(gameEngine);
-        const inputSystem = new InputSystem(gameEngine);
-        const selectionSystem = new SelectionSystem(gameEngine);
-        const movementSystem = new MovementSystem(gameEngine);
-        // Add systems to engine
-        gameEngine.addSystem(gameStateSystem);
-        gameEngine.addSystem(rendererSystem);
-        gameEngine.addSystem(inputSystem);
-        gameEngine.addSystem(selectionSystem);
-        gameEngine.addSystem(movementSystem);
-        
-        
-        // Initialize Pixi.js
-        const canvasContainer = document.querySelector('.game-container');
-        const rect = canvasContainer.getBoundingClientRect();
-        
-        const app = new PIXI.Application({
-            width: rect.width,
-            height: rect.height,
-            backgroundColor: 0x2a2a2a,
-            antialias: true,
-            resolution: window.devicePixelRatio || 1,
-            autoDensity: true
-        });
-        
-        const canvas = document.getElementById('game-canvas');
-        if (canvas && canvas.parentNode) {
-            canvas.parentNode.replaceChild(app.view, canvas);
-        }
-        
-        // Store app in gameEngine for systems
-        gameEngine.setApp(app);
-        
-        // Initialize renderer system
-        rendererSystem.init(app);
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+        <script type="module">
+            import {
+                GameEngine,
+                GameStateSystem,
+                RendererSystem,
+                InputSystem,
+                SelectionSystem,
+                MovementSystem,
+            } from "./index.js";
 
-        // Initialize selection system
-        selectionSystem.init(app);
+            const gameEngine = new GameEngine();
 
-        // Initialize input system
-        inputSystem.init(app);
+            // Initialize systems
+            const gameStateSystem = new GameStateSystem(gameEngine);
+            const rendererSystem = new RendererSystem(gameEngine);
+            const inputSystem = new InputSystem(gameEngine);
+            const selectionSystem = new SelectionSystem(gameEngine);
+            const movementSystem = new MovementSystem(gameEngine);
+            // Add systems to engine
+            gameEngine.addSystem(gameStateSystem);
+            gameEngine.addSystem(rendererSystem);
+            gameEngine.addSystem(inputSystem);
+            gameEngine.addSystem(selectionSystem);
+            gameEngine.addSystem(movementSystem);
 
-        // Initialize movement system
-        movementSystem.init(app);
-        // Update status
-        if (statusEl) {
-            statusEl.textContent = 'Initializing WASM...';
-        }
-        
-        // Initialize game
-        gameStateSystem.initializeGame()
-            .then(result => {
-                if (statusEl) {
-                    statusEl.textContent = result.success ? 'Game initialized successfully! Controls: Left-click to select, Right-click to move, Shift+Click to multi-select, Drag to rectangle select, Esc to clear selection.' : `Error: ${result.error}`;
-                }
-                
-                if (result.success) {
-                    gameEngine.start();
-                }
-            })
-            .catch(error => {
-                console.error('Game initialization error:', error);
-                if (statusEl) {
-                    statusEl.textContent = `Error: ${error.message}`;
-                }
+            // Initialize Pixi.js
+            const canvasContainer = document.querySelector(".game-container");
+            const rect = canvasContainer.getBoundingClientRect();
+
+            const app = new PIXI.Application({
+                width: rect.width,
+                height: rect.height,
+                backgroundColor: 0x2a2a2a,
+                antialias: true,
+                resolution: window.devicePixelRatio || 1,
+                autoDensity: true,
             });
-    </script>
-</body>
 
+            const canvas = document.getElementById("game-canvas");
+            if (canvas && canvas.parentNode) {
+                canvas.parentNode.replaceChild(app.view, canvas);
+            }
+
+            // Store app in gameEngine for systems
+            gameEngine.setApp(app);
+
+            // Initialize renderer system
+            rendererSystem.init(app);
+
+            // Initialize selection system
+            selectionSystem.init(app);
+
+            // Initialize input system
+            inputSystem.init(app);
+
+            // Initialize movement system
+            movementSystem.init(app);
+
+            // Get status element
+            const statusEl = document.getElementById("status");
+
+            // Update status
+            if (statusEl) {
+                statusEl.textContent = "Initializing WASM...";
+            }
+
+            // Initialize game
+            gameStateSystem
+                .initializeGame()
+                .then((result) => {
+                    if (statusEl) {
+                        statusEl.textContent = result.success
+                            ? "Game initialized successfully! Controls: Left-click to select, Right-click to move, Shift+Click to multi-select, Drag to rectangle select, Esc to clear selection."
+                            : `Error: ${result.error}`;
+                    }
+
+                    if (result.success) {
+                        gameEngine.start();
+                    }
+                })
+                .catch((error) => {
+                    console.error("Game initialization error:", error);
+                    if (statusEl) {
+                        statusEl.textContent = `Error: ${error.message}`;
+                    }
+                });
+        </script>
+    </body>
 </html>
