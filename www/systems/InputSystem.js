@@ -4,9 +4,9 @@
  */
 
 import { GAME_CONFIG } from '../config/game-config.js'
-import { withTransformer } from '../utils/TransformerMixin.js'
+import { TransformerProvider } from '../utils/TransformerMixin.js'
 
-export class InputSystem extends withTransformer(class {}) {
+export class InputSystem extends TransformerProvider {
   constructor (gameEngine, rendererSystem = null) {
     super()
     this.gameEngine = gameEngine
@@ -25,9 +25,9 @@ export class InputSystem extends withTransformer(class {}) {
       this.rendererSystem = this.gameEngine.rendererSystem
     }
     
-    // Initialize transformer via mixin's _getTransformer() fallback chain
+    // Initialize transformer via mixin's getTransformer() fallback chain
     if (!this.transformer) {
-      this.transformer = this._getTransformer()
+      // use TransformerProvider.getTransformer()
     }
     
     this.setupEventListeners()
@@ -154,7 +154,7 @@ export class InputSystem extends withTransformer(class {}) {
      }
 
      const { screenX, screenY } = this._getCanvasCoords(event)
-     const transformer = this._getTransformer()
+     const transformer = this.getTransformer()
      const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
 
      const entityAtPosition = this._findEntityAtPosition(screenX, screenY)
@@ -178,7 +178,7 @@ export class InputSystem extends withTransformer(class {}) {
     if (!this.gameEngine.state.get('isRunning')) return
 
     const { screenX, screenY } = this._getCanvasCoords(event)
-    const transformer = this._getTransformer()
+    const transformer = this.getTransformer()
     const entityId = this._findEntityAtPosition(screenX, screenY)
 
      if (entityId !== null) {
@@ -353,7 +353,7 @@ export class InputSystem extends withTransformer(class {}) {
      const entities = this.gameEngine.state.get('entities')
      if (!(entities instanceof Map)) return null
 
-     const transformer = this._getTransformer()
+     const transformer = this.getTransformer()
      const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
      
      // Ищем сущность, которая отрисована и содержит точку

@@ -23,13 +23,8 @@ export { EntitySpawnSystem, createEntitySpawnSystem } from "./systems/EntitySpaw
 export { calculateDistance, calculateDistanceBetween, clamp, lerp } from "./utils/math.js"
 export { CoordinateTransformer, createCoordinateTransformer } from "./utils/coordinate-transformer.js"
 export { createEntitySprite, getEntityColor, drawEntity, drawEntityShape, drawBaseShape, drawAlertShape } from "./utils/entity-drawer.js"
-export {
-  createDisposable,
-  TimerManager,
-  EventManager,
-  GraphicsCleanup,
-  Cleanupable
-} from "./utils/cleanup.js"
+export { createDisposable, TimerManager, EventManager, GraphicsCleanup, Cleanupable } from "./utils/cleanup.js"
+export { TransformerProvider, TransformerMixin } from "./utils/TransformerMixin.js"
 export {
   createEntityData,
   findPlayerBase,
@@ -98,6 +93,8 @@ export default {
   EventManager,
   GraphicsCleanup,
   Cleanupable,
+  TransformerProvider,
+  TransformerMixin,
   
   // WASM
   initWasm,

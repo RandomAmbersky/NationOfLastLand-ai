@@ -7,10 +7,10 @@
 import { GAME_CONFIG } from '../config/game-config.js'
 import { SelectionIndicator } from '../services/SelectionIndicator.js'
 import { createRepository } from '../core/EntityRepository.js'
-import { withTransformer } from '../utils/TransformerMixin.js'
+import { TransformerProvider } from '../utils/TransformerMixin.js'
 import { canMove, isPlayerUnit } from '../utils/entity-utils.js'
 
-export class SelectionSystem extends withTransformer(class {}) {
+export class SelectionSystem extends TransformerProvider {
   constructor(gameEngine) {
     super()
     this.gameEngine = gameEngine
@@ -26,9 +26,9 @@ export class SelectionSystem extends withTransformer(class {}) {
     this.selectionIndicator = new SelectionIndicator(this.gameEngine, this.rendererSystem)
     this.repository = createRepository(this.gameEngine.state)
     
-    // Initialize transformer via mixin's _getTransformer() fallback chain
+    // Initialize transformer via mixin's getTransformer() fallback chain
     if (!this.transformer) {
-      this.transformer = this._getTransformer()
+      this.transformer = this.getTransformer()
     }
     
     // Set transformer on selection indicator

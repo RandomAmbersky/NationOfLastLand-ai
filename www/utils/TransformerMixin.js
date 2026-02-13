@@ -1,42 +1,36 @@
 /**
- * TransformerMixin - Provides consistent transformer handling across systems
- * Eliminates duplicate transformer initialization logic
+ * TransformerProvider - Provides consistent transformer handling across systems
+ * Replaces TransformerMixin with cleaner composition pattern
  */
 
 import { createCoordinateTransformer } from './coordinate-transformer.js'
 
 /**
- * Returns a class that extends the given base class with transformer functionality
- * @param {Function} BaseClass - Base class to extend
- * @returns {Function} Extended class
+ * Shared transformer provider that can be composed into classes
+ * Manages transformer through explicit injection or fallback chain
  */
-export function withTransformer(BaseClass) {
-  return class extends BaseClass {
-    transformer = null
+export class TransformerProvider {
+  constructor() {
+    this.transformer = null
+  }
 
-    /**
-     * Set the transformer instance
-     * @param {Object} transformer - CoordinateTransformer instance
-     */
-    setTransformer(transformer) {
-      this.transformer = transformer
-    }
+  setTransformer(transformer) {
+    this.transformer = transformer
+  }
 
-    /**
-     * Get the transformer, with fallback chain
-     * @returns {Object|null} CoordinateTransformer or null
-     */
-    _getTransformer() {
-      if (this.transformer) return this.transformer
+  getTransformer() {
+    if (this.transformer) return this.transformer
+    if (this.gameEngine?.transformer) return this.gameEngine.transformer
+    if (this.rendererSystem?.transformer) return this.rendererSystem.transformer
+    if (this.app) return this.transformer
+    return null
+  }
 
-      // Fallback chain
-      if (this.gameEngine?.transformer) return this.gameEngine.transformer
-      if (this.rendererSystem?.transformer) return this.rendererSystem.transformer
-      if (this.app) {
-        return this.transformer = createCoordinateTransformer(this.app)
-      }
-
-      return null
-    }
+  initTransformerFromApp(app) {
+    if (!app) return null
+    this.transformer = createCoordinateTransformer(app)
+    return this.transformer
   }
 }
+
+export class TransformerMixin extends TransformerProvider {}
