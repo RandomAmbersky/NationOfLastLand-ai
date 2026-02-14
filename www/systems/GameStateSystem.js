@@ -15,7 +15,6 @@ export class GameStateSystem {
   }
 
   async initializeGame () {
-    // GameApi is auto-created if not provided
     if (!this.gameApi) {
       return { success: false, error: 'GameApi not initialized' }
     }

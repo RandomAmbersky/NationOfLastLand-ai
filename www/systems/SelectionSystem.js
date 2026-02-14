@@ -15,9 +15,7 @@ export class SelectionSystem {
     this.isDestroyed = false
   }
 
-  init (app) {
-    this.app = app
-    // Получаем rendererSystem из gameEngine (устанавливается при инициализации RendererSystem)
+  init () {
     this.rendererSystem = this.gameEngine.rendererSystem || null
     this.selectionIndicator = new SelectionIndicator(this.gameEngine, this.rendererSystem)
 
