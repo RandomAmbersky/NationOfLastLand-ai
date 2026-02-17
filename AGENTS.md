@@ -31,6 +31,14 @@ This document provides essential information for agents working in this codebase
 - **Development Server**: Node.js with serve package
 - **Testing**: Jest with jsdom environment
 
+### Frontend (TypeScript)
+- **Web Framework**: Vanilla TypeScript with Pixi.js for rendering
+- **Build System**: TypeScript compiler (tsc)
+- **Test Framework**: Jest with ts-jest
+- **Development Server**: Node.js with Express
+- **Type Safety**: Full TypeScript with strict mode enabled
+- **Project Location**: `www-ts/` directory (original JS in `www/`)
+
 ## Project Structure
 
 ```
@@ -104,6 +112,31 @@ This document provides essential information for agents working in this codebase
 │   │   └── game-config.js
 │   ├── pkg/                # Compiled WASM output
 │   └── *.test.js           # Jest test files
+├── www-ts/                 # Web frontend - TypeScript version
+│   ├── index.ts            # Centralized exports
+│   ├── core/               # Core engine modules (TypeScript)
+│   │   ├── GameEngine.ts
+│   │   ├── StateContainer.ts
+│   │   └── ...             # TypeScript versions of core modules
+│   ├── systems/            # Game systems (TypeScript)
+│   │   ├── RendererSystem.ts
+│   │   ├── InputSystem.ts
+│   │   ├── SelectionSystem.ts
+│   │   ├── GameStateSystem.ts
+│   │   └── EntitySpawnSystem.ts
+│   ├── utils/              # Utility functions (TypeScript)
+│   │   ├── entity-utils.ts
+│   │   ├── cleanup.ts
+│   │   ├── math.ts
+│   │   └── coordinate-transformer.ts
+│   ├── services/           # Service modules (TypeScript)
+│   │   └── SelectionIndicator.ts
+│   ├── api/                # Game API (TypeScript)
+│   │   └── GameApi.ts
+│   ├── config/             # Frontend configuration (TypeScript)
+│   │   └── game-config.ts
+│   ├── pkg/                # Compiled WASM output
+│   └── *.test.ts           # Jest test files
 ├── examples/               # Rust examples
 │   └── selection_rules.rs
 ├── docs/                   # Documentation
