@@ -208,20 +208,22 @@
             gameEngine.addSystem(selectionSystem);
             gameEngine.addSystem(movementSystem);
 
-            // Initialize Pixi.js
+            // Initialize Pixi.js - use canvas dimensions so size is correct before layout
+            const canvas = document.getElementById("game-canvas");
             const canvasContainer = document.querySelector(".game-container");
             const rect = canvasContainer.getBoundingClientRect();
+            const width = Math.max(rect.width || 0, canvas?.width || 800);
+            const height = Math.max(rect.height || 0, canvas?.height || 600);
 
             const app = new PIXI.Application({
-                width: rect.width,
-                height: rect.height,
+                width,
+                height,
                 backgroundColor: 0x2a2a2a,
                 antialias: true,
                 resolution: window.devicePixelRatio || 1,
                 autoDensity: true,
             });
 
-            const canvas = document.getElementById("game-canvas");
             if (canvas && canvas.parentNode) {
                 canvas.parentNode.replaceChild(app.view, canvas);
             }

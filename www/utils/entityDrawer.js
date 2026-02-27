@@ -37,50 +37,54 @@ export function getEntityColor (vehicleType, faction) {
   return vehicleColors[faction] || vehicleColors.Neutral
 }
 
+/** Stroke a rectangle (same API as grid: lineStyle + path) so it always renders */
+function strokeRect (g, x, y, w, h) {
+  g.moveTo(x, y)
+  g.lineTo(x + w, y)
+  g.lineTo(x + w, y + h)
+  g.lineTo(x, y + h)
+  g.lineTo(x, y)
+}
+
 /**
- * Draw entity shape on graphics
- * @param {PIXI.Graphics} graphics - Graphics object
- * @param {string} vehicleType - Vehicle type (scout, tank, transport)
+ * Draw entity shape as path for stroke
  */
 export function drawEntityShape (graphics, vehicleType) {
   switch (vehicleType) {
     case 'scout':
-      graphics.drawRect(-4, -4, 8, 8)
+      strokeRect(graphics, -4, -4, 8, 8)
       break
     case 'tank':
-      graphics.drawRect(-10, -8, 20, 16)
+      strokeRect(graphics, -10, -8, 20, 16)
       break
     case 'transport':
-      graphics.drawRect(-12, -10, 24, 20)
+      strokeRect(graphics, -12, -10, 24, 20)
       break
     default:
-      graphics.drawRect(-4, -4, 8, 8)
+      strokeRect(graphics, -4, -4, 8, 8)
   }
 }
 
 /**
- * Draw base shape on graphics
- * @param {PIXI.Graphics} graphics - Graphics object
+ * Draw base shape as path for stroke
  */
 export function drawBaseShape (graphics) {
-  graphics.drawRect(-15, -15, 30, 30)
+  strokeRect(graphics, -15, -15, 30, 30)
 }
 
 /**
- * Draw alert shape on graphics
- * @param {PIXI.Graphics} graphics - Graphics object
+ * Draw alert shape - triangle path
  */
 export function drawAlertShape (graphics) {
   graphics.moveTo(0, -8)
   graphics.lineTo(6, 6)
   graphics.lineTo(-6, 6)
-  graphics.closePath()
+  graphics.lineTo(0, -8)
 }
 
 /**
- * Draw full entity (vehicle/base/alert) with correct color
- * @param {PIXI.Graphics} graphics - Graphics object
- * @param {Object} entityData - Entity data with type, vehicleType, fraction
+ * Draw full entity: use lineStyle + path (same as grid) so it renders in PixiJS 7.
+ * Outline only — fill API was not drawing.
  */
 export function drawEntity (graphics, entityData) {
   const entityType = entityData.entity_type || 'vehicle'
@@ -91,18 +95,21 @@ export function drawEntity (graphics, entityData) {
 
   if (entityType === 'base') {
     color = GAME_CONFIG.COLORS.base
-    graphics.beginFill(color)
-    drawBaseShape(graphics)
   } else if (entityType === 'alert') {
     color = GAME_CONFIG.COLORS.alert
-    graphics.beginFill(color)
-    drawAlertShape(graphics)
   } else {
     color = getEntityColor(vehicleType, faction)
-    graphics.beginFill(color)
+  }
+
+  graphics.lineStyle(2, color, 1)
+
+  if (entityType === 'base') {
+    drawBaseShape(graphics)
+  } else if (entityType === 'alert') {
+    drawAlertShape(graphics)
+  } else {
     drawEntityShape(graphics, vehicleType)
   }
-  graphics.endFill()
 }
 
 /**

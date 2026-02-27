@@ -12,6 +12,8 @@ export class RendererSystem {
     this.gameEngine = gameEngine
     this.coordinateService = coordinateService
     this.app = null
+    this.entityLayer = null
+    this._scaleInvalidatedOnce = false
     this.targetIndicator = null
     this.alertHighlight = null
     this.gridContainer = null
@@ -103,11 +105,7 @@ export class RendererSystem {
       console.error('RendererSystem.addToStage: container is null/undefined!')
       return
     }
-    if (!this.app) {
-      console.error('RendererSystem.addToStage: app is null! container:', container)
-      return
-    }
-    console.log('RendererSystem.addToStage: Adding container to stage, children count:', container.children?.length)
+    if (!this.app) return
     this.app.stage.addChild(container)
   }
 
@@ -268,7 +266,7 @@ export class RendererSystem {
     }
 
     this.gridContainer.addChild(gridGraphics)
-    this.addToStage(this.gridContainer)
+    this.app.stage.addChild(this.gridContainer)
   }
 
   updateGrid () {
@@ -287,10 +285,20 @@ export class RendererSystem {
   handleEntitiesUpdated (entities) {
     if (!entities || !(entities instanceof Map)) return
 
+    const stateEntities = this.gameEngine.state.get('entities')
+    const size = entities.size
+    let didChange = false
+
+    if (size > 0 && !this._scaleInvalidatedOnce && this.gameEngine.transformer?.invalidateScaleCache) {
+      this.gameEngine.transformer.invalidateScaleCache()
+      this._scaleInvalidatedOnce = true
+    }
+
     for (const [id, entity] of entities) {
       let storedEntity = this.getEntity(id)
+      const needsSprite = (!storedEntity || !storedEntity.container) && entity.gameX !== undefined && entity.gameY !== undefined
 
-      if (!storedEntity && entity.gameX !== undefined && entity.gameY !== undefined) {
+      if (needsSprite) {
         const coords = this._toScreenCoords(entity.gameX, entity.gameY)
         storedEntity = createEntitySprite(id, coords.x, coords.y, entity)
         storedEntity.screenX = coords.x
@@ -298,11 +306,9 @@ export class RendererSystem {
         storedEntity.gameX = entity.gameX
         storedEntity.gameY = entity.gameY
         this.addToStage(storedEntity.container)
-        // Добавляем в state.entities
-        const entities = this.gameEngine.state.get('entities')
-        entities.set(storedEntity.id, storedEntity)
-        this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
-      } else if (storedEntity && storedEntity.container && entity.gameX !== undefined && entity.gameY !== undefined) {
+        stateEntities.set(storedEntity.id, storedEntity)
+        didChange = true
+      } else if (storedEntity?.container && entity.gameX !== undefined && entity.gameY !== undefined) {
         storedEntity.gameX = entity.gameX
         storedEntity.gameY = entity.gameY
         const coords = this._toScreenCoords(entity.gameX, entity.gameY)
@@ -311,6 +317,10 @@ export class RendererSystem {
         storedEntity.x = coords.x
         storedEntity.y = coords.y
       }
+    }
+
+    if (didChange) {
+      this.gameEngine.state.merge({ entities: stateEntities }, 'entitiesUpdated')
     }
   }
 
@@ -355,9 +365,15 @@ export class RendererSystem {
     }
 
     if (this.gridContainer) {
-      this.removeFromStage(this.gridContainer)
+      if (this.gridContainer.parent) this.gridContainer.parent.removeChild(this.gridContainer)
       this.gridContainer.destroy({ children: true, texture: true, baseTexture: true })
       this.gridContainer = null
+    }
+
+    if (this.entityLayer) {
+      if (this.entityLayer.parent) this.entityLayer.parent.removeChild(this.entityLayer)
+      this.entityLayer.destroy({ children: true })
+      this.entityLayer = null
     }
 
     if (this.entitySpawnSystem) {

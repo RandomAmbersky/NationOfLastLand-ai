@@ -38,10 +38,13 @@ export class CoordinateTransformer {
     if (!this.app) return { x: 1, y: 1 }
 
     if (!this._scaleCache) {
-      const canvas = this.app.view
+      const w = this.app.screen?.width ?? this.app.view?.width ?? GAME_CONFIG.WORLD_SIZE.width
+      const h = this.app.screen?.height ?? this.app.view?.height ?? GAME_CONFIG.WORLD_SIZE.height
+      const scaleX = (w && Number.isFinite(w)) ? w / GAME_CONFIG.WORLD_SIZE.width : 1
+      const scaleY = (h && Number.isFinite(h)) ? h / GAME_CONFIG.WORLD_SIZE.height : 1
       this._scaleCache = {
-        x: canvas.width / GAME_CONFIG.WORLD_SIZE.width,
-        y: canvas.height / GAME_CONFIG.WORLD_SIZE.height
+        x: Number.isFinite(scaleX) ? scaleX : 1,
+        y: Number.isFinite(scaleY) ? scaleY : 1
       }
     }
     return this._scaleCache

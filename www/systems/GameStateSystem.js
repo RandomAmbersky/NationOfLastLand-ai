@@ -30,7 +30,7 @@ export class GameStateSystem {
         alertsCount: gameState.alerts_count
       }, 'gameInitialized')
 
-      if (gameState.entities) {
+      if (gameState.entities && gameState.entities.length > 0) {
         const entitiesMap = this.gameEngine.state.get('entities')
         for (const entity of gameState.entities) {
           const normalizedEntity = createEntityData(entity)
