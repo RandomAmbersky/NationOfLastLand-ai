@@ -187,7 +187,11 @@
                 InputSystem,
                 SelectionSystem,
                 MovementSystem,
+                initWasm,
             } from "./index.js";
+
+            // Load WASM module first (required before any game init / get_entities_data etc.)
+            await initWasm();
 
             const gameEngine = new GameEngine();
 
