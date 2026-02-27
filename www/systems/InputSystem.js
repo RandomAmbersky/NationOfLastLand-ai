@@ -132,7 +132,7 @@ export class InputSystem {
     drag.hasDragged = false
 
     if (drag.graphics) {
-      this.rendererSystem?.removeFromStage({ container: drag.graphics })
+      this.rendererSystem?.removeFromStage(drag.graphics)
       drag.graphics = null
     }
   }
@@ -212,7 +212,7 @@ export class InputSystem {
   _cleanupDragGraphics () {
     const drag = this.dragState
     if (drag.graphics && !drag.isDragging) {
-      this.rendererSystem?.removeFromStage({ container: drag.graphics })
+      this.rendererSystem?.removeFromStage(drag.graphics)
       drag.graphics = null
     }
   }
@@ -241,7 +241,7 @@ export class InputSystem {
     drag.mouseLeftCanvas = false
 
     if (drag.graphics) {
-      this.rendererSystem?.removeFromStage({ container: drag.graphics })
+      this.rendererSystem?.removeFromStage(drag.graphics)
       drag.graphics = null
     }
 
@@ -294,7 +294,7 @@ export class InputSystem {
     drag.mouseLeftCanvas = false
 
     if (drag.graphics) {
-      this.rendererSystem?.removeFromStage({ container: drag.graphics })
+      this.rendererSystem?.removeFromStage(drag.graphics)
       drag.graphics = null
     }
   }
@@ -311,7 +311,7 @@ export class InputSystem {
     }
 
     if (drag.graphics) {
-      this.rendererSystem?.removeFromStage({ container: drag.graphics })
+      this.rendererSystem?.removeFromStage(drag.graphics)
       drag.graphics = null
     }
   }

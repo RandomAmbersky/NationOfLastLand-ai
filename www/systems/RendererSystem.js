@@ -194,11 +194,10 @@ export class RendererSystem {
    */
   removeEntity (id) {
     const entities = this.gameEngine.state.get('entities')
+    const entity = entities.get(id)
     entities.delete(id)
     this.gameEngine.state.merge({ entities }, 'entitiesUpdated')
 
-    // Also remove from stage if exists
-    const entity = entities.get(id)
     if (entity && entity.container) {
       this.removeFromStage(entity.container)
       entity.container.destroy({ children: true, texture: true, baseTexture: true })

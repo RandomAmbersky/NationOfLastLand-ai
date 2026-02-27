@@ -223,6 +223,14 @@ export class GameStateSystem {
       return null
     }
   }
+
+  /**
+   * Get GameApi instance for wiring WASM calls from outside (e.g. index.html)
+   * @returns {GameApi}
+   */
+  getApi () {
+    return this.gameApi
+  }
 }
 
 export function createGameStateSystem (gameEngine, gameApi = null) {

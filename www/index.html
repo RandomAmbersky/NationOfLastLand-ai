@@ -260,6 +260,46 @@
                     if (result.success) {
                         gameEngine.start();
 
+                        // Wire state events to SelectionSystem and WASM (GameApi)
+                        const gameApi = gameStateSystem.getApi();
+                        if (gameApi) {
+                            gameEngine.state.subscribe("entityClicked", (data) => {
+                                try {
+                                    gameApi.handleEntitySelection(data.gameX, data.gameY);
+                                } catch (e) {
+                                    console.warn("GameApi.handleEntitySelection:", e);
+                                }
+                                selectionSystem.handleEntityClicked(data);
+                            });
+                            gameEngine.state.subscribe("entitySelected", (data) => {
+                                try {
+                                    gameApi.clearSelection();
+                                    gameApi.selectEntity(data.entityId);
+                                } catch (e) {
+                                    console.warn("GameApi select entity:", e);
+                                }
+                                selectionSystem.handleEntitySelected(data);
+                            });
+                            gameEngine.state.subscribe("selectionCleared", () => {
+                                try {
+                                    gameApi.clearSelection();
+                                } catch (e) {
+                                    console.warn("GameApi.clearSelection:", e);
+                                }
+                                selectionSystem.handleSelectionCleared();
+                            });
+                            gameEngine.state.subscribe("rectangleSelection", (data) => {
+                                selectionSystem.handleRectangleSelection(data);
+                            });
+                            gameEngine.state.subscribe("groupTargetSet", (data) => {
+                                try {
+                                    gameApi.setGroupTarget(data.targetX, data.targetY);
+                                } catch (e) {
+                                    console.warn("GameApi.setGroupTarget:", e);
+                                }
+                            });
+                        }
+
                         // Setup update buttons
                         updateOnceBtn.addEventListener("click", () => {
                             console.log("Update Once clicked");
