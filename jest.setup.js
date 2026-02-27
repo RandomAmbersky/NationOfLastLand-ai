@@ -65,6 +65,8 @@ global.PIXI = {
       if (idx > -1) this.children.splice(idx, 1)
       return child
     }
+
+    destroy () { return this }
   },
   Text: class {
     constructor (text, style = {}) {
