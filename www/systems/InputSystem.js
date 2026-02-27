@@ -346,18 +346,18 @@ export class InputSystem {
     if (!(entities instanceof Map)) return null
 
     const transformer = this.gameEngine.transformer
-    const { gameX, gameY } = transformer.screenToGame(screenX, screenY)
+    if (!transformer) return null
 
-    // Ищем сущность, которая отрисована и содержит точку
-    const hitRadius = GAME_CONFIG.LIMITS.entityHitRadius ?? 15
+    // Hit test in screen space (radius in pixels) so behaviour is consistent at any canvas size
+    const hitRadiusPx = GAME_CONFIG.LIMITS.entityHitRadius ?? 20
 
     for (const [id, entity] of entities) {
       const entityGameX = entity.gameX ?? entity.position?.x ?? 0
       const entityGameY = entity.gameY ?? entity.position?.y ?? 0
-
-      // Сравниваем в игровых координатах
-      if (Math.abs(gameX - entityGameX) <= hitRadius &&
-           Math.abs(gameY - entityGameY) <= hitRadius) {
+      const entityScreen = transformer.gameToScreen(entityGameX, entityGameY)
+      const dx = screenX - entityScreen.x
+      const dy = screenY - entityScreen.y
+      if (dx * dx + dy * dy <= hitRadiusPx * hitRadiusPx) {
         return id
       }
     }

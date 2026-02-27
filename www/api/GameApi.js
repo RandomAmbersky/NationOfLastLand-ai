@@ -44,7 +44,7 @@ export class GameApi {
    * @param {Function} [wasm.deselect_entity] - Deselect entity
    * @param {Function} [wasm.clear_selection] - Clear all selections
    * @param {Function} [wasm.set_group_target] - Set target for selected group
-   * @param {Function} [wasm.handle_entity_selection] - Handle entity click
+   * @param {Function} [wasm.handle_entity_selection] - Handle entity click (entityId, isMultiSelect, currentSelectedIds)
    * @param {Function} [wasm.create_base] - Create player base
    * @param {Function} [wasm.build_floor] - Build floor on base
    * @param {Function} [wasm.get_entity_info] - Get entity info
@@ -62,7 +62,8 @@ export class GameApi {
         deselect_entity: (id) => deselect_entity(id),
         clear_selection: () => clear_selection(),
         set_group_target: (x, y) => set_group_target(x, y),
-        handle_entity_selection: (x, y) => handle_entity_selection(x, y),
+        handle_entity_selection: (entityId, isMultiSelect, currentSelectedIds) =>
+          handle_entity_selection(entityId, isMultiSelect, currentSelectedIds),
         create_base: (x, y) => create_base(x, y),
         build_floor: (baseId, floorType) => build_floor(baseId, floorType),
         get_entity_info: (id) => get_entity_info(id),
@@ -174,15 +175,17 @@ export class GameApi {
   }
 
   /**
-   * Handle entity selection on click
-   * @param {number} x - Click X coordinate
-   * @param {number} y - Click Y coordinate
+   * Handle entity selection on click (syncs with WASM selection rules).
+   * @param {number} entityId - Clicked entity ID
+   * @param {boolean} isMultiSelect - Whether shift was held
+   * @param {number[]} currentSelectedIds - Current selection IDs before this click
    */
-  handleEntitySelection (x, y) {
+  handleEntitySelection (entityId, isMultiSelect, currentSelectedIds) {
     if (!this.wasm.handle_entity_selection) {
       throw new Error('GameApi: handle_entity_selection function not available')
     }
-    this.wasm.handle_entity_selection(x, y)
+    const ids = Array.isArray(currentSelectedIds) ? currentSelectedIds : Array.from(currentSelectedIds || [])
+    this.wasm.handle_entity_selection(entityId, isMultiSelect, ids)
   }
 
   /**

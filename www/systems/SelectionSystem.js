@@ -53,12 +53,16 @@ export class SelectionSystem {
       console.warn('handleEntityClicked: clickedEntity not found for id', entityId)
       return
     }
+    if (!selections || !(selections instanceof Set)) {
+      console.warn('handleEntityClicked: selections not a Set')
+      return
+    }
 
     // Правило 1: Если ничего не выбрано - просто выбираем юнит
     if (selections.size === 0) {
       selections.add(entityId)
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      this.selectionIndicator?.updateIndicators(selections)
       return
     }
 
@@ -70,7 +74,7 @@ export class SelectionSystem {
       selections.clear()
       selections.add(entityId)
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      this.selectionIndicator?.updateIndicators(selections)
       return
     }
 
@@ -81,7 +85,7 @@ export class SelectionSystem {
         selections.clear()
         selections.add(entityId)
         state.merge({ selections }, 'selectionsChanged')
-        this.selectionIndicator.updateIndicators(selections)
+        this.selectionIndicator?.updateIndicators(selections)
         return
       }
     }
@@ -105,7 +109,7 @@ export class SelectionSystem {
         if (selections.size < GAME_CONFIG.LIMITS.maxGroupSize) {
           selections.add(entityId)
           state.merge({ selections }, 'selectionsChanged')
-          this.selectionIndicator.updateIndicators(selections)
+          this.selectionIndicator?.updateIndicators(selections)
         }
       }
       return
@@ -120,7 +124,7 @@ export class SelectionSystem {
     if (selections.size === 1 && this._isPlayerUnit(clickedEntity) && this._canMove(clickedEntity)) {
       selections.add(entityId)
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      this.selectionIndicator?.updateIndicators(selections)
       return
     }
 
@@ -129,7 +133,7 @@ export class SelectionSystem {
       selections.clear()
       selections.add(entityId)
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      this.selectionIndicator?.updateIndicators(selections)
       return
     }
 
@@ -138,7 +142,7 @@ export class SelectionSystem {
       selections.clear()
       selections.add(entityId)
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      this.selectionIndicator?.updateIndicators(selections)
     }
   }
 
@@ -158,7 +162,7 @@ export class SelectionSystem {
     selections.clear()
     selections.add(entityId)
     state.merge({ selections }, 'selectionsChanged')
-    this.selectionIndicator.updateIndicators(selections)
+    this.selectionIndicator?.updateIndicators(selections)
   }
 
   /**
@@ -171,7 +175,7 @@ export class SelectionSystem {
     if (selections.size > 0) {
       selections.clear()
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      this.selectionIndicator?.updateIndicators(selections)
     }
   }
 
@@ -207,7 +211,7 @@ export class SelectionSystem {
 
     if (addedCount > 0) {
       state.merge({ selections }, 'selectionsChanged')
-      this.selectionIndicator.updateIndicators(selections)
+      this.selectionIndicator?.updateIndicators(selections)
     }
     return addedCount
   }
@@ -239,7 +243,7 @@ export class SelectionSystem {
       selections.delete(entityId)
       state.merge({ selections }, 'selectionsChanged')
       if (this.selectionIndicator) {
-        this.selectionIndicator.updateIndicators(selections)
+        this.selectionIndicator?.updateIndicators(selections)
       }
       return true
     }
@@ -254,7 +258,7 @@ export class SelectionSystem {
       selections.clear()
       state.merge({ selections }, 'selectionsChanged')
       if (this.selectionIndicator) {
-        this.selectionIndicator.updateIndicators(selections)
+        this.selectionIndicator?.updateIndicators(selections)
       }
       return true
     }
@@ -278,7 +282,7 @@ export class SelectionSystem {
 
     state.merge({ selections }, 'selectionsChanged')
     if (this.selectionIndicator) {
-      this.selectionIndicator.updateIndicators(selections)
+      this.selectionIndicator?.updateIndicators(selections)
     }
     return count
   }
@@ -304,7 +308,7 @@ export class SelectionSystem {
 
     state.merge({ selections }, 'selectionsChanged')
     if (this.selectionIndicator) {
-      this.selectionIndicator.updateIndicators(selections)
+      this.selectionIndicator?.updateIndicators(selections)
     }
     return limitedEntities.length
   }
@@ -345,7 +349,7 @@ export class SelectionSystem {
 
   updateIndicators (selections) {
     if (this.selectionIndicator) {
-      this.selectionIndicator.updateIndicators(selections)
+      this.selectionIndicator?.updateIndicators(selections)
     }
   }
 

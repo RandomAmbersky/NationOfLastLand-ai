@@ -270,12 +270,17 @@
                         const gameApi = gameStateSystem.getApi();
                         if (gameApi) {
                             gameEngine.state.subscribe("entityClicked", (data) => {
+                                const prevSelections = Array.from(gameEngine.state.get("selections") || []);
+                                selectionSystem.handleEntityClicked(data);
                                 try {
-                                    gameApi.handleEntitySelection(data.gameX, data.gameY);
+                                    gameApi.handleEntitySelection(
+                                        data.entityId,
+                                        data.isMultiSelect ?? false,
+                                        prevSelections
+                                    );
                                 } catch (e) {
                                     console.warn("GameApi.handleEntitySelection:", e);
                                 }
-                                selectionSystem.handleEntityClicked(data);
                             });
                             gameEngine.state.subscribe("entitySelected", (data) => {
                                 try {

@@ -77,8 +77,8 @@ export const GAME_CONFIG = {
     dragThreshold: 5,
     // Maximum number of units in a selection group
     maxGroupSize: 12,
-    // Entity size for click/touch detection (radius in pixels)
-    entityHitRadius: 15,
+    // Entity size for click/touch detection (radius in pixels, screen space)
+    entityHitRadius: 25,
     // Movement speed limits
     maxSpeed: 100,
     // Zoom limits
